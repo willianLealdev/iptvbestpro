@@ -402,7 +402,8 @@ function getBaseUrl($array = false){
 
     // Get host
     if (array_key_exists("HTTP_X_FORWARDED_HOST", $_SERVER) && $_SERVER["HTTP_X_FORWARDED_HOST"] != "") {
-        $host = trim(end(explode(',', $_SERVER["HTTP_X_FORWARDED_HOST"])));
+        $forwarded_hosts = explode(',', $_SERVER["HTTP_X_FORWARDED_HOST"]);
+        $host = trim(end($forwarded_hosts));
     } elseif (array_key_exists("SERVER_NAME", $_SERVER) && $_SERVER["SERVER_NAME"] != "") {
         $host = $_SERVER["SERVER_NAME"];
     } elseif (array_key_exists("HTTP_HOST", $_SERVER) && $_SERVER["HTTP_HOST"] != "") {
