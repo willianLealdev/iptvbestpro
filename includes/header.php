@@ -189,12 +189,17 @@ $mysqli->set_charset("utf8mb4");
                 <?php if(isset($_SESSION['admin_type'])){?>
                     <?php if($_SESSION['admin_type'] != 0){?>
                     
+                        <?php // Itens ocultos do menu (as páginas continuam existindo)
+                            $menu_hidden = array('manage_ads.php'); ?>
+
+                        <?php if (!in_array('manage_ads.php', $menu_hidden)) { ?>
                         <li class="nsofts-sidebar-nav__item">
                             <a href="manage_ads.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_ads.php" or $currentFile == "create_ads.php") { ?>active<?php } ?>">
                                 <i class="ri-advertisement-line nsofts-sidebar-nav__icon"></i>
                                 <span class="nsofts-sidebar-nav__text">Custom Ads</span>
                             </a>
                         </li>
+                        <?php } ?>
                     
                         <li class="nsofts-sidebar-nav__item nsofts-has-menu">
                             <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_dns.php" or $currentFile == "create_dns.php" or $currentFile == "settings_xui.php") { ?>open active<?php } ?>">
