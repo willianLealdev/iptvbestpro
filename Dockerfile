@@ -15,6 +15,9 @@ RUN { \
       echo "memory_limit=256M"; \
       echo "max_execution_time=300"; \
       echo "date.timezone=America/Sao_Paulo"; \
+      echo "display_errors=Off"; \
+      echo "log_errors=On"; \
+      echo "error_reporting=E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING"; \
     } > /usr/local/etc/php/conf.d/painel.ini
 
 COPY . /var/www/html/
