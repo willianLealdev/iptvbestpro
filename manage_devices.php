@@ -66,8 +66,9 @@
         exit;
     }
 
-    // Gerar novo código de ativação do admin
-    if(isset($_POST['regen_admin_code'])){
+    // Gerar novo código de ativação do admin: somente o Super Admin (admin_type 3)
+    $is_super_admin = isset($_SESSION['admin_type']) && $_SESSION['admin_type'] == 3;
+    if(isset($_POST['regen_admin_code']) && $is_super_admin){
         $new_code = activation_code_generate($mysqli);
         if($new_code){ panel_config_set($mysqli, 'admin_code', $new_code); }
         dev_flash((bool)$new_code, $new_code ? 'Novo código do admin: '.$new_code : 'Não foi possível gerar o código.');
@@ -208,9 +209,11 @@
                     </div>
                     <small class="text-muted">O cliente digita este código no app e o aparelho aparece aqui com o filtro <b>Meus (admin)</b>.</small>
                 </div>
-                <form method="post" onsubmit="return confirm('Gerar um novo código? O código atual deixa de funcionar para novos vínculos.');">
-                    <button type="submit" name="regen_admin_code" class="btn btn-outline-secondary"><i class="ri-refresh-line"></i> Gerar novo código</button>
-                </form>
+                <?php if($is_super_admin){ ?>
+                    <form method="post" onsubmit="return confirm('Gerar um novo código? O código atual deixa de funcionar para novos vínculos.');">
+                        <button type="submit" name="regen_admin_code" class="btn btn-outline-secondary"><i class="ri-refresh-line"></i> Gerar novo código</button>
+                    </form>
+                <?php } ?>
             </div>
         </div>
 
