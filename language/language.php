@@ -64,6 +64,14 @@
 	$client_lang['error_pass_not_match_admin']="Confirm Password not matched !";
 	
 	$client_lang['approve_admin']="Your registration is completed. Wait until admin approve it";
+
+	// Revendedores
+	$client_lang['reseller_added']="Revendedor criado com sucesso.";
+	$client_lang['reseller_updated']="Revendedor atualizado com sucesso.";
+	$client_lang['reseller_email_exists']="Já existe um revendedor com este e-mail.";
+	$client_lang['reseller_invalid']="Preencha nome, e-mail válido e senha (mínimo 6 caracteres).";
+	$client_lang['reseller_credits_ok']="Créditos atualizados com sucesso.";
+	$client_lang['reseller_credits_error']="Não foi possível alterar os créditos (saldo insuficiente ou valor inválido).";
     
    
     

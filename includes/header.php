@@ -154,7 +154,16 @@ $mysqli->set_charset("utf8mb4");
                         <span class="nsofts-sidebar-nav__text">Dashboard</span>
                     </a>
                 </li>
-                
+
+                <?php if(isset($_SESSION['admin_type']) && $_SESSION['admin_type'] != 0){ ?>
+                <li class="nsofts-sidebar-nav__item">
+                    <a href="manage_resellers.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_resellers.php" or $currentFile == "create_reseller.php") { ?>active<?php } ?>">
+                        <i class="ri-user-star-line nsofts-sidebar-nav__icon"></i>
+                        <span class="nsofts-sidebar-nav__text">Resellers</span>
+                    </a>
+                </li>
+                <?php } ?>
+
                 <li class="nsofts-sidebar-nav__item">
                     <a href="manage_notification.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_notification.php" or $currentFile == "notification_onesignal.php") { ?>active<?php } ?>">
                         <i class="ri-notification-2-line nsofts-sidebar-nav__icon"></i>

@@ -109,6 +109,15 @@
                     mysqli_query($mysqli, $sqlDelete);
                 }
 				
+				else if($table=='tbl_resellers'){
+                    $reseller_ids = implode(',', array_filter(array_map('intval', explode(',', $ids))));
+                    if($reseller_ids != '' && isset($_SESSION['admin_type']) && $_SESSION['admin_type'] != 0){
+                        mysqli_query($mysqli, "DELETE FROM tbl_reseller_credits WHERE `reseller_id` IN ($reseller_ids)");
+                        mysqli_query($mysqli, "UPDATE tbl_devices SET `reseller_id` = 0 WHERE `reseller_id` IN ($reseller_ids)");
+                        mysqli_query($mysqli, "DELETE FROM tbl_resellers WHERE `id` IN ($reseller_ids)");
+                    }
+                }
+
 				else if($table=='tbl_poster_gallery'){
                     $sqlCategory="SELECT * FROM $table WHERE `id` IN ($ids)";
                     $res=mysqli_query($mysqli, $sqlCategory);

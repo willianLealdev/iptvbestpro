@@ -1,9 +1,9 @@
 <?php $page_title="Dashboard";
     include("includes/header.php");
     require("includes/lb_helper.php");
-    require_once("includes/device_tracker.php");
+    require_once("includes/reseller_helper.php");
 
-    devices_migrate($mysqli);
+    resellers_migrate($mysqli);
 
     function dash_count($mysqli, $sql){
         $row = mysqli_fetch_array(mysqli_query($mysqli, $sql));
@@ -11,12 +11,11 @@
     }
 
     $today_start = devices_today_start();
-    $week_ago = time() - (7 * 86400);
 
     $total_today     = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices WHERE first_seen >= ".$today_start);
     $total_devices   = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices");
-    $total_active    = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices WHERE last_seen >= ".$week_ago);
-    $total_countries = dash_count($mysqli, "SELECT COUNT(DISTINCT country_code) as num FROM tbl_devices WHERE country_code <> ''");
+    $total_resellers = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_resellers");
+    $total_credit_share = resellers_total_credit_share($mysqli);
 
     // Dispositivos por App
     $by_app = array();
@@ -34,7 +33,7 @@
     }
     arsort($by_platform);
 
-    // Dispositivos por País
+    // Dispositivos por PaÃ­s
     $by_country = array();
     $res = mysqli_query($mysqli, "SELECT country_code, MAX(country_name) AS country_name, COUNT(*) AS num
                                   FROM tbl_devices WHERE country_code <> '' GROUP BY country_code ORDER BY num DESC");
@@ -43,7 +42,7 @@
     }
     $total_unknown_country = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices WHERE country_code = ''");
 
-    // Últimas instalações
+    // Ãšltimas instalaÃ§Ãµes
     $result_recent = mysqli_query($mysqli, "SELECT * FROM tbl_devices ORDER BY first_seen DESC LIMIT 8");
 
     $sql_reports="SELECT * FROM tbl_reports ORDER BY tbl_reports.`id` DESC LIMIT 10";
@@ -133,10 +132,10 @@
             <div class="col-xxl-3 col-md-6">
                 <div class="card dash-stat" style="--dash-color:#f0769a; --dash-bg:#fff7f9; --dash-icon-bg:#ffe0e8;">
                     <div class="card-body">
-                        <div class="dash-stat__icon"><i class="ri-pulse-fill"></i></div>
+                        <div class="dash-stat__icon"><i class="ri-user-add-fill"></i></div>
                         <div>
-                            <div class="dash-stat__label">Ativos (últimos 7 dias)</div>
-                            <div class="dash-stat__value"><?php echo thousandsNumberFormat($total_active); ?></div>
+                            <div class="dash-stat__label">Resellers</div>
+                            <div class="dash-stat__value"><?php echo thousandsNumberFormat($total_resellers); ?></div>
                         </div>
                     </div>
                 </div>
@@ -144,10 +143,10 @@
             <div class="col-xxl-3 col-md-6">
                 <div class="card dash-stat" style="--dash-color:#16c784; --dash-bg:#f3fdf7; --dash-icon-bg:#ccf7dd;">
                     <div class="card-body">
-                        <div class="dash-stat__icon"><i class="ri-earth-fill"></i></div>
+                        <div class="dash-stat__icon"><i class="ri-share-forward-box-fill"></i></div>
                         <div>
-                            <div class="dash-stat__label">Países</div>
-                            <div class="dash-stat__value"><?php echo thousandsNumberFormat($total_countries); ?></div>
+                            <div class="dash-stat__label">Total Credit Share</div>
+                            <div class="dash-stat__value"><?php echo thousandsNumberFormat($total_credit_share); ?></div>
                         </div>
                     </div>
                 </div>
@@ -202,12 +201,12 @@
             </div>
         </div>
 
-        <!-- Mapa por País -->
+        <!-- Mapa por PaÃ­s -->
         <div class="row g-4 mt-1">
             <div class="col-lg-8">
                 <div class="card dash-card">
                     <div class="card-body p-4">
-                        <div class="dash-card__title">Instalações por País</div>
+                        <div class="dash-card__title">InstalaÃ§Ãµes por PaÃ­s</div>
                         <div id="dash_map"></div>
                     </div>
                 </div>
@@ -215,7 +214,7 @@
             <div class="col-lg-4">
                 <div class="card dash-card">
                     <div class="card-body p-4">
-                        <div class="dash-card__title">Top Países</div>
+                        <div class="dash-card__title">Top PaÃ­ses</div>
                         <?php if (count($by_country) > 0) { ?>
                             <div style="max-height: 380px; overflow-y: auto;">
                                 <?php foreach ($by_country as $c) { ?>
@@ -228,30 +227,30 @@
                                 <?php if ($total_unknown_country > 0) { ?>
                                     <div class="dash-country">
                                         <i class="ri-question-line" style="width:26px;text-align:center;color:#9ca3af;"></i>
-                                        <span class="dash-country__name">Não identificado</span>
+                                        <span class="dash-country__name">NÃ£o identificado</span>
                                         <span class="dash-country__num"><?php echo thousandsNumberFormat($total_unknown_country); ?></span>
                                     </div>
                                 <?php } ?>
                             </div>
                         <?php } else { ?>
-                            <div class="dash-empty"><i class="ri-earth-line" style="font-size:40px;"></i><br>Os países aparecem aqui quando os apps começarem a se registrar.</div>
+                            <div class="dash-empty"><i class="ri-earth-line" style="font-size:40px;"></i><br>Os paÃ­ses aparecem aqui quando os apps comeÃ§arem a se registrar.</div>
                         <?php } ?>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Últimas instalações / Reports -->
+        <!-- Ãšltimas instalaÃ§Ãµes / Reports -->
         <div class="row g-4 mt-1">
             <div class="col-lg-7">
                 <div class="card dash-card">
                     <div class="card-body p-4">
-                        <div class="dash-card__title">Últimas Instalações</div>
+                        <div class="dash-card__title">Ãšltimas InstalaÃ§Ãµes</div>
                         <?php if (mysqli_num_rows($result_recent) > 0) { ?>
                             <div class="table-responsive">
                                 <table class="table align-middle mb-0">
                                     <thead>
-                                        <tr><th>Dispositivo</th><th>Plataforma</th><th>País</th><th>Instalado</th></tr>
+                                        <tr><th>Dispositivo</th><th>Plataforma</th><th>PaÃ­s</th><th>Instalado</th></tr>
                                     </thead>
                                     <tbody>
                                     <?php while ($d = mysqli_fetch_assoc($result_recent)) {
@@ -259,7 +258,7 @@
                                         <tr>
                                             <td>
                                                 <div class="fw-semibold"><?php echo htmlspecialchars($d['device_model'] != '' ? $d['device_model'] : $d['device_id']); ?></div>
-                                                <small class="text-muted"><?php echo htmlspecialchars($d['app_name'] != '' ? $d['app_name'] : $d['application_id']); ?><?php echo $d['app_version'] != '' ? ' · v'.htmlspecialchars($d['app_version']) : ''; ?></small>
+                                                <small class="text-muted"><?php echo htmlspecialchars($d['app_name'] != '' ? $d['app_name'] : $d['application_id']); ?><?php echo $d['app_version'] != '' ? ' Â· v'.htmlspecialchars($d['app_version']) : ''; ?></small>
                                             </td>
                                             <td><i class="<?php echo $p['icon']; ?>" style="color: <?php echo $p['color']; ?>"></i> <?php echo $p['label']; ?></td>
                                             <td>
@@ -267,7 +266,7 @@
                                                     <img class="dash-country__flag" src="https://flagcdn.com/w40/<?php echo strtolower($d['country_code']); ?>.png" alt="" loading="lazy">
                                                     <span data-country="<?php echo htmlspecialchars($d['country_code']); ?>"><?php echo htmlspecialchars($d['country_code']); ?></span>
                                                 <?php } else { ?>
-                                                    <span class="text-muted">—</span>
+                                                    <span class="text-muted">â€”</span>
                                                 <?php } ?>
                                             </td>
                                             <td><?php echo calculate_time_span($d['first_seen']); ?></td>
@@ -277,7 +276,7 @@
                                 </table>
                             </div>
                         <?php } else { ?>
-                            <div class="dash-empty">Nenhuma instalação registrada ainda.</div>
+                            <div class="dash-empty">Nenhuma instalaÃ§Ã£o registrada ainda.</div>
                         <?php } ?>
                     </div>
                 </div>
@@ -345,7 +344,7 @@
         try { return (countryNames && countryNames.of(code)) || fallback || code; } catch (e) { return fallback || code; }
     }
 
-    // Nomes de países em português
+    // Nomes de paÃ­ses em portuguÃªs
     document.querySelectorAll('[data-country]').forEach(function (el) {
         el.textContent = countryName(el.getAttribute('data-country'), el.textContent);
     });
@@ -371,7 +370,7 @@
     }
     new jsVectorMap(mapOptions);
 
-    // Gráfico por App
+    // GrÃ¡fico por App
     window.addEventListener('load', function () {
         var canvas = document.getElementById('dash_app_chart');
         if (!canvas || typeof Chart === 'undefined') return;
