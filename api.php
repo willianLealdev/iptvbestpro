@@ -243,7 +243,8 @@ if($get_helper['helper_name']=="app_details"){
 	$jsonObj = array();
 	$data_arr = array();
 	
-	$sql="SELECT * FROM tbl_stream_dns WHERE tbl_stream_dns.status='1' ORDER BY tbl_stream_dns.id DESC";
+	// DNS unificado: a opção "1-Stream" do app usa a mesma lista de servidores do Xtream Codes
+	$sql="SELECT * FROM tbl_xui_dns WHERE tbl_xui_dns.status='1' ORDER BY tbl_xui_dns.id DESC";
     $result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
     if(mysqli_num_rows($result) > 0){
         while ($data3 = mysqli_fetch_assoc($result)){

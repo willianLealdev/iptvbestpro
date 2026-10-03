@@ -137,6 +137,36 @@ function resellers_migrate($mysqli){
     if (panel_config_get($mysqli, 'admin_code', '') == '') {
         panel_config_set($mysqli, 'admin_code', activation_code_generate($mysqli));
     }
+
+    dns_unify($mysqli);
+}
+
+/**
+ * Xtream Codes e 1-Stream usam o mesmo tipo de servidor: tudo fica em tbl_xui_dns.
+ * Copia (uma única vez) os DNS do 1-Stream que ainda não existem na lista principal.
+ */
+function dns_unify($mysqli){
+    if (panel_config_get($mysqli, 'dns_unified', '0') == '1') return;
+
+    $existing = array();
+    $res = mysqli_query($mysqli, "SELECT dns_base FROM tbl_xui_dns");
+    while ($res && $r = mysqli_fetch_assoc($res)) $existing[] = strtolower(rtrim(trim($r['dns_base']), '/'));
+
+    $res = mysqli_query($mysqli, "SELECT dns_title, dns_base, status FROM tbl_stream_dns");
+    while ($res && $r = mysqli_fetch_assoc($res)) {
+        $key = strtolower(rtrim(trim($r['dns_base']), '/'));
+        if ($key == '' || in_array($key, $existing)) continue;
+        $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_xui_dns (dns_title, dns_base, status) VALUES (?, ?, ?)");
+        $status = (int)$r['status'];
+        mysqli_stmt_bind_param($stmt, 'ssi', $r['dns_title'], $r['dns_base'], $status);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        $existing[] = $key;
+    }
+
+    // Mantém as opções do app iguais para as duas formas de login
+    mysqli_query($mysqli, "UPDATE tbl_settings SET is_stream_dns = is_xui_dns, is_stream_radio = is_xui_radio WHERE id = 1");
+    panel_config_set($mysqli, 'dns_unified', '1');
 }
 
 /* ---------- Configurações ---------- */

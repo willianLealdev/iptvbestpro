@@ -1,4 +1,4 @@
-<?php $page_title="Settings Extream codes";
+<?php $page_title="Configurações dos Servidores DNS";
     include("includes/header.php");
     require("includes/lb_helper.php");
     require("language/language.php");
@@ -9,9 +9,14 @@
     
     if(isset($_POST['app_submit'])){
         
+        // Unificado: as mesmas opções valem para Xtream Codes e 1-Stream
+        $is_dns = !empty($_POST['is_xui_dns']) ? 'true' : 'false';
+        $is_radio = !empty($_POST['is_xui_radio']) ? 'true' : 'false';
         $data = array(
-            'is_xui_dns'  =>  ($_POST['is_xui_dns']) ? 'true' : 'false',
-            'is_xui_radio'  =>  ($_POST['is_xui_radio']) ? 'true' : 'false'
+            'is_xui_dns'  =>  $is_dns,
+            'is_xui_radio'  =>  $is_radio,
+            'is_stream_dns'  =>  $is_dns,
+            'is_stream_radio'  =>  $is_radio
         );
 
         $settings_edit = Update('tbl_settings', $data, "WHERE id = '1'");

@@ -203,19 +203,21 @@ $mysqli->set_charset("utf8mb4");
                     
                         <li class="nsofts-sidebar-nav__item nsofts-has-menu">
                             <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_dns.php" or $currentFile == "create_dns.php" or $currentFile == "settings_xui.php") { ?>open active<?php } ?>">
-                                <i class="ri-xing-line nsofts-sidebar-nav__icon"></i>
-                                <span class="nsofts-sidebar-nav__text">Extream codes</span>
+                                <i class="ri-server-line nsofts-sidebar-nav__icon"></i>
+                                <span class="nsofts-sidebar-nav__text">Servidores DNS</span>
                             </a>
                             <ul class="nsofts-submenu <?php if ($currentFile == "manage_dns.php" or $currentFile == "create_dns.php" or $currentFile == "settings_xui.php" ) { ?>show<?php } ?>">
                                 <li>
-                                    <a href="settings_xui.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_xui.php") { ?>active<?php } ?>">Settings</a>
+                                    <a href="manage_dns.php" class="nsofts-submenu__link <?php if ($currentFile == "create_dns.php" or $currentFile == "manage_dns.php") { ?>active<?php } ?>">DNS</a>
                                 </li>
                                 <li>
-                                    <a href="manage_dns.php" class="nsofts-submenu__link <?php if ($currentFile == "create_dns.php" or $currentFile == "manage_dns.php") { ?>active<?php } ?>">DNS</a>
+                                    <a href="settings_xui.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_xui.php") { ?>active<?php } ?>">Configurações</a>
                                 </li>
                             </ul>
                         </li>
-                        
+
+                        <?php // 1-Stream unificado com Servidores DNS (mesma lista). Páginas antigas continuam existindo, só ocultas.
+                        if (false) { ?>
                         <li class="nsofts-sidebar-nav__item nsofts-has-menu">
                             <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_dns_stream.php" or $currentFile == "create_dns_stream.php" or $currentFile == "settings_stream.php") { ?>open active<?php } ?>">
                                 <i class="ri-mist-line nsofts-sidebar-nav__icon"></i>
@@ -230,6 +232,7 @@ $mysqli->set_charset("utf8mb4");
                                 </li>
                             </ul>
                         </li>
+                        <?php } ?>
                         
                         <li class="nsofts-sidebar-nav__item">
                             <a href="manage_blacklist.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_blacklist.php" or $currentFile == "create_blacklist.php") { ?>active<?php } ?>">
