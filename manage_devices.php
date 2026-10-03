@@ -1,0 +1,426 @@
+<?php $page_title="Devices";
+    include("includes/header.php");
+    require("includes/lb_helper.php");
+    require("language/language.php");
+    require_once("includes/reseller_helper.php");
+
+    if(!isset($_SESSION['admin_type']) || $_SESSION['admin_type'] == 0){
+        header("Location:dashboard.php");
+        exit;
+    }
+
+    resellers_migrate($mysqli);
+    $packages = devices_packages();
+    $admin_label = 'admin: '.(isset($_SESSION['admin_name']) ? $_SESSION['admin_name'] : '');
+    $admin_id = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
+    $default_app_id = isset($settings_details['envato_package_name']) ? $settings_details['envato_package_name'] : '';
+
+    function dev_flash($ok, $msg){
+        $_SESSION['dev_msg'] = $msg;
+        $_SESSION['msg'] = 'dev_custom';
+        $_SESSION['class'] = $ok ? 'success' : 'error';
+    }
+    $back_url = "manage_devices.php".(!empty($_SERVER['QUERY_STRING']) ? '?'.$_SERVER['QUERY_STRING'] : '');
+
+    // Ativar / renovar dispositivo existente
+    if(isset($_POST['activate_submit'])){
+        $r = devices_activate($mysqli, $_POST['device_pk'], $_POST['package'], (int)$_POST['reseller_id'], $admin_label, $admin_id);
+        dev_flash($r['ok'], $r['msg']);
+        header("Location:".$back_url);
+        exit;
+    }
+
+    // Adicionar e ativar um dispositivo pelo MAC / Device ID
+    if(isset($_POST['add_submit'])){
+        $device_id = mb_substr(trim(strip_tags($_POST['device_id'])), 0, 191);
+        $application_id = mb_substr(trim(strip_tags($_POST['application_id'])), 0, 191);
+        if($device_id == ''){
+            dev_flash(false, 'Informe o MAC / Device ID.');
+        } else {
+            $now = time();
+            $stmt = mysqli_prepare($mysqli, "INSERT IGNORE INTO tbl_devices (device_id, application_id, app_name, first_seen, last_seen) VALUES (?,?,?,?,0)");
+            $app_name = defined('APP_NAME') ? APP_NAME : '';
+            mysqli_stmt_bind_param($stmt, 'sssi', $device_id, $application_id, $app_name, $now);
+            mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+
+            $stmt = mysqli_prepare($mysqli, "SELECT id FROM tbl_devices WHERE device_id = ? AND application_id = ?");
+            mysqli_stmt_bind_param($stmt, 'ss', $device_id, $application_id);
+            mysqli_stmt_execute($stmt);
+            $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+            mysqli_stmt_close($stmt);
+
+            $r = $row ? devices_activate($mysqli, $row['id'], $_POST['package'], (int)$_POST['reseller_id'], $admin_label, $admin_id)
+                      : array('ok' => false, 'msg' => 'Não foi possível criar o dispositivo.');
+            dev_flash($r['ok'], $r['msg']);
+        }
+        header("Location:".$back_url);
+        exit;
+    }
+
+    // Desativar
+    if(isset($_POST['deactivate_submit'])){
+        devices_deactivate($mysqli, $_POST['device_pk']);
+        dev_flash(true, 'Ativação removida.');
+        header("Location:".$back_url);
+        exit;
+    }
+
+    if(isset($_SESSION['dev_msg'])){
+        $client_lang['dev_custom'] = $_SESSION['dev_msg'];
+        unset($_SESSION['dev_msg']);
+    }
+
+    // Filtros
+    $keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
+    $app_filter = isset($_GET['app']) ? trim($_GET['app']) : '';
+    $pkg_filter = (isset($_GET['package']) && ($_GET['package'] == 'none' || isset($packages[$_GET['package']]))) ? $_GET['package'] : '';
+    $status_filter = (isset($_GET['status']) && in_array($_GET['status'], array('active','expired','inactive'))) ? $_GET['status'] : '';
+
+    $sortable = array('app' => 'app_label', 'credits' => 'd.used_credits', 'activated' => 'd.activated_at', 'expires' => 'd.expires_at', 'seen' => 'd.first_seen');
+    $sort = (isset($_GET['sort']) && isset($sortable[$_GET['sort']])) ? $_GET['sort'] : 'seen';
+    $dir = (isset($_GET['dir']) && strtolower($_GET['dir']) == 'asc') ? 'ASC' : 'DESC';
+
+    $now = time();
+    $where = array();
+    if($keyword != ''){
+        $kw = mysqli_real_escape_string($mysqli, $keyword);
+        $where[] = "(d.device_id LIKE '%$kw%' OR d.activated_by LIKE '%$kw%' OR d.device_model LIKE '%$kw%' OR d.ip_address LIKE '%$kw%')";
+    }
+    if($app_filter != ''){
+        $af = mysqli_real_escape_string($mysqli, $app_filter);
+        $where[] = "COALESCE(NULLIF(d.app_name,''), d.application_id) = '$af'";
+    }
+    if($pkg_filter == 'none'){ $where[] = "d.package = ''"; }
+    else if($pkg_filter != ''){ $where[] = "d.package = '".mysqli_real_escape_string($mysqli, $pkg_filter)."'"; }
+    if($status_filter == 'active'){ $where[] = "d.package <> '' AND (d.expires_at = 0 OR d.expires_at >= $now)"; }
+    if($status_filter == 'expired'){ $where[] = "d.package <> '' AND d.expires_at > 0 AND d.expires_at < $now"; }
+    if($status_filter == 'inactive'){ $where[] = "d.package = ''"; }
+    $where_sql = count($where) ? 'WHERE '.implode(' AND ', $where) : '';
+
+    $total_rows = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_devices d $where_sql"));
+    $total_rows = (int)$total_rows['num'];
+
+    $limit = 20;
+    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $last_page = max(1, (int)ceil($total_rows / $limit));
+    if($page > $last_page){ $page = $last_page; }
+    $start = ($page - 1) * $limit;
+
+    $result = mysqli_query($mysqli, "SELECT d.*, COALESCE(NULLIF(d.app_name,''), NULLIF(d.application_id,''), '—') AS app_label
+                                     FROM tbl_devices d $where_sql
+                                     ORDER BY ".$sortable[$sort]." $dir, d.id DESC LIMIT $start, $limit") or die(mysqli_error($mysqli));
+
+    $apps = array();
+    $res = mysqli_query($mysqli, "SELECT DISTINCT COALESCE(NULLIF(app_name,''), application_id) AS a FROM tbl_devices WHERE COALESCE(NULLIF(app_name,''), application_id) <> '' ORDER BY a");
+    while($a = mysqli_fetch_assoc($res)){ $apps[] = $a['a']; }
+
+    $app_ids = array();
+    if($default_app_id != ''){ $app_ids[] = $default_app_id; }
+    $res = mysqli_query($mysqli, "SELECT DISTINCT application_id FROM tbl_devices WHERE application_id <> ''");
+    while($a = mysqli_fetch_assoc($res)){ if(!in_array($a['application_id'], $app_ids)){ $app_ids[] = $a['application_id']; } }
+
+    $resellers = array();
+    $res = mysqli_query($mysqli, "SELECT id, name, email, credits FROM tbl_resellers WHERE status = 1 ORDER BY name");
+    while($r = mysqli_fetch_assoc($res)){ $resellers[] = $r; }
+
+    function dv_url($changes = array()){
+        $params = array_merge($_GET, $changes);
+        foreach($params as $k => $v){ if($v === '' || $v === null){ unset($params[$k]); } }
+        return 'manage_devices.php'.(count($params) ? '?'.http_build_query($params) : '');
+    }
+    function dv_sort($key, $sort, $dir){
+        $next = ($sort == $key && $dir == 'ASC') ? 'desc' : 'asc';
+        $icon = 'ri-arrow-up-down-line';
+        if($sort == $key){ $icon = ($dir == 'ASC') ? 'ri-arrow-up-s-fill' : 'ri-arrow-down-s-fill'; }
+        return '<a class="dv-sort'.($sort == $key ? ' active' : '').'" href="'.htmlspecialchars(dv_url(array('sort' => $key, 'dir' => $next, 'page' => ''))).'" title="Ordenar"><i class="'.$icon.'"></i></a>';
+    }
+?>
+
+<!-- Start: main -->
+<main id="nsofts_main">
+    <div class="nsofts-container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb align-items-center">
+                <li class="breadcrumb-item d-inline-flex"><a href="dashboard.php"><i class="ri-home-4-fill"></i></a></li>
+                <li class="breadcrumb-item d-inline-flex active" aria-current="page"><?php echo $page_title; ?></li>
+            </ol>
+        </nav>
+
+        <style>
+            .dv-card { border: 0; border-radius: 14px; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); }
+            .dv-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+            .dv-search { position: relative; width: 300px; max-width: 100%; }
+            .dv-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; }
+            .dv-search input { padding-left: 34px; border-radius: 8px; }
+            .dv-filter { width: auto; min-width: 150px; border-radius: 8px; }
+            .dv-btn-add { background: #4b9a2a; border-color: #4b9a2a; color: #fff; border-radius: 8px; padding: 8px 16px; }
+            .dv-btn-add:hover { background: #3f8323; border-color: #3f8323; color: #fff; }
+            .dv-table-wrap { border: 1px solid #eef0f4; border-radius: 10px; overflow: hidden; }
+            .dv-table { margin: 0; }
+            .dv-table thead th { background: #fafbfc; color: #1f2937; font-weight: 600; text-align: center; white-space: nowrap; padding: 16px 12px; border-bottom: 1px solid #eef0f4; border-right: 1px solid #f1f3f7; }
+            .dv-table tbody td { text-align: center; vertical-align: middle; padding: 12px; border-right: 1px solid #f6f7f9; white-space: nowrap; }
+            .dv-table th:last-child, .dv-table td:last-child { border-right: 0; position: sticky; right: 0; background: #fff; box-shadow: -6px 0 8px -6px rgba(0,0,0,.08); }
+            .dv-table thead th:last-child { background: #fafbfc; }
+            .dv-sort { color: #b6bcc8; text-decoration: none; margin-left: 4px; }
+            .dv-sort.active { color: #3b6cf6; }
+            .dv-copy { color: #3b6cf6; cursor: pointer; margin-left: 4px; }
+            .dv-app { display: inline-flex; align-items: center; gap: 8px; }
+            .dv-app img { width: 30px; height: 30px; border-radius: 6px; object-fit: cover; background: #111827; }
+            .dv-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 13px; border: 1px solid transparent; }
+            .pk-year { color: #389e0d; background: #f6ffed; border-color: #d9f7be; }
+            .pk-lifetime { color: #531dab; background: #f9f0ff; border-color: #efdbff; }
+            .pk-trial { color: #d46b08; background: #fff7e6; border-color: #ffe7ba; }
+            .pk-none { color: #8c8c8c; background: #fafafa; border-color: #f0f0f0; }
+            .dv-expired { color: #dc2626; font-weight: 600; }
+            .dv-muted { color: #9ca3af; }
+            .dv-empty { padding: 50px 10px; text-align: center; color: #9ca3af; }
+            .dv-empty i { font-size: 46px; display: block; margin-bottom: 6px; color: #d1d5db; }
+            .dv-footer { background: #fafbfc; border-top: 1px solid #eef0f4; padding: 14px 16px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+            .dv-dots { border: 0; background: transparent; font-size: 20px; line-height: 1; color: #374151; padding: 2px 8px; }
+        </style>
+
+        <div class="card dv-card">
+            <div class="card-body p-4">
+                <div class="dv-toolbar">
+                    <form method="get" action="manage_devices.php" class="d-flex flex-wrap gap-2">
+                        <div class="dv-search">
+                            <i class="ri-search-line"></i>
+                            <input type="text" name="keyword" class="form-control" placeholder="Buscar MAC, e-mail, modelo ou IP" value="<?php echo htmlspecialchars($keyword); ?>">
+                        </div>
+                        <select name="app" class="form-select dv-filter" onchange="this.form.submit()">
+                            <option value="">Todos os apps</option>
+                            <?php foreach($apps as $a){ ?>
+                                <option value="<?php echo htmlspecialchars($a); ?>" <?php if($app_filter == $a){ echo 'selected'; } ?>><?php echo htmlspecialchars($a); ?></option>
+                            <?php } ?>
+                        </select>
+                        <select name="package" class="form-select dv-filter" onchange="this.form.submit()">
+                            <option value="">Todos os pacotes</option>
+                            <?php foreach($packages as $k => $p){ ?>
+                                <option value="<?php echo $k; ?>" <?php if($pkg_filter == $k){ echo 'selected'; } ?>><?php echo $p['label']; ?></option>
+                            <?php } ?>
+                            <option value="none" <?php if($pkg_filter == 'none'){ echo 'selected'; } ?>>Sem pacote</option>
+                        </select>
+                        <select name="status" class="form-select dv-filter" onchange="this.form.submit()">
+                            <option value="">Todos os status</option>
+                            <option value="active" <?php if($status_filter == 'active'){ echo 'selected'; } ?>>Ativos</option>
+                            <option value="expired" <?php if($status_filter == 'expired'){ echo 'selected'; } ?>>Expirados</option>
+                            <option value="inactive" <?php if($status_filter == 'inactive'){ echo 'selected'; } ?>>Não ativados</option>
+                        </select>
+                        <?php if($sort != 'seen' || $dir != 'DESC'){ ?>
+                            <input type="hidden" name="sort" value="<?php echo htmlspecialchars($sort); ?>">
+                            <input type="hidden" name="dir" value="<?php echo strtolower($dir); ?>">
+                        <?php } ?>
+                        <?php if($keyword != '' || $app_filter != '' || $pkg_filter != '' || $status_filter != ''){ ?>
+                            <a href="manage_devices.php" class="btn btn-outline-secondary d-inline-flex align-items-center">Limpar</a>
+                        <?php } ?>
+                    </form>
+                    <a href="javascript:void(0)" class="btn dv-btn-add d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
+                        <i class="ri-add-line"></i><span class="ps-1">Ativar Dispositivo</span>
+                    </a>
+                </div>
+
+                <div class="dv-table-wrap">
+                    <div class="table-responsive">
+                        <table class="table dv-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Mac</th>
+                                    <th>Ativado por</th>
+                                    <th>App<?php echo dv_sort('app', $sort, $dir); ?></th>
+                                    <th>Créditos usados<?php echo dv_sort('credits', $sort, $dir); ?></th>
+                                    <th>Pacote</th>
+                                    <th>Ativação<?php echo dv_sort('activated', $sort, $dir); ?></th>
+                                    <th>Vencimento<?php echo dv_sort('expires', $sort, $dir); ?></th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php if(mysqli_num_rows($result) > 0){ ?>
+                                <?php $i = 0; while($row = mysqli_fetch_assoc($result)){ $i++;
+                                    $status = devices_activation_status($row);
+                                    $pkg = isset($packages[$row['package']]) ? $packages[$row['package']] : null; ?>
+                                    <tr>
+                                        <td><?php echo $start + $i; ?></td>
+                                        <td>
+                                            <span><?php echo htmlspecialchars($row['device_id']); ?></span>
+                                            <i class="ri-file-copy-line dv-copy" data-copy="<?php echo htmlspecialchars($row['device_id']); ?>" title="Copiar"></i>
+                                            <?php if($row['device_model'] != ''){ ?><br><small class="dv-muted"><?php echo htmlspecialchars($row['device_model']); ?></small><?php } ?>
+                                        </td>
+                                        <td>
+                                            <?php if($row['activated_by'] != ''){ ?>
+                                                <span><?php echo htmlspecialchars($row['activated_by']); ?></span>
+                                                <i class="ri-file-copy-line dv-copy" data-copy="<?php echo htmlspecialchars($row['activated_by']); ?>" title="Copiar"></i>
+                                            <?php } else { ?><span class="dv-muted">—</span><?php } ?>
+                                        </td>
+                                        <td>
+                                            <span class="dv-app">
+                                                <img src="images/<?php echo htmlspecialchars(APP_LOGO); ?>" alt="" onerror="this.style.visibility='hidden'">
+                                                <span><?php echo htmlspecialchars($row['app_label']); ?></span>
+                                            </span>
+                                        </td>
+                                        <td><?php echo (int)$row['used_credits']; ?></td>
+                                        <td>
+                                            <?php if($pkg){ ?>
+                                                <span class="dv-badge <?php echo $pkg['class']; ?>"><?php echo $pkg['label']; ?></span>
+                                            <?php } else { ?>
+                                                <span class="dv-badge pk-none">Sem pacote</span>
+                                            <?php } ?>
+                                        </td>
+                                        <td><?php echo (int)$row['activated_at'] > 0 ? date('d/m/Y', $row['activated_at']) : '<span class="dv-muted">—</span>'; ?></td>
+                                        <td>
+                                            <?php if($status == 'inactive'){ ?>
+                                                <span class="dv-muted">—</span>
+                                            <?php } else if((int)$row['expires_at'] == 0){ ?>
+                                                Vitalício
+                                            <?php } else { ?>
+                                                <span class="<?php echo $status == 'expired' ? 'dv-expired' : ''; ?>"><?php echo date('d/m/Y', $row['expires_at']); ?></span>
+                                                <?php if($status == 'expired'){ ?><br><small class="dv-expired">Expirado</small><?php } ?>
+                                            <?php } ?>
+                                        </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="dv-dots" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">···</button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li><a class="dropdown-item btn_activate" href="javascript:void(0)" data-pk="<?php echo $row['id']; ?>" data-mac="<?php echo htmlspecialchars($row['device_id']); ?>">
+                                                        <i class="ri-flashlight-line me-1"></i><?php echo $status == 'inactive' ? 'Ativar' : 'Renovar / trocar pacote'; ?></a></li>
+                                                    <li><a class="dropdown-item" href="manage_users.php?keyword=<?php echo urlencode($row['device_id']); ?>"><i class="ri-play-list-line me-1"></i>Login da playlist</a></li>
+                                                    <?php if($status != 'inactive'){ ?>
+                                                        <li>
+                                                            <form method="post" onsubmit="return confirm('Remover a ativação deste dispositivo? Os créditos usados não são devolvidos.');">
+                                                                <input type="hidden" name="device_pk" value="<?php echo $row['id']; ?>">
+                                                                <button type="submit" name="deactivate_submit" class="dropdown-item"><i class="ri-forbid-line me-1"></i>Desativar</button>
+                                                            </form>
+                                                        </li>
+                                                    <?php } ?>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item text-danger btn_delete" href="javascript:void(0)" data-id="<?php echo $row['id']; ?>" data-table="tbl_devices"><i class="ri-delete-bin-line me-1"></i>Excluir</a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php } ?>
+                            <?php } else { ?>
+                                <tr><td colspan="9"><div class="dv-empty"><i class="ri-inbox-line"></i>Nenhum dispositivo encontrado</div></td></tr>
+                            <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="dv-footer">
+                        <span>Total: <?php echo thousandsNumberFormat($total_rows); ?></span>
+                        <?php if($last_page > 1){ ?>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item <?php if($page <= 1){ echo 'disabled'; } ?>"><a class="page-link" href="<?php echo htmlspecialchars(dv_url(array('page' => $page - 1))); ?>">‹</a></li>
+                                <?php for($p = max(1, $page - 2); $p <= min($last_page, $page + 2); $p++){ ?>
+                                    <li class="page-item <?php if($p == $page){ echo 'active'; } ?>"><a class="page-link" href="<?php echo htmlspecialchars(dv_url(array('page' => $p))); ?>"><?php echo $p; ?></a></li>
+                                <?php } ?>
+                                <li class="page-item <?php if($page >= $last_page){ echo 'disabled'; } ?>"><a class="page-link" href="<?php echo htmlspecialchars(dv_url(array('page' => $page + 1))); ?>">›</a></li>
+                            </ul>
+                        <?php } ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<!-- End: main -->
+
+<?php
+    // Campos compartilhados pelos dois modais
+    function dv_package_reseller_fields($packages, $resellers){ ?>
+        <div class="mb-3">
+            <label class="form-label">Pacote</label>
+            <select name="package" class="form-select" required>
+                <?php foreach($packages as $k => $p){ ?>
+                    <option value="<?php echo $k; ?>" <?php if($k == 'year'){ echo 'selected'; } ?>>
+                        <?php echo $p['label']; ?> — <?php echo $p['days'] > 0 ? $p['days'].' dias' : 'sem vencimento'; ?> · <?php echo $p['credits']; ?> crédito(s)
+                    </option>
+                <?php } ?>
+            </select>
+        </div>
+        <div class="mb-0">
+            <label class="form-label">Ativar como</label>
+            <select name="reseller_id" class="form-select">
+                <option value="0">Admin (sem custo de créditos)</option>
+                <?php foreach($resellers as $r){ ?>
+                    <option value="<?php echo $r['id']; ?>"><?php echo htmlspecialchars($r['name'].' — '.$r['email']); ?> (<?php echo (int)$r['credits']; ?> créditos)</option>
+                <?php } ?>
+            </select>
+            <small class="text-muted">Escolhendo um revendedor, os créditos do pacote são descontados do saldo dele.</small>
+        </div>
+<?php } ?>
+
+<!-- Modal: ativar / renovar -->
+<div class="modal fade" id="activateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ativar / Renovar — <span id="activate_mac"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="device_pk" id="activate_pk">
+                <p class="text-muted small">Se o dispositivo ainda estiver válido, os dias do novo pacote são somados ao vencimento atual.</p>
+                <?php dv_package_reseller_fields($packages, $resellers); ?>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" name="activate_submit" class="btn btn-success">Ativar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: adicionar dispositivo -->
+<div class="modal fade" id="addDeviceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ativar Dispositivo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">MAC / Device ID</label>
+                    <input type="text" name="device_id" class="form-control" maxlength="191" required placeholder="Ex.: D9:30:89:BB:51:D6">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">App</label>
+                    <select name="application_id" class="form-select">
+                        <?php if(count($app_ids) == 0){ ?><option value="">(padrão)</option><?php } ?>
+                        <?php foreach($app_ids as $a){ ?>
+                            <option value="<?php echo htmlspecialchars($a); ?>"><?php echo htmlspecialchars($a); ?></option>
+                        <?php } ?>
+                    </select>
+                </div>
+                <?php dv_package_reseller_fields($packages, $resellers); ?>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" name="add_submit" class="btn btn-success">Ativar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('click', function (e) {
+    var copy = e.target.closest('.dv-copy');
+    if (copy) {
+        var text = copy.getAttribute('data-copy');
+        var done = function () { if (window.jQuery && $.notify) { $.notify('Copiado: ' + text, { position: 'top right', className: 'success' }); } };
+        if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done); }
+        else { var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done(); }
+        return;
+    }
+    var act = e.target.closest('.btn_activate');
+    if (act) {
+        document.getElementById('activate_pk').value = act.getAttribute('data-pk');
+        document.getElementById('activate_mac').textContent = act.getAttribute('data-mac');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('activateModal')).show();
+    }
+});
+</script>
+
+<?php include("includes/footer.php");?>

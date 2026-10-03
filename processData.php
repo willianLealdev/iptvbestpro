@@ -118,6 +118,13 @@
                     }
                 }
 
+				else if($table=='tbl_devices'){
+                    $device_ids = implode(',', array_filter(array_map('intval', explode(',', $ids))));
+                    if($device_ids != '' && isset($_SESSION['admin_type']) && $_SESSION['admin_type'] != 0){
+                        mysqli_query($mysqli, "DELETE FROM tbl_devices WHERE `id` IN ($device_ids)");
+                    }
+                }
+
 				else if($table=='tbl_poster_gallery'){
                     $sqlCategory="SELECT * FROM $table WHERE `id` IN ($ids)";
                     $res=mysqli_query($mysqli, $sqlCategory);
