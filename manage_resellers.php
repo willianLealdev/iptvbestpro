@@ -153,7 +153,7 @@
                                     <tr>
                                         <td><?php echo $start + $i; ?></td>
                                         <td class="fw-semibold"><?php echo htmlspecialchars($row['name']); ?></td>
-                                        <td><?php echo htmlspecialchars($row['email']); ?><?php if($row['phone'] != '){ ?><br><small class="text-muted"><?php echo htmlspecialchars($row['phone']); ?></small><?php } ?></td>
+                                        <td><?php echo htmlspecialchars($row['email']); ?><?php if($row['phone'] != ''){ ?><br><small class="text-muted"><?php echo htmlspecialchars($row['phone']); ?></small><?php } ?></td>
                                         <td><span style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:2px;color:#3b6cf6;"><?php echo htmlspecialchars((string)$row['code']); ?></span></td>
                                         <td><span class="rs-credits"><?php echo thousandsNumberFormat($row['credits']); ?></span></td>
                                         <td><?php echo thousandsNumberFormat($row['devices']); ?></td>
