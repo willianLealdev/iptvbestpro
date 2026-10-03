@@ -1,3 +1,14 @@
+# Etapa 1: base de geolocalização por país (DB-IP Lite, CC BY 4.0) + leitor MMDB
+FROM composer:2 AS geo
+WORKDIR /geo
+RUN composer require maxmind-db/reader:^1.11 --no-interaction --no-progress --no-plugins \
+    && apk add --no-cache curl \
+    && M_ATUAL=$(date +%Y-%m) \
+    && M_ANTERIOR=$(date -d @$(( $(date +%s) - 2764800 )) +%Y-%m) \
+    && ( curl -fsSL "https://download.db-ip.com/free/dbip-country-lite-${M_ATUAL}.mmdb.gz" -o country.mmdb.gz \
+         || curl -fsSL "https://download.db-ip.com/free/dbip-country-lite-${M_ANTERIOR}.mmdb.gz" -o country.mmdb.gz ) \
+    && gunzip country.mmdb.gz
+
 FROM php:8.2-apache
 
 # Extensões exigidas pelo painel (mysqli, pdo, curl, gd, exif)
@@ -20,6 +31,7 @@ RUN { \
       echo "error_reporting=E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING"; \
     } > /usr/local/etc/php/conf.d/painel.ini
 
+COPY --from=geo /geo /opt/geo
 COPY . /var/www/html/
 COPY docker-entrypoint.sh /usr/local/bin/painel-entrypoint
 RUN sed -i 's/\r$//' /usr/local/bin/painel-entrypoint \

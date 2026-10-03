@@ -26,6 +26,18 @@ if($settings_details['envato_buyer_name']=='' OR $settings_details['envato_purch
 
 $get_helper = get_api_data($_POST['data']);
 
+// Registro de dispositivos (dashboard: instalações, plataformas e países)
+require_once("includes/device_tracker.php");
+if(in_array($get_helper['helper_name'], array('app_details', 'device_register')) && !empty($get_helper['device_id'])){
+    devices_register($mysqli, $get_helper);
+}
+if($get_helper['helper_name']=="device_register"){
+    $set[$API_NAME][] = array('MSG' => 'Device registered', 'success' => '1');
+    header( 'Content-Type: application/json; charset=utf-8' );
+    echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    die();
+}
+
 // App details
 if($get_helper['helper_name']=="app_details"){
     
