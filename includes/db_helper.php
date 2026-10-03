@@ -8,20 +8,12 @@ session_start();
 
 header("Content-Type: text/html;charset=UTF-8");
 
-if($_SERVER['HTTP_HOST']=="localhost" or $_SERVER['HTTP_HOST']=="192.168.1.125"){
-
-	DEFINE ('DB_USER', 'db_uname');
-	DEFINE ('DB_PASSWORD', 'db_password');
-	DEFINE ('DB_HOST', 'db_hname');
-	DEFINE ('DB_NAME', 'db_name');
-    
-} else {
-
-	DEFINE ('DB_USER', 'db_uname');
-	DEFINE ('DB_PASSWORD', 'db_password');
-	DEFINE ('DB_HOST', 'db_hname');
-	DEFINE ('DB_NAME', 'db_name');
-}
+// Easypanel/Docker: credenciais vêm das variáveis de ambiente (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME).
+// Os valores de fallback continuam sendo substituídos pelo instalador original.
+DEFINE ('DB_USER', getenv('DB_USER') ?: 'db_uname');
+DEFINE ('DB_PASSWORD', getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : 'db_password');
+DEFINE ('DB_HOST', getenv('DB_HOST') ?: 'db_hname');
+DEFINE ('DB_NAME', getenv('DB_NAME') ?: 'db_name');
 
 $mysqli = @new mysqli(DB_HOST,DB_USER,DB_PASSWORD,DB_NAME);
 if ($mysqli->connect_errno) {

@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+APP=/var/www/html
+DATA=/data
+
+mkdir -p "$DATA"
+
+# Pastas de mídia: na primeira vez copia os arquivos padrão para o volume,
+# depois troca a pasta do app por um link para o volume.
+for dir in images uploads; do
+    if [ ! -d "$DATA/$dir" ]; then
+        cp -a "$APP/$dir" "$DATA/$dir"
+    fi
+    if [ ! -L "$APP/$dir" ]; then
+        rm -rf "$APP/$dir"
+        ln -s "$DATA/$dir" "$APP/$dir"
+    fi
+done
+
+# Licença: o instalador grava includes/.lic; o link faz ela ficar no volume.
+rm -f "$APP/includes/.lic"
+ln -s "$DATA/.lic" "$APP/includes/.lic"
+
+chown -R www-data:www-data "$DATA"
+
+exec docker-php-entrypoint "$@"
