@@ -38,6 +38,48 @@ if($get_helper['helper_name']=="device_register"){
     die();
 }
 
+// Ativação por código de revendedor
+// device_link:   { device_id, code, platform?, device_model?, ... } -> vincula o aparelho ao dono do código
+// device_status: { device_id } -> status: unlinked | pending | active | expired
+if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="device_status"){
+    require_once("includes/reseller_helper.php");
+    resellers_migrate($mysqli);
+
+    if($get_helper['helper_name']=="device_link"){
+        $link = devices_link($mysqli, $get_helper);
+        $device = $link['device'];
+        $success = $link['ok'] ? '1' : '0';
+        $msg = $link['msg'];
+    } else {
+        if(!empty($get_helper['device_id'])){ devices_register($mysqli, $get_helper); }
+        $device = !empty($get_helper['device_id'])
+            ? devices_find($mysqli, devices_clean($get_helper['device_id'], 191), devices_clean(isset($get_helper['application_id']) ? $get_helper['application_id'] : '', 191))
+            : null;
+        $success = '1';
+        $msg = '';
+    }
+
+    $status = devices_app_status($device);
+    $status_msgs = array(
+        'unlinked' => 'Digite o código do seu revendedor para continuar.',
+        'pending'  => 'Aguardando ativação pelo seu revendedor.',
+        'active'   => 'Dispositivo ativo.',
+        'expired'  => 'Sua ativação venceu. Fale com seu revendedor para renovar.',
+    );
+    $set[$API_NAME][] = array(
+        'success'      => $success,
+        'MSG'          => $msg != '' ? $msg : $status_msgs[$status],
+        'status'       => $status,
+        'is_active'    => $status == 'active' ? '1' : '0',
+        'expires_at'   => ($device && (int)$device['expires_at'] > 0) ? date('Y-m-d', $device['expires_at']) : '',
+        'days_left'    => ($device && $status == 'active' && (int)$device['expires_at'] > 0) ? (string)max(0, (int)ceil(($device['expires_at'] - time()) / 86400)) : '',
+        'reseller'     => $device ? devices_owner_name($mysqli, $device) : '',
+    );
+    header( 'Content-Type: application/json; charset=utf-8' );
+    echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    die();
+}
+
 // App details
 if($get_helper['helper_name']=="app_details"){
     

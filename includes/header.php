@@ -155,12 +155,27 @@ $mysqli->set_charset("utf8mb4");
                     </a>
                 </li>
 
-                <?php if(isset($_SESSION['admin_type']) && $_SESSION['admin_type'] != 0){ ?>
-                <li class="nsofts-sidebar-nav__item">
-                    <a href="manage_resellers.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_resellers.php" or $currentFile == "create_reseller.php") { ?>active<?php } ?>">
+                <?php if(isset($_SESSION['admin_type']) && $_SESSION['admin_type'] != 0){
+                    $rs_menu_open = in_array($currentFile, array("manage_resellers.php", "create_reseller.php", "manage_credit_orders.php"));
+                    $rs_pending_orders = 0;
+                    $rs_tbl = mysqli_query($mysqli, "SHOW TABLES LIKE 'tbl_credit_orders'");
+                    if($rs_tbl && mysqli_num_rows($rs_tbl) > 0){
+                        $rs_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_credit_orders WHERE status = 'pending'"));
+                        $rs_pending_orders = (int)$rs_row['num'];
+                    } ?>
+                <li class="nsofts-sidebar-nav__item nsofts-has-menu">
+                    <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($rs_menu_open) { ?>open active<?php } ?>">
                         <i class="ri-user-star-line nsofts-sidebar-nav__icon"></i>
-                        <span class="nsofts-sidebar-nav__text">Resellers</span>
+                        <span class="nsofts-sidebar-nav__text">Resellers<?php if($rs_pending_orders > 0){ ?> <span class="badge bg-warning text-dark ms-1"><?php echo $rs_pending_orders; ?></span><?php } ?></span>
                     </a>
+                    <ul class="nsofts-submenu <?php if ($rs_menu_open) { ?>show<?php } ?>">
+                        <li>
+                            <a href="manage_resellers.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_resellers.php" or $currentFile == "create_reseller.php") { ?>active<?php } ?>">Revendedores</a>
+                        </li>
+                        <li>
+                            <a href="manage_credit_orders.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_credit_orders.php") { ?>active<?php } ?>">Pedidos de Créditos<?php if($rs_pending_orders > 0){ ?> (<?php echo $rs_pending_orders; ?>)<?php } ?></a>
+                        </li>
+                    </ul>
                 </li>
                 <?php } ?>
 

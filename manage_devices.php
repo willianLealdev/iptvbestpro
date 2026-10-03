@@ -66,6 +66,16 @@
         exit;
     }
 
+    // Gerar novo código de ativação do admin
+    if(isset($_POST['regen_admin_code'])){
+        $new_code = activation_code_generate($mysqli);
+        if($new_code){ panel_config_set($mysqli, 'admin_code', $new_code); }
+        dev_flash((bool)$new_code, $new_code ? 'Novo código do admin: '.$new_code : 'Não foi possível gerar o código.');
+        header("Location:".$back_url);
+        exit;
+    }
+    $admin_code = panel_config_get($mysqli, 'admin_code', '');
+
     if(isset($_SESSION['dev_msg'])){
         $client_lang['dev_custom'] = $_SESSION['dev_msg'];
         unset($_SESSION['dev_msg']);
@@ -76,6 +86,7 @@
     $app_filter = isset($_GET['app']) ? trim($_GET['app']) : '';
     $pkg_filter = (isset($_GET['package']) && ($_GET['package'] == 'none' || isset($packages[$_GET['package']]))) ? $_GET['package'] : '';
     $status_filter = (isset($_GET['status']) && in_array($_GET['status'], array('active','expired','inactive'))) ? $_GET['status'] : '';
+    $owner_filter = isset($_GET['owner']) ? trim($_GET['owner']) : ''; // '' | admin | none | id do revendedor
 
     $sortable = array('app' => 'app_label', 'credits' => 'd.used_credits', 'activated' => 'd.activated_at', 'expires' => 'd.expires_at', 'seen' => 'd.first_seen');
     $sort = (isset($_GET['sort']) && isset($sortable[$_GET['sort']])) ? $_GET['sort'] : 'seen';
@@ -96,6 +107,9 @@
     if($status_filter == 'active'){ $where[] = "d.package <> '' AND (d.expires_at = 0 OR d.expires_at >= $now)"; }
     if($status_filter == 'expired'){ $where[] = "d.package <> '' AND d.expires_at > 0 AND d.expires_at < $now"; }
     if($status_filter == 'inactive'){ $where[] = "d.package = ''"; }
+    if($owner_filter == 'admin'){ $where[] = "d.owner = 'admin'"; }
+    else if($owner_filter == 'none'){ $where[] = "d.owner = ''"; }
+    else if(ctype_digit($owner_filter)){ $where[] = "d.owner = 'reseller' AND d.reseller_id = ".(int)$owner_filter; }
     $where_sql = count($where) ? 'WHERE '.implode(' AND ', $where) : '';
 
     $total_rows = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_devices d $where_sql"));
@@ -123,6 +137,10 @@
     $resellers = array();
     $res = mysqli_query($mysqli, "SELECT id, name, email, credits FROM tbl_resellers WHERE status = 1 ORDER BY name");
     while($r = mysqli_fetch_assoc($res)){ $resellers[] = $r; }
+
+    $all_resellers = array();
+    $res = mysqli_query($mysqli, "SELECT id, name FROM tbl_resellers ORDER BY name");
+    while($r = mysqli_fetch_assoc($res)){ $all_resellers[] = $r; }
 
     function dv_url($changes = array()){
         $params = array_merge($_GET, $changes);
@@ -180,6 +198,22 @@
             .dv-dots { border: 0; background: transparent; font-size: 20px; line-height: 1; color: #374151; padding: 2px 8px; }
         </style>
 
+        <div class="card dv-card mb-4">
+            <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <div class="text-muted">Seu código de ativação (admin)</div>
+                    <div style="font-family:'Courier New',monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#3b6cf6;">
+                        <?php echo htmlspecialchars($admin_code); ?>
+                        <i class="ri-file-copy-line dv-copy" style="font-size:20px;letter-spacing:0;" data-copy="<?php echo htmlspecialchars($admin_code); ?>" title="Copiar"></i>
+                    </div>
+                    <small class="text-muted">O cliente digita este código no app e o aparelho aparece aqui com o filtro <b>Meus (admin)</b>.</small>
+                </div>
+                <form method="post" onsubmit="return confirm('Gerar um novo código? O código atual deixa de funcionar para novos vínculos.');">
+                    <button type="submit" name="regen_admin_code" class="btn btn-outline-secondary"><i class="ri-refresh-line"></i> Gerar novo código</button>
+                </form>
+            </div>
+        </div>
+
         <div class="card dv-card">
             <div class="card-body p-4">
                 <div class="dv-toolbar">
@@ -199,19 +233,27 @@
                             <?php foreach($packages as $k => $p){ ?>
                                 <option value="<?php echo $k; ?>" <?php if($pkg_filter == $k){ echo 'selected'; } ?>><?php echo $p['label']; ?></option>
                             <?php } ?>
-                            <option value="none" <?php if($pkg_filter == 'none'){ echo 'selected'; } ?>>Sem pacote</option>
+                            <option value="none" <?php if($pkg_filter == 'none'){ echo 'selected'; } ?>>Aguardando ativação</option>
                         </select>
                         <select name="status" class="form-select dv-filter" onchange="this.form.submit()">
                             <option value="">Todos os status</option>
                             <option value="active" <?php if($status_filter == 'active'){ echo 'selected'; } ?>>Ativos</option>
                             <option value="expired" <?php if($status_filter == 'expired'){ echo 'selected'; } ?>>Expirados</option>
-                            <option value="inactive" <?php if($status_filter == 'inactive'){ echo 'selected'; } ?>>Não ativados</option>
+                            <option value="inactive" <?php if($status_filter == 'inactive'){ echo 'selected'; } ?>>Aguardando ativação</option>
                         </select>
                         <?php if($sort != 'seen' || $dir != 'DESC'){ ?>
                             <input type="hidden" name="sort" value="<?php echo htmlspecialchars($sort); ?>">
                             <input type="hidden" name="dir" value="<?php echo strtolower($dir); ?>">
                         <?php } ?>
-                        <?php if($keyword != '' || $app_filter != '' || $pkg_filter != '' || $status_filter != ''){ ?>
+                        <select name="owner" class="form-select dv-filter" onchange="this.form.submit()">
+                            <option value="">Todos os revendedores</option>
+                            <option value="admin" <?php if($owner_filter == 'admin'){ echo 'selected'; } ?>>Meus (admin)</option>
+                            <option value="none" <?php if($owner_filter == 'none'){ echo 'selected'; } ?>>Sem vínculo</option>
+                            <?php foreach($all_resellers as $r){ ?>
+                                <option value="<?php echo $r['id']; ?>" <?php if($owner_filter === (string)$r['id']){ echo 'selected'; } ?>><?php echo htmlspecialchars($r['name']); ?></option>
+                            <?php } ?>
+                        </select>
+                        <?php if($keyword != '' || $app_filter != '' || $pkg_filter != '' || $status_filter != '' || $owner_filter != ''){ ?>
                             <a href="manage_devices.php" class="btn btn-outline-secondary d-inline-flex align-items-center">Limpar</a>
                         <?php } ?>
                     </form>
@@ -227,7 +269,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Mac</th>
-                                    <th>Ativado por</th>
+                                    <th>Revendedor</th>
                                     <th>App<?php echo dv_sort('app', $sort, $dir); ?></th>
                                     <th>Créditos usados<?php echo dv_sort('credits', $sort, $dir); ?></th>
                                     <th>Pacote</th>
@@ -240,7 +282,7 @@
                             <?php if(mysqli_num_rows($result) > 0){ ?>
                                 <?php $i = 0; while($row = mysqli_fetch_assoc($result)){ $i++;
                                     $status = devices_activation_status($row);
-                                    $pkg = isset($packages[$row['package']]) ? $packages[$row['package']] : null; ?>
+                                    $pkg = devices_package_info($row['package']); $owner_label = devices_owner_label($mysqli, $row); ?>
                                     <tr>
                                         <td><?php echo $start + $i; ?></td>
                                         <td>
@@ -249,10 +291,12 @@
                                             <?php if($row['device_model'] != ''){ ?><br><small class="dv-muted"><?php echo htmlspecialchars($row['device_model']); ?></small><?php } ?>
                                         </td>
                                         <td>
-                                            <?php if($row['activated_by'] != ''){ ?>
-                                                <span><?php echo htmlspecialchars($row['activated_by']); ?></span>
-                                                <i class="ri-file-copy-line dv-copy" data-copy="<?php echo htmlspecialchars($row['activated_by']); ?>" title="Copiar"></i>
-                                            <?php } else { ?><span class="dv-muted">—</span><?php } ?>
+                                            <?php $who = $owner_label != '' ? $owner_label : $row['activated_by']; ?>
+                                            <?php if($who != ''){ ?>
+                                                <span><?php echo htmlspecialchars($who); ?></span>
+                                                <i class="ri-file-copy-line dv-copy" data-copy="<?php echo htmlspecialchars($who); ?>" title="Copiar"></i>
+                                                <?php if($row['activated_by'] != '' && $row['activated_by'] != $who){ ?><br><small class="dv-muted">ativado por <?php echo htmlspecialchars($row['activated_by']); ?></small><?php } ?>
+                                            <?php } else { ?><span class="dv-muted">Sem vínculo</span><?php } ?>
                                         </td>
                                         <td>
                                             <span class="dv-app">
@@ -265,7 +309,7 @@
                                             <?php if($pkg){ ?>
                                                 <span class="dv-badge <?php echo $pkg['class']; ?>"><?php echo $pkg['label']; ?></span>
                                             <?php } else { ?>
-                                                <span class="dv-badge pk-none">Sem pacote</span>
+                                                <span class="dv-badge pk-trial">Aguardando ativação</span>
                                             <?php } ?>
                                         </td>
                                         <td><?php echo (int)$row['activated_at'] > 0 ? date('d/m/Y', $row['activated_at']) : '<span class="dv-muted">—</span>'; ?></td>
@@ -333,7 +377,7 @@
             <label class="form-label">Pacote</label>
             <select name="package" class="form-select" required>
                 <?php foreach($packages as $k => $p){ ?>
-                    <option value="<?php echo $k; ?>" <?php if($k == 'year'){ echo 'selected'; } ?>>
+                    <option value="<?php echo $k; ?>" <?php if($k == '1y'){ echo 'selected'; } ?>>
                         <?php echo $p['label']; ?> — <?php echo $p['days'] > 0 ? $p['days'].' dias' : 'sem vencimento'; ?> · <?php echo $p['credits']; ?> crédito(s)
                     </option>
                 <?php } ?>

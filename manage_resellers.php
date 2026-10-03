@@ -36,7 +36,7 @@
     $where = array();
     if($keyword != ''){
         $kw = mysqli_real_escape_string($mysqli, $keyword);
-        $where[] = "(r.name LIKE '%$kw%' OR r.email LIKE '%$kw%' OR r.remark LIKE '%$kw%')";
+        $where[] = "(r.name LIKE '%$kw%' OR r.email LIKE '%$kw%' OR r.remark LIKE '%$kw%' OR r.code LIKE '%$kw%' OR r.phone LIKE '%$kw%')";
     }
     if($status_filter !== ''){ $where[] = "r.status = ".(int)$status_filter; }
     $where_sql = count($where) ? 'WHERE '.implode(' AND ', $where) : '';
@@ -50,7 +50,7 @@
     if($page > $last_page){ $page = $last_page; }
     $start = ($page - 1) * $limit;
 
-    $sql = "SELECT r.*, (SELECT COUNT(*) FROM tbl_devices d WHERE d.reseller_id = r.id) AS devices
+    $sql = "SELECT r.*, (SELECT COUNT(*) FROM tbl_devices d WHERE d.owner = 'reseller' AND d.reseller_id = r.id AND d.package <> '') AS devices
             FROM tbl_resellers r $where_sql
             ORDER BY ".$sortable[$sort]." $dir, r.id DESC
             LIMIT $start, $limit";
@@ -110,7 +110,7 @@
                     <form method="get" action="manage_resellers.php" class="d-flex flex-wrap gap-2">
                         <div class="rs-search">
                             <i class="ri-search-line"></i>
-                            <input type="text" name="keyword" class="form-control" placeholder="Buscar por nome, e-mail ou observação" value="<?php echo htmlspecialchars($keyword); ?>">
+                            <input type="text" name="keyword" class="form-control" placeholder="Buscar nome, e-mail, código ou WhatsApp" value="<?php echo htmlspecialchars($keyword); ?>">
                         </div>
                         <select name="status" class="form-select rs-filter" onchange="this.form.submit()">
                             <option value="" <?php if($status_filter === ''){ echo 'selected'; } ?>>Todos os status</option>
@@ -138,6 +138,7 @@
                                     <th>#</th>
                                     <th><?php echo rs_sort_link('name', 'Nome', $sort, $dir); ?></th>
                                     <th><?php echo rs_sort_link('email', 'E-mail', $sort, $dir); ?></th>
+                                    <th>Código</th>
                                     <th><?php echo rs_sort_link('credits', 'Créditos', $sort, $dir); ?></th>
                                     <th><?php echo rs_sort_link('devices', 'Dispositivos Ativados', $sort, $dir); ?></th>
                                     <th><?php echo rs_sort_link('created', 'Criado em', $sort, $dir); ?></th>
@@ -152,7 +153,8 @@
                                     <tr>
                                         <td><?php echo $start + $i; ?></td>
                                         <td class="fw-semibold"><?php echo htmlspecialchars($row['name']); ?></td>
-                                        <td><?php echo htmlspecialchars($row['email']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['email']); ?><?php if($row['phone'] != '){ ?><br><small class="text-muted"><?php echo htmlspecialchars($row['phone']); ?></small><?php } ?></td>
+                                        <td><span style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:2px;color:#3b6cf6;"><?php echo htmlspecialchars((string)$row['code']); ?></span></td>
                                         <td><span class="rs-credits"><?php echo thousandsNumberFormat($row['credits']); ?></span></td>
                                         <td><?php echo thousandsNumberFormat($row['devices']); ?></td>
                                         <td><?php echo date('d/m/Y H:i', $row['created_at']); ?></td>
@@ -171,7 +173,7 @@
                                     </tr>
                                 <?php } ?>
                             <?php } else { ?>
-                                <tr><td colspan="9"><div class="rs-empty"><i class="ri-inbox-line"></i>Nenhum revendedor encontrado</div></td></tr>
+                                <tr><td colspan="10"><div class="rs-empty"><i class="ri-inbox-line"></i>Nenhum revendedor encontrado</div></td></tr>
                             <?php } ?>
                             </tbody>
                         </table>

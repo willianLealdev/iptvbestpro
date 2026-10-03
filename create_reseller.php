@@ -31,6 +31,7 @@
         $password = isset($_POST['password']) ? (string)$_POST['password'] : '';
         $status = (isset($_POST['status']) && $_POST['status'] == '1') ? 1 : 0;
         $remark = mb_substr(trim(strip_tags($_POST['remark'])), 0, 2000);
+        $phone = mb_substr(preg_replace('/[^0-9+()\- ]/', '', isset($_POST['phone']) ? $_POST['phone'] : ''), 0, 30);
         $now = time();
 
         $invalid = ($name == '' || !filter_var($email, FILTER_VALIDATE_EMAIL)
@@ -53,8 +54,9 @@
             $_SESSION['class'] = 'error';
         } else if(!$is_edit){
             $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_resellers (name, email, password, credits, status, remark, created_at, updated_at) VALUES (?,?,?,0,?,?,?,?)");
-            mysqli_stmt_bind_param($stmt, 'sssisii', $name, $email, $hash, $status, $remark, $now, $now);
+            $code = activation_code_generate($mysqli);
+            $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_resellers (name, email, phone, password, code, credits, status, remark, created_at, updated_at) VALUES (?,?,?,?,?,0,?,?,?,?)");
+            mysqli_stmt_bind_param($stmt, 'sssssisii', $name, $email, $phone, $hash, $code, $status, $remark, $now, $now);
             mysqli_stmt_execute($stmt);
             $new_id = mysqli_insert_id($mysqli);
             mysqli_stmt_close($stmt);
@@ -70,11 +72,11 @@
         } else {
             if($password != ''){
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = mysqli_prepare($mysqli, "UPDATE tbl_resellers SET name=?, email=?, password=?, status=?, remark=?, updated_at=? WHERE id=?");
-                mysqli_stmt_bind_param($stmt, 'sssisii', $name, $email, $hash, $status, $remark, $now, $self_id);
+                $stmt = mysqli_prepare($mysqli, "UPDATE tbl_resellers SET name=?, email=?, phone=?, password=?, status=?, remark=?, updated_at=? WHERE id=?");
+                mysqli_stmt_bind_param($stmt, 'ssssisii', $name, $email, $phone, $hash, $status, $remark, $now, $self_id);
             } else {
-                $stmt = mysqli_prepare($mysqli, "UPDATE tbl_resellers SET name=?, email=?, status=?, remark=?, updated_at=? WHERE id=?");
-                mysqli_stmt_bind_param($stmt, 'ssisii', $name, $email, $status, $remark, $now, $self_id);
+                $stmt = mysqli_prepare($mysqli, "UPDATE tbl_resellers SET name=?, email=?, phone=?, status=?, remark=?, updated_at=? WHERE id=?");
+                mysqli_stmt_bind_param($stmt, 'sssisii', $name, $email, $phone, $status, $remark, $now, $self_id);
             }
             mysqli_stmt_execute($stmt);
             mysqli_stmt_close($stmt);
@@ -89,7 +91,9 @@
         $reseller['email'] = $email;
         $reseller['status'] = $status;
         $reseller['remark'] = $remark;
+        $reseller['phone'] = $phone;
     }
+    if(!isset($reseller['phone'])){ $reseller['phone'] = ''; }
 
     // Histórico de créditos (edição)
     $history = null;
@@ -126,6 +130,20 @@
                                     <input type="email" name="email" maxlength="191" value="<?php echo htmlspecialchars($reseller['email']); ?>" class="form-control" required>
                                 </div>
                             </div>
+                            <div class="mb-3 row">
+                                <label class="col-sm-3 col-form-label">WhatsApp</label>
+                                <div class="col-sm-9">
+                                    <input type="tel" name="phone" maxlength="30" value="<?php echo htmlspecialchars($reseller['phone']); ?>" class="form-control" placeholder="+55 11 99999-9999">
+                                </div>
+                            </div>
+                            <?php if($is_edit){ ?>
+                                <div class="mb-3 row">
+                                    <label class="col-sm-3 col-form-label">Código de ativação</label>
+                                    <div class="col-sm-9">
+                                        <div class="form-control-plaintext" style="font-family:'Courier New',monospace;font-size:22px;font-weight:700;letter-spacing:4px;color:#3b6cf6;"><?php echo htmlspecialchars((string)$reseller['code']); ?></div>
+                                    </div>
+                                </div>
+                            <?php } ?>
                             <div class="mb-3 row">
                                 <label class="col-sm-3 col-form-label">Senha</label>
                                 <div class="col-sm-9">
