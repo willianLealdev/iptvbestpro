@@ -103,6 +103,7 @@ function resellers_migrate($mysqli){
 
     // Campos de vínculo e ativação no dispositivo
     $columns = array(
+        'customer_name' => "VARCHAR(120) NOT NULL DEFAULT ''",    // nome do cliente (preenchido na ativação)
         'owner'         => "VARCHAR(10) NOT NULL DEFAULT ''",     // '' = sem dono | 'admin' | 'reseller'
         'reseller_id'   => "INT(11) NOT NULL DEFAULT 0",          // dono revendedor
         'linked_at'     => "INT(11) NOT NULL DEFAULT 0",
@@ -466,6 +467,18 @@ function devices_activate($mysqli, $device_pk, $package_key, $charge_reseller_id
     }
     if (!$ok) return array('ok' => false, 'msg' => 'Erro ao salvar a ativação.');
     return array('ok' => true, 'msg' => 'Ativado por '.$pkg['label'].' — vence em '.date('d/m/Y', $expires).'.');
+}
+
+// Grava o nome do cliente do aparelho ($reseller_id > 0 restringe aos aparelhos desse revendedor)
+function devices_set_customer($mysqli, $device_pk, $name, $reseller_id = 0){
+    $name = mb_substr(trim(strip_tags((string)$name)), 0, 120);
+    $pk = (int)$device_pk;
+    $extra = $reseller_id > 0 ? " AND owner = 'reseller' AND reseller_id = ".(int)$reseller_id : '';
+    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_devices SET customer_name = ? WHERE id = ?".$extra);
+    mysqli_stmt_bind_param($stmt, 'si', $name, $pk);
+    $ok = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    return $ok;
 }
 
 function devices_deactivate($mysqli, $device_pk, $reseller_id = 0){

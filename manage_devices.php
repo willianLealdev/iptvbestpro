@@ -26,8 +26,15 @@
     $back_url = "manage_devices.php".(!empty($_SERVER['QUERY_STRING']) ? '?'.$_SERVER['QUERY_STRING'] : '');
 
     // Ativar / renovar dispositivo existente
+    $customer_name = isset($_POST['customer_name']) ? trim($_POST['customer_name']) : '';
     if(isset($_POST['activate_submit'])){
+        if($customer_name == ''){
+            dev_flash(false, 'Informe o nome do cliente.');
+            header("Location:".$back_url);
+            exit;
+        }
         $r = devices_activate($mysqli, $_POST['device_pk'], $_POST['package'], $charge_reseller, $admin_label, $admin_id);
+        if($r['ok']){ devices_set_customer($mysqli, $_POST['device_pk'], $customer_name); }
         dev_flash($r['ok'], $r['msg']);
         header("Location:".$back_url);
         exit;
@@ -37,7 +44,9 @@
     if(isset($_POST['add_submit'])){
         $device_id = mb_substr(trim(strip_tags($_POST['device_id'])), 0, 191);
         $application_id = mb_substr(trim(strip_tags($_POST['application_id'])), 0, 191);
-        if($device_id == ''){
+        if($customer_name == ''){
+            dev_flash(false, 'Informe o nome do cliente.');
+        } else if($device_id == ''){
             dev_flash(false, 'Informe o MAC / Device ID.');
         } else {
             $now = time();
@@ -55,6 +64,7 @@
 
             $r = $row ? devices_activate($mysqli, $row['id'], $_POST['package'], $charge_reseller, $admin_label, $admin_id)
                       : array('ok' => false, 'msg' => 'Não foi possível criar o dispositivo.');
+            if($r['ok']){ devices_set_customer($mysqli, $row['id'], $customer_name); }
             dev_flash($r['ok'], $r['msg']);
         }
         header("Location:".$back_url);
@@ -99,7 +109,7 @@
     $where = array();
     if($keyword != ''){
         $kw = mysqli_real_escape_string($mysqli, $keyword);
-        $where[] = "(d.device_id LIKE '%$kw%' OR d.activated_by LIKE '%$kw%' OR d.device_model LIKE '%$kw%' OR d.ip_address LIKE '%$kw%')";
+        $where[] = "(d.customer_name LIKE '%$kw%' OR d.device_id LIKE '%$kw%' OR d.activated_by LIKE '%$kw%' OR d.device_model LIKE '%$kw%' OR d.ip_address LIKE '%$kw%')";
     }
     if($app_filter != ''){
         $af = mysqli_real_escape_string($mysqli, $app_filter);
@@ -225,7 +235,7 @@
                     <form method="get" action="manage_devices.php" class="d-flex flex-wrap gap-2">
                         <div class="dv-search">
                             <i class="ri-search-line"></i>
-                            <input type="text" name="keyword" class="form-control" placeholder="Buscar MAC, e-mail, modelo ou IP" value="<?php echo htmlspecialchars($keyword); ?>">
+                            <input type="text" name="keyword" class="form-control" placeholder="Buscar cliente, MAC, e-mail ou IP" value="<?php echo htmlspecialchars($keyword); ?>">
                         </div>
                         <select name="app" class="form-select dv-filter" onchange="this.form.submit()">
                             <option value="">Todos os apps</option>
@@ -273,6 +283,7 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
+                                    <th>Cliente</th>
                                     <th>Mac</th>
                                     <th>Revendedor</th>
                                     <th>App<?php echo dv_sort('app', $sort, $dir); ?></th>
@@ -290,6 +301,7 @@
                                     $pkg = devices_package_info($row['package']); $owner_label = devices_owner_label($mysqli, $row); ?>
                                     <tr>
                                         <td><?php echo $start + $i; ?></td>
+                                        <td class="fw-semibold text-start"><?php echo $row['customer_name'] != '' ? htmlspecialchars($row['customer_name']) : '<span class="dv-muted fw-normal">—</span>'; ?></td>
                                         <td>
                                             <span><?php echo htmlspecialchars($row['device_id']); ?></span>
                                             <i class="ri-file-copy-line dv-copy" data-copy="<?php echo htmlspecialchars($row['device_id']); ?>" title="Copiar"></i>
@@ -332,7 +344,7 @@
                                             <div class="dropdown">
                                                 <button class="dv-dots" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">···</button>
                                                 <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li><a class="dropdown-item btn_activate" href="javascript:void(0)" data-pk="<?php echo $row['id']; ?>" data-mac="<?php echo htmlspecialchars($row['device_id']); ?>">
+                                                    <li><a class="dropdown-item btn_activate" href="javascript:void(0)" data-pk="<?php echo $row['id']; ?>" data-mac="<?php echo htmlspecialchars($row['device_id']); ?>" data-customer="<?php echo htmlspecialchars($row['customer_name']); ?>">
                                                         <i class="ri-flashlight-line me-1"></i><?php echo $status == 'inactive' ? 'Ativar' : 'Renovar / trocar pacote'; ?></a></li>
                                                     <li><a class="dropdown-item" href="device_playlist.php?device=<?php echo $row['id']; ?>"><i class="ri-play-list-line me-1"></i>Playlist</a></li>
                                                     <?php if($status != 'inactive'){ ?>
@@ -351,7 +363,7 @@
                                     </tr>
                                 <?php } ?>
                             <?php } else { ?>
-                                <tr><td colspan="9"><div class="dv-empty"><i class="ri-inbox-line"></i>Nenhum dispositivo encontrado</div></td></tr>
+                                <tr><td colspan="10"><div class="dv-empty"><i class="ri-inbox-line"></i>Nenhum dispositivo encontrado</div></td></tr>
                             <?php } ?>
                             </tbody>
                         </table>
@@ -412,6 +424,10 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" name="device_pk" id="activate_pk">
+                <div class="mb-3">
+                    <label class="form-label">Cliente</label>
+                    <input type="text" name="customer_name" id="activate_customer" class="form-control" maxlength="120" required placeholder="Nome do cliente">
+                </div>
                 <p class="text-muted small">Se o dispositivo ainda estiver válido, os dias do novo pacote são somados ao vencimento atual.</p>
                 <?php dv_package_reseller_fields($packages, $resellers, $is_super_admin); ?>
             </div>
@@ -432,6 +448,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Cliente</label>
+                    <input type="text" name="customer_name" class="form-control" maxlength="120" required placeholder="Nome do cliente">
+                </div>
                 <div class="mb-3">
                     <label class="form-label">MAC / Device ID</label>
                     <input type="text" name="device_id" class="form-control" maxlength="191" required placeholder="Ex.: D9:30:89:BB:51:D6">
@@ -469,6 +489,7 @@ document.addEventListener('click', function (e) {
     if (act) {
         document.getElementById('activate_pk').value = act.getAttribute('data-pk');
         document.getElementById('activate_mac').textContent = act.getAttribute('data-mac');
+        document.getElementById('activate_customer').value = act.getAttribute('data-customer') || '';
         bootstrap.Modal.getOrCreateInstance(document.getElementById('activateModal')).show();
     }
 });

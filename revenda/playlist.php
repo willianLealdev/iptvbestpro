@@ -36,6 +36,10 @@ playlist_form_styles(); ?>
 
 <div class="rv-card p-4 mb-4 d-flex flex-wrap gap-4 align-items-center">
     <div>
+        <div class="rv-muted small">Cliente</div>
+        <div class="fw-bold fs-5"><?php echo $device['customer_name'] != '' ? rv_e($device['customer_name']) : '—'; ?></div>
+    </div>
+    <div>
         <div class="rv-muted small">Dispositivo</div>
         <div class="fw-bold fs-5"><?php echo rv_e($device['device_id']); ?></div>
         <?php if ($device['device_model'] != '') { ?><div class="rv-muted small"><?php echo rv_e($device['device_model']); ?></div><?php } ?>

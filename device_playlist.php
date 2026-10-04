@@ -66,6 +66,10 @@
         <div class="card mb-4" style="border:0;border-radius:14px;box-shadow:0 4px 14px rgba(15,23,42,.06);">
             <div class="card-body p-4 d-flex flex-wrap gap-4 align-items-center">
                 <div>
+                    <div class="text-muted small">Cliente</div>
+                    <div class="fw-bold fs-5"><?php echo $device['customer_name'] != '' ? htmlspecialchars($device['customer_name']) : '—'; ?></div>
+                </div>
+                <div>
                     <div class="text-muted small">Dispositivo</div>
                     <div class="fw-bold fs-5"><?php echo htmlspecialchars($device['device_id']); ?></div>
                     <?php if($device['device_model'] != ''){ ?><div class="text-muted small"><?php echo htmlspecialchars($device['device_model']); ?></div><?php } ?>
