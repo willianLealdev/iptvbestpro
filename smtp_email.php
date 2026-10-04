@@ -50,8 +50,12 @@ else{
 
 function send_email($recipient_email,$recipient_name,$subject,$message, $is_test=false)
 {
+    global $mysqli;
+    $GLOBALS['mail_last_error'] = '';
     if(MAIL_PROVIDER == 'resend'){
         $r = resend_send(RESEND_API_KEY, SMTP_EMAIL, RESEND_FROM_NAME, $recipient_email, $recipient_name, $subject, $message);
+        $GLOBALS['mail_last_error'] = $r['error'];
+        mail_log_result($mysqli, 'Resend', $recipient_email, $subject, $r['ok'], $r['error'], $r['id']);
         if($is_test){
             $_SESSION['msg'] = $r['ok'] ? "mail_sent_success" : "mail_sent_error";
             if(!$r['ok']){
@@ -86,21 +90,18 @@ function send_email($recipient_email,$recipient_name,$subject,$message, $is_test
     $mail->Body    = $message;
     //$mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
 
+    $sent = $mail->send();
+    $GLOBALS['mail_last_error'] = $sent ? '' : (string)$mail->ErrorInfo;
+    mail_log_result($mysqli, 'SMTP', $recipient_email, $subject, $sent, $GLOBALS['mail_last_error']);
     if($is_test){
-        if($mail->send()){
+        if($sent){
             $_SESSION['msg'] = "mail_sent_success";
         }
         else{
             $_SESSION['msg'] = "mail_sent_error";
             $_SESSION['class'] = "error";
+            $_SESSION['mail_error_detail'] = $GLOBALS['mail_last_error'];
         }
     }
-    else{
-        if($mail->send()){
-            return true;
-        }
-        else{
-            return false;
-        }
-    }
+    return $sent;
 }

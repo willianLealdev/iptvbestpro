@@ -363,6 +363,31 @@
                                         </div>
                                         <button type="submit" name="btn_send" class="btn btn-primary" style="min-width: 120px;">Send</button>
                                     </div>
+                                    <?php $mail_log = mail_log_list($mysqli); ?>
+                                    <div class="card border-0" style="background:#f7f9fe;">
+                                        <div class="card-body">
+                                            <h6 class="mb-1">Últimos envios do sistema</h6>
+                                            <p class="small text-muted mb-3">Todo e-mail enviado (teste, confirmação de cadastro, nova senha, alertas) aparece aqui com a resposta do provedor. "Aceito" significa que o provedor recebeu; a entrega final aparece no painel da Resend (Emails).</p>
+                                            <?php if ($mail_log) { ?>
+                                                <div class="table-responsive"><table class="table table-sm mb-0">
+                                                    <thead><tr><th>Data</th><th>Para</th><th>Assunto</th><th>Via</th><th>Resultado</th></tr></thead>
+                                                    <tbody>
+                                                    <?php foreach ($mail_log as $l) { ?>
+                                                        <tr>
+                                                            <td class="text-nowrap small"><?php echo date('d/m/Y H:i', (int)$l['t']); ?></td>
+                                                            <td class="small" translate="no"><?php echo htmlspecialchars($l['to']); ?></td>
+                                                            <td class="small" translate="no"><?php echo htmlspecialchars($l['s']); ?></td>
+                                                            <td class="small"><?php echo htmlspecialchars($l['p']); ?></td>
+                                                            <td class="small"><?php if ($l['ok']) { ?><span class="badge bg-success">Aceito</span><?php } else { ?><span class="badge bg-danger">Falhou</span> <span class="text-danger" translate="no"><?php echo htmlspecialchars($l['e']); ?></span><?php } ?></td>
+                                                        </tr>
+                                                    <?php } ?>
+                                                    </tbody>
+                                                </table></div>
+                                            <?php } else { ?>
+                                                <p class="small text-muted mb-0">Nenhum envio registrado ainda.</p>
+                                            <?php } ?>
+                                        </div>
+                                    </div>
                                 </form>
                             </div>
                             
@@ -418,8 +443,16 @@ $("#check_smtp_form").on("submit", function(e) {
                 dataType: 'json',
                 data: {'action': 'check_smtp','email': email},
                 success: function(res) {
-                    console.log(res);
-                    location.reload();
+                    swal({
+                        title: res.ok ? 'Enviado' : 'Falhou',
+                        text: (res.msg || '') + (res.from ? '\n\nRemetente: ' + res.from + ' (' + res.provider + ')' : ''),
+                        type: res.ok ? 'success' : 'error',
+                        confirmButtonClass: 'btn btn-primary m-2',
+                        buttonsStyling: false
+                    }).then(function () { location.reload(); });
+                },
+                error: function (xhr) {
+                    swal({ title: 'Falhou', text: 'O servidor recusou o pedido (HTTP ' + xhr.status + '). Recarregue a página e tente de novo.', type: 'error', confirmButtonClass: 'btn btn-primary m-2', buttonsStyling: false });
                 }
             });
         } else {

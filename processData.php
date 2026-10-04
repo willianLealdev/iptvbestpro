@@ -222,9 +222,15 @@
     		</table>
     		</div>';
     
-    		send_email($to,$recipient_name,$subject,$message, true);
-    		$_SESSION['msg'] = "22";
+    		$ok = send_email($to,$recipient_name,$subject,$message, false);
+    		unset($_SESSION['msg'], $_SESSION['class'], $_SESSION['mail_error_detail']);
     		$response['status'] = 1;
+    		$response['ok'] = $ok ? 1 : 0;
+    		$response['provider'] = MAIL_PROVIDER == 'resend' ? 'Resend' : 'SMTP';
+    		$response['from'] = SMTP_EMAIL;
+    		$response['msg'] = $ok
+    			? 'O provedor aceitou o e-mail para '.$to.'. Se não chegar em alguns minutos, confira o spam e o painel do provedor.'
+    			: 'Não enviado: '.(isset($GLOBALS['mail_last_error']) && $GLOBALS['mail_last_error'] != '' ? $GLOBALS['mail_last_error'] : 'erro desconhecido');
 			echo json_encode($response);
     		break;
     	}

@@ -23,6 +23,27 @@ function resend_migrate($mysqli){
     }
 }
 
+// Guarda os últimos 15 envios (data, destino, provedor, resultado, erro) em tbl_panel_config
+function mail_log_result($mysqli, $provider, $to, $subject, $ok, $error = '', $id = ''){
+    if (!$mysqli) return;
+    $res = @mysqli_query($mysqli, "SELECT value FROM tbl_panel_config WHERE name = 'mail_log'");
+    $row = $res ? mysqli_fetch_assoc($res) : null;
+    $log = $row ? json_decode($row['value'], true) : array();
+    if (!is_array($log)) $log = array();
+    array_unshift($log, array('t' => time(), 'p' => $provider, 'to' => mb_substr((string)$to, 0, 120), 's' => mb_substr((string)$subject, 0, 120),
+                              'ok' => $ok ? 1 : 0, 'e' => mb_substr((string)$error, 0, 300), 'id' => mb_substr((string)$id, 0, 80)));
+    $json = json_encode(array_slice($log, 0, 15), JSON_UNESCAPED_UNICODE);
+    $stmt = @mysqli_prepare($mysqli, "INSERT INTO tbl_panel_config (name, value) VALUES ('mail_log', ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
+    if ($stmt) { mysqli_stmt_bind_param($stmt, 's', $json); @mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt); }
+}
+
+function mail_log_list($mysqli){
+    $res = @mysqli_query($mysqli, "SELECT value FROM tbl_panel_config WHERE name = 'mail_log'");
+    $row = $res ? mysqli_fetch_assoc($res) : null;
+    $log = $row ? json_decode($row['value'], true) : array();
+    return is_array($log) ? $log : array();
+}
+
 // Mostra só o final da chave (nunca a chave inteira na tela)
 function resend_mask_key($key){
     $key = (string)$key;
