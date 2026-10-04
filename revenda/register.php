@@ -57,42 +57,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-rv_head('Cadastro'); ?>
-<div class="rv-auth">
-    <div class="rv-card p-4 p-sm-5" style="max-width:480px;">
-        <?php brand_auth_header('../', 'Seja um Revendedor'); ?>
-        <p class="rv-muted text-center mb-4">Crie sua conta e receba seu código exclusivo de ativação.</p>
-        <?php if ($errors) { ?>
-            <div class="alert alert-danger"><?php foreach ($errors as $e) { echo '<div>'.rv_e($e).'</div>'; } ?></div>
-        <?php } ?>
+require_once(__DIR__."/../includes/auth_layout.php");
+auth_start(array('prefix' => '../', 'title' => 'Cadastro', 'badge' => 'Seja um Revendedor', 'icon' => 'ri-store-2-line', 'wide' => true, 'subtitle' => 'Crie sua conta e receba seu código exclusivo de ativação.')); ?>
+        <?php auth_alert('err', $errors); ?>
         <form method="post">
             <?php echo rv_csrf_field(); ?>
-            <div class="mb-3">
-                <label class="form-label">Nome / Empresa</label>
-                <input type="text" name="name" class="form-control" maxlength="120" value="<?php echo rv_e($form['name']); ?>" required>
+            <?php auth_input(array('name' => 'name', 'label' => 'Nome / Empresa', 'icon' => 'ri-user-3-line', 'value' => $form['name'], 'attrs' => 'maxlength="120" autocomplete="name"')); ?>
+            <?php auth_input(array('name' => 'email', 'type' => 'email', 'label' => 'E-mail', 'icon' => 'ri-mail-line', 'value' => $form['email'], 'placeholder' => 'seu@email.com', 'attrs' => 'maxlength="191" autocomplete="email"')); ?>
+            <?php auth_input(array('name' => 'phone', 'type' => 'tel', 'label' => 'WhatsApp', 'icon' => 'ri-whatsapp-line', 'value' => $form['phone'], 'placeholder' => '+55 11 99999-9999', 'required' => false, 'attrs' => 'maxlength="30" autocomplete="tel"')); ?>
+            <div class="au-row">
+                <?php auth_input(array('name' => 'password', 'type' => 'password', 'label' => 'Senha', 'icon' => 'ri-lock-2-line', 'attrs' => 'minlength="6" autocomplete="new-password"')); ?>
+                <?php auth_input(array('name' => 'password_confirm', 'type' => 'password', 'label' => 'Confirmar senha', 'icon' => 'ri-lock-2-line', 'attrs' => 'minlength="6" autocomplete="new-password"')); ?>
             </div>
-            <div class="mb-3">
-                <label class="form-label">E-mail</label>
-                <input type="email" name="email" class="form-control" maxlength="191" value="<?php echo rv_e($form['email']); ?>" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">WhatsApp</label>
-                <input type="tel" name="phone" class="form-control" maxlength="30" value="<?php echo rv_e($form['phone']); ?>" placeholder="+55 11 99999-9999">
-            </div>
-            <div class="row g-3 mb-4">
-                <div class="col-sm-6">
-                    <label class="form-label">Senha</label>
-                    <input type="password" name="password" class="form-control" minlength="6" required autocomplete="new-password">
-                </div>
-                <div class="col-sm-6">
-                    <label class="form-label">Confirmar senha</label>
-                    <input type="password" name="password_confirm" class="form-control" minlength="6" required autocomplete="new-password">
-                </div>
-            </div>
-            <button type="submit" class="btn rv-btn-green btn-lg w-100">Criar conta</button>
+            <button type="submit" class="au-btn"><i class="ri-user-add-line"></i> Criar conta</button>
         </form>
-        <p class="text-center mt-4 mb-0 rv-muted">Já tem conta? <a href="index.php">Entrar</a></p>
-    </div>
-</div>
-</body>
-</html>
+        <p class="au-alt">Já tem conta? <a href="index.php">Entrar</a></p>
+<?php auth_end(); ?>

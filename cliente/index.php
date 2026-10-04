@@ -35,27 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-cl_head('Entrar'); ?>
-<div class="cl-auth">
-    <div class="cl-card p-4 p-sm-5">
-        <?php brand_auth_header('../', 'Área do Cliente'); ?>
-        <?php $f = cl_take_flash(); if ($f) { ?><div class="alert alert-<?php echo $f['type'] == 'success' ? 'success' : 'danger'; ?>"><?php echo cl_e($f['msg']); ?></div><?php } ?>
-        <?php if ($error) { ?><div class="alert alert-danger"><?php echo cl_e($error); ?></div><?php } ?>
+require_once(__DIR__."/../includes/auth_layout.php");
+$f = cl_take_flash();
+auth_start(array('prefix' => '../', 'title' => 'Entrar', 'badge' => 'Área do Cliente', 'icon' => 'ri-user-3-line', 'subtitle' => 'Entre para ver suas assinaturas, códigos e playlists.')); ?>
+        <?php if ($f) auth_alert($f['type'] == 'success' ? 'ok' : 'err', $f['msg']); ?>
+        <?php auth_alert('err', $error); ?>
         <form method="post" autocomplete="on">
             <?php echo cl_csrf_field(); ?>
-            <div class="mb-3">
-                <label class="form-label">E-mail</label>
-                <input type="email" name="email" class="form-control form-control-lg" value="<?php echo cl_e($email); ?>" required autofocus>
-            </div>
-            <div class="mb-4">
-                <label class="form-label">Senha</label>
-                <input type="password" name="password" class="form-control form-control-lg" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg w-100">Entrar</button>
+            <?php auth_input(array('name' => 'email', 'type' => 'email', 'label' => 'E-mail', 'icon' => 'ri-mail-line', 'value' => $email, 'placeholder' => 'seu@email.com', 'attrs' => 'autofocus autocomplete="email"')); ?>
+            <?php auth_input(array('name' => 'password', 'type' => 'password', 'label' => 'Senha', 'icon' => 'ri-lock-2-line', 'placeholder' => '••••••••', 'attrs' => 'autocomplete="current-password"')); ?>
+            <button type="submit" class="au-btn"><i class="ri-login-box-line"></i> Entrar</button>
         </form>
-        <p class="text-center mt-4 mb-0 cl-muted">Ainda não tem conta? <a href="register.php">Cadastre-se</a></p>
-    </div>
-</div>
-<script src="../assets/vendors/bootstrap/bootstrap.min.js"></script>
-</body>
-</html>
+        <p class="au-alt">Ainda não tem conta? <a href="register.php">Cadastre-se</a></p>
+<?php auth_end(); ?>

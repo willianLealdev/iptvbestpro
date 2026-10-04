@@ -35,29 +35,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-rv_head('Entrar'); ?>
-<div class="rv-auth">
-    <div class="rv-card p-4 p-sm-5">
-        <?php brand_auth_header('../', 'Área do Revendedor'); ?>
-        <?php $f = rv_take_flash(); if ($f) { ?><div class="alert alert-<?php echo $f['type'] == 'success' ? 'success' : 'danger'; ?>"><?php echo rv_e($f['msg']); ?></div><?php } ?>
-        <?php if ($error) { ?><div class="alert alert-danger"><?php echo rv_e($error); ?></div><?php } ?>
+require_once(__DIR__."/../includes/auth_layout.php");
+$f = rv_take_flash();
+auth_start(array('prefix' => '../', 'title' => 'Entrar', 'badge' => 'Área do Revendedor', 'icon' => 'ri-store-2-line', 'subtitle' => 'Entre para gerenciar seus aparelhos, créditos e a sua marca.')); ?>
+        <?php if ($f) auth_alert($f['type'] == 'success' ? 'ok' : 'err', $f['msg']); ?>
+        <?php auth_alert('err', $error); ?>
         <form method="post" autocomplete="on">
             <?php echo rv_csrf_field(); ?>
-            <div class="mb-3">
-                <label class="form-label">E-mail</label>
-                <input type="email" name="email" class="form-control form-control-lg" value="<?php echo rv_e($email); ?>" required autofocus>
-            </div>
-            <div class="mb-4">
-                <label class="form-label">Senha</label>
-                <input type="password" name="password" class="form-control form-control-lg" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg w-100">Entrar</button>
+            <?php auth_input(array('name' => 'email', 'type' => 'email', 'label' => 'E-mail', 'icon' => 'ri-mail-line', 'value' => $email, 'placeholder' => 'seu@email.com', 'attrs' => 'autofocus autocomplete="email"')); ?>
+            <?php auth_input(array('name' => 'password', 'type' => 'password', 'label' => 'Senha', 'icon' => 'ri-lock-2-line', 'placeholder' => '••••••••', 'attrs' => 'autocomplete="current-password"')); ?>
+            <button type="submit" class="au-btn"><i class="ri-login-box-line"></i> Entrar</button>
         </form>
         <?php if (rv_signup_enabled($mysqli)) { ?>
-            <p class="text-center mt-4 mb-0 rv-muted">Ainda não é revendedor? <a href="register.php">Cadastre-se</a></p>
+            <p class="au-alt">Ainda não é revendedor? <a href="register.php">Cadastre-se</a></p>
         <?php } ?>
-    </div>
-</div>
-<script src="../assets/vendors/bootstrap/bootstrap.min.js"></script>
-</body>
-</html>
+<?php auth_end(); ?>

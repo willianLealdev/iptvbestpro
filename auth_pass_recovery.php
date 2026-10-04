@@ -92,129 +92,20 @@
 ?>
 
  
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-
-	<!-- Seo Meta -->
-    <meta name="description" content="Admin panel | Dashboard">
-    <meta name="keywords" content="css3, html5">
-    
-    <!-- Website Title -->
-    <title>Login | <?php echo APP_NAME;?></title>
-    
-    <!-- Favicon --> 
-    <link href="<?php echo brand_logo_url(); ?>" rel="icon" sizes="32x32">
-    <link href="<?php echo brand_logo_url(); ?>" rel="icon" sizes="192x192">
-
-    <!-- IOS Touch Icons -->
-    <link rel="apple-touch-icon" href="<?php echo brand_logo_url(); ?>">
-    <link rel="apple-touch-icon" sizes="152x152" href="<?php echo brand_logo_url(); ?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo brand_logo_url(); ?>">
-    <link rel="apple-touch-icon" sizes="167x167" href="<?php echo brand_logo_url(); ?>">
-
-    <!-- Google font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- Vendor styles -->
-    <link rel="stylesheet" href="assets/vendors/bootstrap/bootstrap.min.css" type="text/css">
-    <link rel="stylesheet" href="assets/vendors/perfect-scrollbar/perfect-scrollbar.min.css" type="text/css">
-    <link rel="stylesheet" href="assets/vendors/remixicon/remixicon.min.css" type="text/css">
-    <link rel="stylesheet" href="assets/vendors/quill/quill.min.css" type="text/css">
-    <link rel="stylesheet" href="assets/vendors/select2/select2.min.css" type="text/css">
-
-    <!-- Main style -->
-    <link rel="stylesheet" href="assets/css/styles.css" type="text/css">
-    
-    <!--[if lt IE 9]>
-	    <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-        <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
-    
-</head>
-<body>
-<?php echo i18n_switcher_fixed(); ?>
-    
-    <!-- Loader -->
-    <div id="nsofts_loader">
-        <div class="text-center">
-            <i class="ri-3x ri-donut-chart-line nsofts-loader-icon"></i>
-            <span class="d-block">Loading</span>
-        </div>
-    </div>
-
-
-    <!-- Start: 404 -->
-    <main class="d-flex justify-content-center align-items-center py-5 min-vh-100">
-        <div class="container">
-            <div class="col-xl-4 col-lg-5 col-md-7 col-sm-9 mx-auto">
-                <div class="nsofts-auth position-relative">
-                    <img src="assets/images/pattern-1.svg" class="nsofts-auth__pattern-1 position-absolute" alt="">
-                    <img src="assets/images/pattern-2.svg" class="nsofts-auth__pattern-2 position-absolute" alt="">
-                    <div class="card position-relative">
-                        <div class="card-body px-4 py-4">
-                            
-                            <form action="" method="POST" enctype="multipart/form-data">
-                                <?php brand_auth_header('', 'Painel administrativo'); ?>
-                                <div class="mb-4">
-                                    <h5>Forgot password!</h5>
-                                    <p>Enter your register email to get password on your mail id.</p>
-                                </div>
-
-                                <div class="mb-3">
-                                    <div class="nsofts-input-icon nsofts-input-icon--left">
-                                        <label for="email" class="nsofts-input-icon__left">
-                                            <i class="ri-at-line"></i>
-                                        </label>
-                                        <input type="text" name="forgot_email" id="forgot_email"  class="form-control" autocomplete="off" placeholder="Enter your email " required>
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <button  type="submit" name="submit" class="btn btn-primary btn-lg w-100">Send mail</button>
-                                </div>
-                                <p class="text-center">Go to login page? <a href="gerencia.php" class="text-decoration-none">Login</a></p>
-                                
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-    <!-- End: 404 -->
-    
-
-    <!-- Vendor scripts -->
-    <script src="assets/js/jquery.min.js"></script>
-    <script src="assets/vendors/bootstrap/bootstrap.min.js"></script>
-    <script src="assets/vendors/notify/notify.min.js"></script>
-    <script src="assets/vendors/perfect-scrollbar/perfect-scrollbar.min.js"></script>
-    <script src="assets/vendors/quill/quill.min.js"></script>
-    <script src="assets/vendors/select2/select2.min.js"></script>
-
-    <!-- Main script -->
-    <script src="assets/js/main.js"></script>
-    
-    <?php if (isset($_SESSION['msg'])) { ?>
-        <script type="text/javascript">
-            $('.notifyjs-corner').empty();
-            $.notify(
-            '<?php echo str_replace("'", "\'", __($client_lang[$_SESSION["msg"]])); ?>', {
-                position: "top right",
-                className: '<?= $_SESSION["class"] ?>'
-            }
-            );
-        </script>
-        <?php
-        unset($_SESSION['msg']);
-        unset($_SESSION['class']);
-    }?>
-
-</body>
-</html>
+<?php
+require_once("includes/auth_layout.php");
+$au_msg = '';
+$au_type = 'err';
+if (isset($_SESSION['msg'])) {
+    $au_msg = isset($client_lang[$_SESSION['msg']]) ? $client_lang[$_SESSION['msg']] : '';
+    $au_type = (isset($_SESSION['class']) && $_SESSION['class'] == 'success') ? 'ok' : 'err';
+    unset($_SESSION['msg'], $_SESSION['class']);
+}
+auth_start(array('prefix' => '', 'title' => 'Recuperar senha', 'badge' => 'Painel administrativo', 'icon' => 'ri-shield-user-line', 'subtitle' => 'Informe o e-mail cadastrado para receber uma nova senha.')); ?>
+        <?php auth_alert($au_type, $au_msg); ?>
+        <form action="" method="POST">
+            <?php auth_input(array('name' => 'forgot_email', 'id' => 'forgot_email', 'type' => 'email', 'label' => 'E-mail', 'icon' => 'ri-mail-line', 'placeholder' => 'seu@email.com', 'attrs' => 'autofocus autocomplete="email"')); ?>
+            <button type="submit" name="submit" class="au-btn"><i class="ri-mail-send-line"></i> Enviar nova senha</button>
+        </form>
+        <p class="au-alt"><a href="gerencia.php"><i class="ri-arrow-left-line"></i> Voltar para o login</a></p>
+<?php auth_end(); ?>
