@@ -101,34 +101,58 @@
                 <?php if(!empty($_SESSION['dns_alert_saved'])){ unset($_SESSION['dns_alert_saved']); ?>
                     <div class="alert alert-success py-2">Alertas de DNS salvos.</div>
                 <?php } ?>
-                <form method="post" class="p-3 rounded mb-4" style="background:#f7f9fe;border:1px solid #e8edf7;">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                        <div class="fw-semibold"><i class="ri-mail-send-line"></i> Alerta por e-mail quando um servidor cair</div>
-                        <div class="form-check form-switch m-0">
+                <form method="post" class="dns-alert mb-4">
+                    <style>
+                        .dns-alert { background: #f7f9fe; border: 1px solid #e8edf7; border-radius: 14px; padding: 20px 22px; }
+                        .dns-alert__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+                        .dns-alert__title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+                        .dns-alert__title i { font-size: 18px; color: #3b6cf6; }
+                        .dns-alert__desc { color: #6b7a99; font-size: 13px; margin: 4px 0 0; }
+                        .dns-alert .form-label { font-size: 13px; font-weight: 600; color: #3b4560; margin-bottom: 6px; }
+                        .dns-alert .form-control, .dns-alert .form-select, .dns-alert__box { height: 44px; border-radius: 10px; }
+                        .dns-alert__box { display: flex; align-items: center; padding: 0 12px; background: #fff; border: 1px solid #dee2e6; }
+                        .dns-alert__box .form-check { margin: 0; padding-left: 0; display: flex; align-items: center; gap: 10px; }
+                        .dns-alert__box .form-check-input { float: none; margin-left: 0 !important; }
+                        .dns-alert__box .form-check-input { margin: 0; }
+                        .dns-alert__box .form-check-label { font-size: 13.5px; }
+                        .dns-alert__hint { font-size: 12.5px; color: #8a94ab; margin-top: 6px; }
+                        .dns-alert__foot { display: flex; align-items: center; justify-content: flex-end; margin-top: 18px; padding-top: 16px; border-top: 1px solid #e8edf7; }
+                    </style>
+                    <div class="dns-alert__head">
+                        <div>
+                            <div class="dns-alert__title"><i class="ri-mail-send-line"></i> Alerta por e-mail quando um servidor cair</div>
+                            <p class="dns-alert__desc">Quando um servidor fica offline, o dono recebe um e-mail; quando volta, recebe outro. Os seus servidores avisam você; os dos revendedores avisam o revendedor. Clientes não recebem.</p>
+                        </div>
+                        <div class="form-check form-switch m-0 text-nowrap">
                             <input class="form-check-input" type="checkbox" name="alert_enabled" id="alert_enabled" value="1" <?php if($alert_cfg['enabled']){ echo 'checked'; } ?>>
-                            <label class="form-check-label" for="alert_enabled">Ligado</label>
+                            <label class="form-check-label fw-semibold" for="alert_enabled">Ligado</label>
                         </div>
                     </div>
-                    <p class="small text-muted mb-3">Quando um servidor fica offline, o dono recebe um e-mail; quando volta, recebe outro. Os seus servidores avisam você; os dos revendedores avisam o revendedor. Clientes não recebem.</p>
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-5">
-                            <label class="form-label small">E-mails que recebem (além do Super Admin)</label>
-                            <input type="text" name="alert_emails" class="form-control" value="<?php echo htmlspecialchars($alert_cfg['emails']); ?>" placeholder="ex.: suporte@seudominio.com, outro@seudominio.com">
-                            <small class="text-muted">Super Admin: <span translate="no"><?php echo $alert_admins ? htmlspecialchars(implode(', ', array_map(function($a){ return $a['email']; }, $alert_admins))) : '—'; ?></span></small>
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <label class="form-label" for="alert_emails">E-mails que recebem (além do Super Admin)</label>
+                            <input type="text" name="alert_emails" id="alert_emails" class="form-control" value="<?php echo htmlspecialchars($alert_cfg['emails']); ?>" placeholder="ex.: suporte@seudominio.com, outro@seudominio.com">
+                            <div class="dns-alert__hint">Super Admin: <span translate="no"><?php echo $alert_admins ? htmlspecialchars(implode(', ', array_map(function($a){ return $a['email']; }, $alert_admins))) : '—'; ?></span></div>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label small">Avisar depois de offline por</label>
-                            <select name="alert_minutes" class="form-select">
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label" for="alert_minutes">Avisar depois de</label>
+                            <select name="alert_minutes" id="alert_minutes" class="form-select">
                                 <?php foreach(array(5, 10, 15, 30) as $m){ ?><option value="<?php echo $m; ?>" <?php if($alert_cfg['minutes'] == $m){ echo 'selected'; } ?>><?php echo $m; ?> min</option><?php } ?>
                             </select>
+                            <div class="dns-alert__hint">offline seguidos</div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="alert_copy" id="alert_copy" value="1" <?php if($alert_cfg['copy']){ echo 'checked'; } ?>>
-                                <label class="form-check-label small" for="alert_copy">Receber cópia dos alertas dos revendedores</label>
+                        <div class="col-sm-6 col-lg-4">
+                            <label class="form-label">Revendedores</label>
+                            <div class="dns-alert__box">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="alert_copy" id="alert_copy" value="1" <?php if($alert_cfg['copy']){ echo 'checked'; } ?>>
+                                    <label class="form-check-label" for="alert_copy">Receber cópia dos alertas deles</label>
+                                </div>
                             </div>
-                            <button type="submit" name="save_alerts" class="btn btn-primary w-100">Salvar alertas</button>
                         </div>
+                    </div>
+                    <div class="dns-alert__foot">
+                        <button type="submit" name="save_alerts" class="btn btn-primary px-4"><i class="ri-save-3-line"></i> Salvar alertas</button>
                     </div>
                 </form>
                 <?php if(mysqli_num_rows($result) > 0){ ?>
