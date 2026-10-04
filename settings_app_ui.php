@@ -88,10 +88,12 @@
                                                 <option value="5" <?php if ($settings_data['is_theme'] == '5') { ?>selected<?php } ?>>VUI</option>
                                                 <option value="6" <?php if ($settings_data['is_theme'] == '6') { ?>selected<?php } ?>>ChristmasUI</option>
                                                 <option value="7" <?php if ($settings_data['is_theme'] == '7') { ?>selected<?php } ?>>HalloweenUI</option>
+                                                <option value="8" <?php if ($settings_data['is_theme'] == '8') { ?>selected<?php } ?>>BestPro (personalizável)</option>
                                             </select>
                                         </div>
                                     </div>
                                     <button type="submit" name="app_theme" class="btn btn-primary" style="min-width: 120px;">Save</button>
+                                    <a href="settings_theme.php" class="btn btn-outline-primary ms-2"><i class="ri-palette-line"></i> Personalizar tema BestPro</a>
                                     <div class="row g-4 mb-3 mt-3">
                                         <div class="col-lg-6 col-sm-6 col-xs-12">
                                             <a href="assets/images/themes/OneUI.png" data-bs-toggle="tooltip" data-bs-placement="top" title="View UI">

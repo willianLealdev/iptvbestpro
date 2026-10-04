@@ -165,6 +165,10 @@ if($get_helper['helper_name']=="app_details"){
         array_push($jsonObj,$data_arr);
     }
     $row['details'] = $jsonObj;
+
+    // Tema BestPro (App UI = 8): cores e imagens configuradas em Settings → Personalizar Tema
+    require_once("includes/theme_helper.php");
+    $row['theme_config'] = theme_api_payload($mysqli, $file_path);
     
     mysqli_free_result($result);
 	$jsonObj = array();
