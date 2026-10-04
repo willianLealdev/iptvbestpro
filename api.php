@@ -174,6 +174,16 @@ if($get_helper['helper_name']=="app_details"){
     // Tema BestPro (App UI = 8): cores e imagens configuradas em Settings → Personalizar Tema
     require_once("includes/theme_helper.php");
     $row['theme_config'] = theme_api_payload($mysqli, $file_path);
+
+    // Marca do revendedor: aparelho vinculado a um revendedor com "Minha Marca" ativa recebe o tema e a marca dele
+    $brand = theme_for_device($mysqli,
+        devices_clean(isset($get_helper['device_id']) ? $get_helper['device_id'] : '', 191),
+        devices_clean(isset($get_helper['application_id']) ? $get_helper['application_id'] : '', 191),
+        $file_path);
+    if ($brand) {
+        foreach ($row['details'] as $i => $detail) { $row['details'][$i]['is_theme'] = $brand['is_theme']; }
+        $row['theme_config'] = $brand['theme_config'];
+    }
     
     mysqli_free_result($result);
 	$jsonObj = array();

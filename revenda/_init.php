@@ -114,6 +114,7 @@ function rv_header($mysqli, $reseller, $title, $active){
                     <li class="nav-item"><a class="nav-link <?php if($active=='devices'){echo 'active';} ?>" href="devices.php"><i class="ri-device-line me-1"></i>Dispositivos</a></li>
                     <li class="nav-item"><a class="nav-link <?php if($active=='credits'){echo 'active';} ?>" href="credits.php"><i class="ri-coin-line me-1"></i>Créditos</a></li>
                     <li class="nav-item"><a class="nav-link <?php if($active=='dns'){echo 'active';} ?>" href="dns.php"><i class="ri-server-line me-1"></i>DNS</a></li>
+                    <li class="nav-item"><a class="nav-link <?php if($active=='theme'){echo 'active';} ?>" href="theme.php"><i class="ri-palette-line me-1"></i>Minha Marca</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-3 py-2 py-lg-0">
                     <span class="rv-balance"><i class="ri-coin-fill me-1"></i><?php echo (int)$reseller['credits']; ?> créditos</span>
