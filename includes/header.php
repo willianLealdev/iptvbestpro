@@ -1,6 +1,7 @@
 <?php
 include("includes/db_helper.php");
 include("includes/session_check.php");
+brand_remember_base_url($mysqli); // domínio do site para os e-mails automáticos (alertas)
 
 $currentFile = $_SERVER["SCRIPT_NAME"];
 $parts = Explode('/', $currentFile);

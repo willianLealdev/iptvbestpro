@@ -27,5 +27,14 @@ $stats = playlist_monitor_run($mysqli);
 printf("%s [dns-monitor] servidores online=%d offline=%d excluidos=%d | playlists verificadas=%d online=%d trocadas=%d sem_servidor=%d (%.1fs)\n",
     date('Y-m-d H:i:s'), $stats['dns_online'], $stats['dns_offline'], $stats['dns_deleted'], $stats['checked'], $stats['online'], $stats['switched'], $stats['offline'], microtime(true) - $start);
 
+// Alertas por e-mail: DNS que caiu ou voltou (admin e revendedor dono)
+try {
+    require_once(__DIR__.'/../includes/dns_alert_helper.php');
+    $sent = dns_alerts_run($mysqli);
+    if ($sent) echo date('Y-m-d H:i:s')." [dns-alert] e-mails enviados=$sent\n";
+} catch (\Throwable $e) {
+    echo date('Y-m-d H:i:s').' [dns-alert] erro: '.$e->getMessage()."\n";
+}
+
 flock($lock, LOCK_UN);
 fclose($lock);

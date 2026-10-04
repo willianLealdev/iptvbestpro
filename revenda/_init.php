@@ -101,6 +101,7 @@ function rv_head($title, $switcher = true){ ?>
 <?php }
 
 function rv_header($mysqli, $reseller, $title, $active){
+    brand_remember_base_url($mysqli);
     rv_head($title, false); ?>
     <nav class="navbar navbar-expand-lg rv-nav mb-4">
         <div class="container-xl">

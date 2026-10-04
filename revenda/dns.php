@@ -1,10 +1,12 @@
 <?php
 require_once(__DIR__."/_init.php");
 require_once(__DIR__."/../includes/playlist_helper.php");
+require_once(__DIR__."/../includes/dns_alert_helper.php");
 
 $reseller = rv_require_login($mysqli);
 $rid = (int)$reseller['id'];
 dns_health_migrate($mysqli);
+dns_alert_migrate($mysqli);
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (!rv_csrf_ok()) {
@@ -18,6 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else if (isset($_POST['toggle_dns'])) {
         $ok = dns_reseller_toggle($mysqli, $rid, $_POST['dns_id']);
         rv_flash($ok ? 'success' : 'error', $ok ? 'Status do servidor alterado.' : 'Servidor não encontrado.');
+    } else if (isset($_POST['toggle_alerts'])) {
+        $on = !empty($_POST['dns_alerts']) ? 1 : 0;
+        mysqli_query($mysqli, "UPDATE tbl_resellers SET dns_alerts = $on WHERE id = $rid");
+        rv_flash('success', $on ? 'Alertas por e-mail ligados.' : 'Alertas por e-mail desligados.');
     } else if (isset($_POST['check_now'])) {
         dns_health_check_all($mysqli, 4, $rid);
         rv_flash('success', 'Servidores verificados.');
@@ -73,6 +79,20 @@ rv_header($mysqli, $reseller, 'DNS', 'dns'); ?>
                 Seus servidores são exclusivos: só você e o administrador têm acesso.
                 Nas playlists cadastradas por usuário e senha, o sistema procura sozinho qual servidor aceita o login.
             </p>
+        </div>
+        <?php $alerts_on = !isset($reseller['dns_alerts']) || (int)$reseller['dns_alerts'] == 1; ?>
+        <div class="rv-card p-4 mt-4">
+            <form method="post">
+                <?php echo rv_csrf_field(); ?>
+                <input type="hidden" name="toggle_alerts" value="1">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <h2 class="rv-title fs-6 mb-0"><i class="ri-mail-send-line"></i> Alerta por e-mail</h2>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" name="dns_alerts" value="1" <?php if ($alerts_on) { echo 'checked'; } ?> onchange="this.form.submit()">
+                    </div>
+                </div>
+                <p class="rv-muted small mt-2 mb-0">Quando um servidor seu ficar offline, você recebe um e-mail em <b translate="no"><?php echo rv_e($reseller['email']); ?></b>, e outro quando ele voltar.</p>
+            </form>
         </div>
     </div>
 

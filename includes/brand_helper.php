@@ -34,6 +34,27 @@ function brand_auth_header($prefix = '', $subtitle = ''){ ?>
     </div>
 <?php }
 
+// Endereço público do site (https://dominio): guardado nas visitas ao painel para os e-mails enviados
+// em segundo plano (ex.: alertas de DNS), que não têm navegador para saber o domínio.
+function brand_remember_base_url($mysqli){
+    if (empty($_SERVER['HTTP_HOST']) || !empty($_SESSION['brand_base_saved'])) return;
+    $proto = !empty($_SERVER['HTTP_X_FORWARDED_PROTO']) ? $_SERVER['HTTP_X_FORWARDED_PROTO'] : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') ? 'https' : 'http');
+    $host = !empty($_SERVER['HTTP_X_FORWARDED_HOST']) ? $_SERVER['HTTP_X_FORWARDED_HOST'] : $_SERVER['HTTP_HOST'];
+    $url = strtolower(trim(explode(',', $proto)[0])).'://'.trim(explode(',', $host)[0]);
+    if (!preg_match('#^https?://[A-Za-z0-9.\-:]+$#', $url) || strpos($url, 'localhost') !== false) return;
+    $stmt = @mysqli_prepare($mysqli, "INSERT INTO tbl_panel_config (name, value) VALUES ('site_base_url', ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
+    if ($stmt) { mysqli_stmt_bind_param($stmt, 's', $url); @mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt); }
+    $_SESSION['brand_base_saved'] = 1;
+}
+
+function brand_saved_base_url(){
+    global $mysqli;
+    if (!isset($mysqli) || !$mysqli) return '';
+    $res = @mysqli_query($mysqli, "SELECT value FROM tbl_panel_config WHERE name = 'site_base_url'");
+    $row = $res ? mysqli_fetch_assoc($res) : null;
+    return $row ? rtrim($row['value'], '/') : '';
+}
+
 function brand_apply_defaults($mysqli){
     if (panel_config_get($mysqli, 'brand_applied_v1', '0') == '1') return;
 

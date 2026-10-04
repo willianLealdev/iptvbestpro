@@ -62,6 +62,8 @@ function acc_ip(){
 }
 
 function acc_base_url(){
+    // Sem navegador (monitor em segundo plano): usa o endereço do site salvo na última visita ao painel
+    if (empty($_SERVER['HTTP_HOST']) && empty($_SERVER['HTTP_X_FORWARDED_HOST'])) return brand_saved_base_url();
     $proto = !empty($_SERVER['HTTP_X_FORWARDED_PROTO']) ? $_SERVER['HTTP_X_FORWARDED_PROTO'] : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') ? 'https' : 'http');
     $host = !empty($_SERVER['HTTP_X_FORWARDED_HOST']) ? $_SERVER['HTTP_X_FORWARDED_HOST'] : (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '');
     return strtolower(trim(explode(',', $proto)[0])).'://'.trim(explode(',', $host)[0]);

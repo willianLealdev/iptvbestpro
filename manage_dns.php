@@ -3,6 +3,26 @@
     require("includes/lb_helper.php");
     require("language/language.php");
     require_once("includes/playlist_helper.php");
+    require_once("includes/dns_alert_helper.php");
+    dns_alert_migrate($mysqli);
+
+    // Alertas por e-mail quando um DNS cair
+    if(isset($_POST['save_alerts']) && isset($_SESSION['admin_type']) && $_SESSION['admin_type'] != 0){
+        $emails = array();
+        foreach(preg_split('/[\s,;]+/', isset($_POST['alert_emails']) ? $_POST['alert_emails'] : '') as $e){
+            $e = trim($e);
+            if($e != '' && filter_var($e, FILTER_VALIDATE_EMAIL)) $emails[] = $e;
+        }
+        panel_config_set($mysqli, 'dns_alert_enabled', !empty($_POST['alert_enabled']) ? '1' : '0');
+        panel_config_set($mysqli, 'dns_alert_copy_resellers', !empty($_POST['alert_copy']) ? '1' : '0');
+        panel_config_set($mysqli, 'dns_alert_emails', implode(', ', array_slice(array_unique($emails), 0, 5)));
+        panel_config_set($mysqli, 'dns_alert_minutes', in_array((int)$_POST['alert_minutes'], array(5, 10, 15, 30)) ? (int)$_POST['alert_minutes'] : 10);
+        $_SESSION['dns_alert_saved'] = 1;
+        header("Location:manage_dns.php");
+        exit;
+    }
+    $alert_cfg = dns_alert_cfg($mysqli);
+    $alert_admins = dns_alert_admin_recipients($mysqli, array('emails' => ''));
 
     // Status online/offline dos servidores (o monitor atualiza a cada 5 minutos)
     dns_health_migrate($mysqli);
@@ -78,6 +98,39 @@
             </div>
             
             <div class="card-body p-4">
+                <?php if(!empty($_SESSION['dns_alert_saved'])){ unset($_SESSION['dns_alert_saved']); ?>
+                    <div class="alert alert-success py-2">Alertas de DNS salvos.</div>
+                <?php } ?>
+                <form method="post" class="p-3 rounded mb-4" style="background:#f7f9fe;border:1px solid #e8edf7;">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <div class="fw-semibold"><i class="ri-mail-send-line"></i> Alerta por e-mail quando um servidor cair</div>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" name="alert_enabled" id="alert_enabled" value="1" <?php if($alert_cfg['enabled']){ echo 'checked'; } ?>>
+                            <label class="form-check-label" for="alert_enabled">Ligado</label>
+                        </div>
+                    </div>
+                    <p class="small text-muted mb-3">Quando um servidor fica offline, o dono recebe um e-mail; quando volta, recebe outro. Os seus servidores avisam você; os dos revendedores avisam o revendedor. Clientes não recebem.</p>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label small">E-mails que recebem (além do Super Admin)</label>
+                            <input type="text" name="alert_emails" class="form-control" value="<?php echo htmlspecialchars($alert_cfg['emails']); ?>" placeholder="ex.: suporte@seudominio.com, outro@seudominio.com">
+                            <small class="text-muted">Super Admin: <span translate="no"><?php echo $alert_admins ? htmlspecialchars(implode(', ', array_map(function($a){ return $a['email']; }, $alert_admins))) : '—'; ?></span></small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Avisar depois de offline por</label>
+                            <select name="alert_minutes" class="form-select">
+                                <?php foreach(array(5, 10, 15, 30) as $m){ ?><option value="<?php echo $m; ?>" <?php if($alert_cfg['minutes'] == $m){ echo 'selected'; } ?>><?php echo $m; ?> min</option><?php } ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="alert_copy" id="alert_copy" value="1" <?php if($alert_cfg['copy']){ echo 'checked'; } ?>>
+                                <label class="form-check-label small" for="alert_copy">Receber cópia dos alertas dos revendedores</label>
+                            </div>
+                            <button type="submit" name="save_alerts" class="btn btn-primary w-100">Salvar alertas</button>
+                        </div>
+                    </div>
+                </form>
                 <?php if(mysqli_num_rows($result) > 0){ ?>
                     <div class="row g-4 mb-3">
                         <?php $i=0; while($row=mysqli_fetch_array($result)) { ?>
