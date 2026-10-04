@@ -8,6 +8,7 @@
 
 require_once(__DIR__."/reseller_helper.php"); // panel_config_get / panel_config_set
 require_once(__DIR__."/theme_models.php");    // campos de cada modelo
+require_once(__DIR__."/media_helper.php");     // cópia das imagens no banco (não somem no deploy)
 
 define('THEME_BESTPRO_ID', '8');
 define('THEME_UPLOAD_MAX_BYTES', 5 * 1024 * 1024);
@@ -306,6 +307,8 @@ function theme_upload($field, $prefix){
     if (!$info || !isset($types[$info[2]])) return array('ok' => false, 'file' => null, 'error' => 'Formato inválido. Use PNG, JPG ou WEBP.');
     $name = $prefix.'_'.bin2hex(random_bytes(6)).'.'.$types[$info[2]];
     if (!move_uploaded_file($f['tmp_name'], __DIR__.'/../images/'.$name)) return array('ok' => false, 'file' => null, 'error' => 'Não foi possível salvar a imagem.');
+    global $mysqli;
+    if (isset($mysqli) && $mysqli) media_backup($mysqli, 'images/'.$name);
     return array('ok' => true, 'file' => $name, 'error' => '');
 }
 
@@ -313,6 +316,8 @@ function theme_delete_file($name){
     if ($name != '' && preg_match('/^theme_([rt][0-9]+_)*[a-z]+_[0-9a-f]{12}\.(png|jpg|webp)$/', $name)) {
         $path = __DIR__.'/../images/'.$name;
         if (is_file($path)) @unlink($path);
+        global $mysqli;
+        if (isset($mysqli) && $mysqli) media_forget($mysqli, 'images/'.$name);
     }
 }
 

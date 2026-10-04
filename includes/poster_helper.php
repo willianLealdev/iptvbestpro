@@ -8,6 +8,7 @@
  */
 
 require_once(__DIR__."/reseller_helper.php");
+require_once(__DIR__."/media_helper.php"); // cópia das imagens no banco (não somem no deploy)
 
 define('POSTER_MAX_BYTES', 8 * 1024 * 1024);
 define('POSTER_MAX_PER_RESELLER', 20);
@@ -27,7 +28,11 @@ function posters_list($mysqli, $scope, $only_active = false){
     $scope = (int)$scope;
     $rows = array();
     $res = mysqli_query($mysqli, "SELECT * FROM tbl_poster_gallery WHERE poster_type = 'movie_ui' AND reseller_id = $scope".($only_active ? " AND status = 1" : "")." ORDER BY id DESC");
-    while ($res && $r = mysqli_fetch_assoc($res)) $rows[] = $r;
+    while ($res && $r = mysqli_fetch_assoc($res)) {
+        // arquivo sumiu da pasta (ex.: depois de um deploy)? volta da cópia do banco
+        if ($r['poster_image'] != '' && !is_file(__DIR__.'/../images/'.basename($r['poster_image']))) media_restore($mysqli, 'images/'.basename($r['poster_image']));
+        $rows[] = $r;
+    }
     return $rows;
 }
 
@@ -57,6 +62,7 @@ function posters_upload($mysqli, $scope, $field){
         if (!$info || !isset($types[$info[2]])) { $errors[] = 'Formato inválido (use JPG, PNG ou WEBP).'; continue; }
         $name = 'poster_'.($scope > 0 ? 'r'.$scope.'_' : '').bin2hex(random_bytes(6)).'.'.$types[$info[2]];
         if (!move_uploaded_file($tmp, __DIR__.'/../images/'.$name)) { $errors[] = 'Não foi possível salvar uma imagem.'; continue; }
+        if (!media_backup($mysqli, 'images/'.$name)) error_log('[posters] cópia no banco falhou: '.$name);
         $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_poster_gallery (poster_type, poster_image, status, reseller_id) VALUES ('movie_ui', ?, 1, ?)");
         mysqli_stmt_bind_param($stmt, 'si', $name, $scope);
         mysqli_stmt_execute($stmt);
@@ -79,6 +85,7 @@ function posters_delete($mysqli, $scope, $id){
     mysqli_query($mysqli, "DELETE FROM tbl_poster_gallery WHERE id = ".(int)$id." AND reseller_id = ".(int)$scope);
     $file = basename($r['poster_image']);
     if ($file != '' && is_file(__DIR__.'/../images/'.$file)) @unlink(__DIR__.'/../images/'.$file);
+    if ($file != '') media_forget($mysqli, 'images/'.$file);
     return true;
 }
 

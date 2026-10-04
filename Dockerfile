@@ -31,6 +31,9 @@ RUN { \
       echo "error_reporting=E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING"; \
     } > /usr/local/etc/php/conf.d/painel.ini
 
+# Imagem que sumiu da pasta (ex.: após deploy) é entregue pela cópia do banco (media.php)
+RUN {       echo "<Directory /var/www/html>";       echo "    RewriteEngine On";       echo "    RewriteCond %{REQUEST_FILENAME} !-f";       echo "    RewriteRule ^(images|uploads)/(.+)\$ media.php?p=\$1/\$2 [L,QSA]";       echo "</Directory>";     } > /etc/apache2/conf-available/media-fallback.conf     && a2enconf media-fallback
+
 COPY --from=geo /geo /opt/geo
 COPY . /var/www/html/
 COPY docker-entrypoint.sh /usr/local/bin/painel-entrypoint
