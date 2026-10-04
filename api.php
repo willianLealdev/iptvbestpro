@@ -391,13 +391,15 @@ else if($get_helper['helper_name']=="get_poster") {
 
 	$jsonObj= array();	
 
-    $sql="SELECT * FROM tbl_poster_gallery WHERE tbl_poster_gallery.status='1' AND tbl_poster_gallery.poster_type ='movie_ui' ORDER BY RAND() DESC";
-	$result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
-    if(mysqli_num_rows($result) > 0){
-        while($data = mysqli_fetch_assoc($result)){
-            $row['poster_image'] = $file_path.'images/'.$data['poster_image'];
-            array_push($jsonObj,$row);
-        }
+    // Pôsteres do dono do aparelho: revendedor com pôsteres próprios ligados, senão os do sistema (admin)
+    require_once("includes/poster_helper.php");
+    $posters = posters_for_device($mysqli,
+        devices_clean(isset($get_helper['device_id']) ? $get_helper['device_id'] : '', 191),
+        devices_clean(isset($get_helper['application_id']) ? $get_helper['application_id'] : '', 191));
+    shuffle($posters);
+    foreach($posters as $data){
+        $row['poster_image'] = $file_path.'images/'.$data['poster_image'];
+        array_push($jsonObj,$row);
     }
 	$set[$API_NAME] = $jsonObj;
 	header( 'Content-Type: application/json; charset=utf-8' );

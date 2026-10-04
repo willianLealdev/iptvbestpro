@@ -74,7 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $allowed) {
 }
 
 $saved_list = theme_saved_list($mysqli, $scope);
-$movie_poster = theme_movie_poster($mysqli);
+require_once(__DIR__.'/../includes/poster_helper.php');
+$movie_poster = posters_preview_image($mysqli, $rid);
 $movie_hero = $movie_poster != '' ? '../images/'.$movie_poster : '../assets/images/themes/'.'MovieUI.png';
 
 $in_use = $editing_saved && (int)$active['saved_id'] === (int)$editing_saved['id'];
@@ -148,7 +149,7 @@ theme_form_styles(); ?>
             'actions_html' => $actions_html,
             'theme_id' => $base,
             'movie_hero' => $movie_hero,
-                'posters_url' => '',
+                'posters_url' => 'posters.php',
                 'model_name' => $catalog[$base]['name'],
             'saved_name' => $editing_saved ? $editing_saved['name'] : '',
         ));

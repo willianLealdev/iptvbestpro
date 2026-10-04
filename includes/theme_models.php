@@ -47,7 +47,7 @@ function theme_model_schema($base){
         case '4': // MovieUI
             return array(
                 'posters_info' => array('type' => 'info', 'group' => 'Pôsteres', 'label' => 'Pôsteres em tela cheia',
-                    'help' => 'No MovieUI, o fundo é o <b>pôster de filme</b> que fica trocando sozinho. Os pôsteres são gerenciados na página <b>Movie UI</b> do painel. Tamanho ideal do pôster: <b>1920 × 1080 px</b> (16:9), com o título na parte de cima e o rodapé mais escuro.'),
+                    'help' => 'No MovieUI, o fundo é o <b>pôster de filme</b> que fica trocando sozinho. Os pôsteres são escolhidos na página <b>Pôsteres</b>: você envia os seus e marca quais aparecem no app. Tamanho ideal do pôster: <b>1920 × 1080 px</b> (16:9), com o título na parte de cima e o rodapé mais escuro.'),
                 'tile_auto'    => array('type' => 'toggle', 'group' => 'Cartões', 'label' => 'Cor dos cartões automática (tirada do pôster)', 'default' => '1'),
                 'tile_color'   => array('type' => 'color', 'group' => 'Cartões', 'label' => 'Cor fixa dos cartões (quando não for automática)', 'default' => '#3A0A10'),
                 'topbar_dark'  => array('type' => 'range', 'group' => 'Barra do topo', 'label' => 'Escurecer a barra do topo', 'min' => 0, 'max' => 90, 'unit' => '%', 'default' => '62'),

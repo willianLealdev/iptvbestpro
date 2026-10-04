@@ -313,6 +313,9 @@ $mysqli->set_charset("utf8mb4");
                                     <a href="settings_theme.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_theme.php") { ?>active<?php } ?>">Temas do App</a>
                                 </li>
                                 <li>
+                                    <a href="manage_movie_ui.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_movie_ui.php") { ?>active<?php } ?>">Pôsteres (MovieUI)</a>
+                                </li>
+                                <li>
                                     <a href="settings_web.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_web.php") { ?>active<?php } ?>">Web Settings</a>
                                 </li>
                                 <li>
