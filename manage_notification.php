@@ -38,7 +38,7 @@
             
         <div class="card h-100">
             <div class="card-header d-md-inline-flex align-items-center justify-content-between py-3 px-4">
-                <a href="<?php echo (isset($_SERVER['HTTP_REFERER'])) ? $_SERVER['HTTP_REFERER'] : "dashboard.php" ?>" class="d-inline-flex align-items-center text-decoration-none fw-semibold nsofts-link">
+                <a href="<?php echo (isset($_SERVER['HTTP_REFERER'])) ? htmlspecialchars($_SERVER['HTTP_REFERER'], ENT_QUOTES, 'UTF-8') : "dashboard.php" ?>" class="d-inline-flex align-items-center text-decoration-none fw-semibold nsofts-link">
                     <i class="ri-arrow-left-line text-danger fw-bold"></i>
                     <span class="ps-2 lh-1"><?=$page_title ?></span>
                 </a>
@@ -66,8 +66,8 @@
                             <tbody>
                                 <?php $i=0; while($row=mysqli_fetch_array($result)) { ?>
                                     <tr>
-                                        <td><?php echo $row['notification_title'];?></td>
-                                        <td><?php echo $row['notification_msg'];?></td>
+                                        <td><?php echo htmlspecialchars((string)$row['notification_title'], ENT_QUOTES, 'UTF-8', false);?></td>
+                                        <td><?php echo htmlspecialchars((string)$row['notification_msg'], ENT_QUOTES, 'UTF-8', false);?></td>
                                         <td class="text-center"><?php echo date('d-m-Y',$row['notification_on']);?></td>
                                         <td class="text-center">
                                             <a href="javascript:void(0)" class="btn btn-danger btn-icon btn_delete" data-id="<?php echo $row['id'];?>" data-table="<?=$tableName ?>" style="padding: 10px 10px !important;" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete">

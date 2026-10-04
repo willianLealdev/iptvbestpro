@@ -119,7 +119,7 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Title</label>
                                 <div class="col-sm-10">
-                                     <input type="text" name="ads_title" class="form-control" value="<?php if(isset($_GET['ads_id'])){echo $row['ads_title'];}?>" required>
+                                     <input type="text" name="ads_title" class="form-control" value="<?php if(isset($_GET['ads_id'])){echo htmlspecialchars((string)$row['ads_title'], ENT_QUOTES, 'UTF-8', false);}?>" required>
                                 </div>
                             </div>
                             

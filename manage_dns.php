@@ -78,7 +78,7 @@
             
         <div class="card h-100">
             <div class="card-header d-md-inline-flex align-items-center justify-content-between py-3 px-4">
-                <a href="<?php echo (isset($_SERVER['HTTP_REFERER'])) ? $_SERVER['HTTP_REFERER'] : "dashboard.php" ?>" class="d-inline-flex align-items-center text-decoration-none fw-semibold nsofts-link">
+                <a href="<?php echo (isset($_SERVER['HTTP_REFERER'])) ? htmlspecialchars($_SERVER['HTTP_REFERER'], ENT_QUOTES, 'UTF-8') : "dashboard.php" ?>" class="d-inline-flex align-items-center text-decoration-none fw-semibold nsofts-link">
                     <i class="ri-arrow-left-line text-danger fw-bold"></i>
                     <span class="ps-2 lh-1"><?=$page_title ?></span>
                 </a>
@@ -167,9 +167,9 @@
                                     ?>
                                     <h5 class="mb-2 d-flex align-items-center gap-2">
                                         <span style="width:12px;height:12px;border-radius:50%;background:<?php echo $dot; ?>;flex:0 0 12px;box-shadow:0 0 0 3px <?php echo $dot; ?>33;" title="<?php echo $label; ?>"></span>
-                                        <?php echo $row['dns_title'];?>
+                                        <?php echo htmlspecialchars((string)$row['dns_title'], ENT_QUOTES, 'UTF-8', false);?>
                                     </h5>
-                                    <p class="mb-1"><?php echo $row['dns_base'];?></p>
+                                    <p class="mb-1"><?php echo htmlspecialchars((string)$row['dns_base'], ENT_QUOTES, 'UTF-8', false);?></p>
                                     <p class="small mb-3" style="color:<?php echo $dot; ?>;">
                                         <b><?php echo $label; ?></b>
                                         <?php if($h == 'online' && (int)$row['latency_ms'] > 0){ ?> · <?php echo (int)$row['latency_ms']; ?> ms<?php } ?>

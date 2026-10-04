@@ -1,5 +1,10 @@
 <?php
 session_start();
+// Sistema já instalado: o instalador fica bloqueado (reinstalar apagaria/substituiria o banco)
+if (is_file(__DIR__."/../includes/.lic") && filesize(__DIR__."/../includes/.lic") > 0 && empty($_SESSION['installer_finishing'])) {
+    http_response_code(404);
+    exit('Not Found');
+}
 require("../includes/lb_helper.php");
 $installFile="../includes/.lic";
 $database_dump_file = 'database.sql';

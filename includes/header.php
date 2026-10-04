@@ -2,6 +2,7 @@
 include("includes/db_helper.php");
 include("includes/session_check.php");
 brand_remember_base_url($mysqli); // domínio do site para os e-mails automáticos (alertas)
+require_once(__DIR__."/admin_guard.php"); // proteções globais do painel (CSRF por origem, ids inteiros, troca de senha padrão)
 
 $currentFile = $_SERVER["SCRIPT_NAME"];
 $parts = Explode('/', $currentFile);

@@ -9,6 +9,11 @@ RUN composer require maxmind-db/reader:^1.11 --no-interaction --no-progress --no
          || curl -fsSL "https://download.db-ip.com/free/dbip-country-lite-${M_ANTERIOR}.mmdb.gz" -o country.mmdb.gz ) \
     && gunzip country.mmdb.gz
 
+# Etapa 2: PHPMailer atualizado (substitui o vendor/ antigo do pacote original)
+FROM composer:2 AS mailer
+WORKDIR /mail
+RUN composer require phpmailer/phpmailer:^6.9 --no-interaction --no-progress --no-plugins --optimize-autoloader
+
 FROM php:8.2-apache
 
 # Extensões exigidas pelo painel (mysqli, pdo, curl, gd, exif)
@@ -29,13 +34,27 @@ RUN { \
       echo "display_errors=Off"; \
       echo "log_errors=On"; \
       echo "error_reporting=E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING"; \
+      echo "expose_php=Off"; \
+      echo "session.cookie_httponly=1"; \
+      echo "session.cookie_secure=1"; \
+      echo "session.cookie_samesite=Lax"; \
+      echo "session.use_strict_mode=1"; \
+      echo "session.use_only_cookies=1"; \
+      echo "session.sid_length=48"; \
+      echo "allow_url_include=Off"; \
     } > /usr/local/etc/php/conf.d/painel.ini
+
+# Segurança do Apache: pastas internas bloqueadas, sem PHP em images/uploads, cabeçalhos, sem versão
+COPY docker/apache-security.conf /etc/apache2/conf-available/painel-security.conf
+RUN a2enconf painel-security
 
 # Imagem que sumiu da pasta (ex.: após deploy) é entregue pela cópia do banco (media.php)
 RUN {       echo "<Directory /var/www/html>";       echo "    RewriteEngine On";       echo "    RewriteCond %{REQUEST_FILENAME} !-f";       echo "    RewriteRule ^(images|uploads)/(.+)\$ media.php?p=\$1/\$2 [L,QSA]";       echo "</Directory>";     } > /etc/apache2/conf-available/media-fallback.conf     && a2enconf media-fallback
 
 COPY --from=geo /geo /opt/geo
 COPY . /var/www/html/
+RUN rm -rf /var/www/html/vendor /var/www/html/docker
+COPY --from=mailer /mail/vendor /var/www/html/vendor
 COPY docker-entrypoint.sh /usr/local/bin/painel-entrypoint
 RUN sed -i 's/\r$//' /usr/local/bin/painel-entrypoint \
     && chmod +x /usr/local/bin/painel-entrypoint \

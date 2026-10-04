@@ -1,4 +1,10 @@
 <?php
+// Desativar a licença: só o Super Admin logado no painel
+session_start();
+if (empty($_SESSION['id']) || !isset($_SESSION['admin_type']) || (int)$_SESSION['admin_type'] !== 3) {
+    http_response_code(404);
+    exit('Not Found');
+}
 require("../includes/lb_helper.php");
 $installFile="../includes/.lic";
 $errors = false;

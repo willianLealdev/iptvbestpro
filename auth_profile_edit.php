@@ -65,7 +65,7 @@
        	} else if($_POST['register_confirm_password'] == $_POST['register_password']){
        	    
        	    $data = array(
-              'password'  =>  md5(trim($_POST['register_password']))
+              'password'  =>  password_hash(trim($_POST['register_password']), PASSWORD_DEFAULT)
             );
             
             $channel_edit=Update('tbl_admin', $data, "WHERE id = '".$_SESSION['id']."'");
@@ -152,10 +152,10 @@
                             
                             <div class="row g-3">
                               <div class="col-md-6">
-                                <input type="text" name="register_password" id="register_password" class="form-control" placeholder="Enter your new password" autocomplete="off" required>
+                                <input type="password" name="register_password" id="register_password" class="form-control" placeholder="Enter your new password" autocomplete="off" required>
                               </div>
                               <div class="col-md-6">
-                                <input type="text" name="register_confirm_password" id="register_confirm_password" class="form-control" placeholder="Enter your new confirm password" autocomplete="off" required>
+                                <input type="password" name="register_confirm_password" id="register_confirm_password" class="form-control" placeholder="Enter your new confirm password" autocomplete="off" required>
                               </div>
                             </div>
                             <button type="submit" name="submit_password" class="btn btn-primary mt-3" style="min-width: 120px;">Change Password</button>

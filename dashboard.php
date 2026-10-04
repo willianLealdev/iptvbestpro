@@ -299,7 +299,7 @@
                         <?php if(mysqli_num_rows($result_reports) > 0){ ?>
                             <?php while($row=mysqli_fetch_array($result_reports)) { ?>
                                 <div class="d-flex align-items-center justify-content-between mt-4">
-                                    <span class="d-block fw-semibold"><?php echo $row['report_title'];?></span>
+                                    <span class="d-block fw-semibold"><?php echo htmlspecialchars((string)$row['report_title'], ENT_QUOTES, 'UTF-8', false);?></span>
                                     <span class="text-muted"><?php echo calculate_time_span($row['report_on']);?></span>
                                 </div>
                             <?php } ?>

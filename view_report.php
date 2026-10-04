@@ -30,11 +30,11 @@
                         <h5 class="mb-4"><?=$page_title ?></h5>
                         
                         <div class="mb-3">
-                            <input type="text" class="form-control" value="Title - <?php if(isset($_GET['report_id'])){echo $row['report_title'];}?>">
+                            <input type="text" class="form-control" value="Title - <?php if(isset($_GET['report_id'])){echo htmlspecialchars((string)$row['report_title'], ENT_QUOTES, 'UTF-8', false);}?>">
                         </div>
                         
                         <div class="mb-3">
-                             <textarea class="form-control" rows="10">Message - <?php if(isset($_GET['report_id'])){echo $row['report_msg'];}?></textarea>
+                             <textarea class="form-control" rows="10">Message - <?php if(isset($_GET['report_id'])){echo htmlspecialchars((string)$row['report_msg'], ENT_QUOTES, 'UTF-8', false);}?></textarea>
                         </div>
                         
                     </div>

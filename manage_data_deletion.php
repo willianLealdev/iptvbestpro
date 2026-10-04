@@ -38,7 +38,7 @@
             
         <div class="card h-100">
             <div class="card-header d-md-inline-flex align-items-center justify-content-between py-3 px-4">
-                <a href="<?php echo (isset($_SERVER['HTTP_REFERER'])) ? $_SERVER['HTTP_REFERER'] : "dashboard.php" ?>" class="d-inline-flex align-items-center text-decoration-none fw-semibold nsofts-link">
+                <a href="<?php echo (isset($_SERVER['HTTP_REFERER'])) ? htmlspecialchars($_SERVER['HTTP_REFERER'], ENT_QUOTES, 'UTF-8') : "dashboard.php" ?>" class="d-inline-flex align-items-center text-decoration-none fw-semibold nsofts-link">
                     <i class="ri-arrow-left-line text-danger fw-bold"></i>
                     <span class="ps-2 lh-1"><?=$page_title ?></span>
                 </a>
@@ -60,10 +60,10 @@
                             <tbody>
                                 <?php $i=0; while($row=mysqli_fetch_array($result)) { ?>
                                     <tr>
-                                        <td><?php echo $row['user_email'];?></td>
+                                        <td><?php echo htmlspecialchars((string)$row['user_email'], ENT_QUOTES, 'UTF-8', false);?></td>
                                         <td class="text-center"><?php echo calculate_time_span($row['deletion_on']);?></td>
                                         <td class="text-center">
-                                            <span class="nsofts-badge nsofts-badge-primary"><?php echo $row['policy_type'];?></span>
+                                            <span class="nsofts-badge nsofts-badge-primary"><?php echo htmlspecialchars((string)$row['policy_type'], ENT_QUOTES, 'UTF-8', false);?></span>
                                         </td>
                                         
                                         <td class="text-center">

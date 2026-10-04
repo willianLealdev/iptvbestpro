@@ -9,7 +9,44 @@
 	
 	$_SESSION['class'] = "success";
 
-	switch ($_POST['action']) {
+	// ---- Segurança: só admin logado, só pedidos do próprio painel, só tabelas/colunas permitidas ----
+	header('Content-Type: application/json; charset=utf-8');
+	function pd_deny($code = 403){ http_response_code($code); echo json_encode(array('status' => 0, 'msg' => 'Acesso negado.')); exit; }
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') pd_deny(405);
+	if (empty($_SESSION['id']) || empty($_SESSION['admin_name']) || !isset($_SESSION['admin_type'])) pd_deny();
+	$pd_host = isset($_SERVER['HTTP_HOST']) ? strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'])) : '';
+	$pd_origin = !empty($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : (!empty($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '');
+	if ($pd_origin === '' || strtolower((string)parse_url($pd_origin, PHP_URL_HOST)) !== $pd_host) pd_deny();
+	$pd_type = (int)$_SESSION['admin_type'];
+
+	$pd_action = isset($_POST['action']) ? (string)$_POST['action'] : '';
+	$pd_tables_toggle = array('tbl_admin', 'tbl_devices', 'tbl_resellers', 'tbl_sidebar', 'tbl_xui_dns', 'tbl_stream_dns', 'tbl_xui_dns_block', 'tbl_users', 'tbl_custom_ads', 'tbl_notification', 'tbl_poster_gallery');
+	$pd_tables_delete = array('tbl_admin', 'tbl_users', 'tbl_policy_deletion', 'tbl_xui_dns', 'tbl_stream_dns', 'tbl_xui_dns_block', 'tbl_notification', 'tbl_reports', 'tbl_resellers', 'tbl_devices', 'tbl_poster_gallery');
+	if ($pd_action == 'toggle_status') {
+		if (!in_array(isset($_POST['table']) ? $_POST['table'] : '', $pd_tables_toggle, true)) pd_deny(400);
+		if ((isset($_POST['column']) ? $_POST['column'] : '') !== 'status') pd_deny(400);
+		if ($_POST['table'] == 'tbl_admin' && $pd_type != 3) pd_deny();
+		$_POST['id'] = (string)(int)(isset($_POST['id']) ? $_POST['id'] : 0);
+		$_POST['for_action'] = (isset($_POST['for_action']) && $_POST['for_action'] == 'enable') ? 'enable' : 'disable';
+	} else if ($pd_action == 'multi_action') {
+		$pd_table = isset($_POST['table']) ? $_POST['table'] : '';
+		if (!in_array($pd_table, $pd_tables_delete, true)) pd_deny(400);
+		if ($pd_type == 0) pd_deny();                                   // editor não exclui/altera em massa
+		if ($pd_table == 'tbl_admin' && $pd_type != 3) pd_deny();       // só o Super Admin mexe em admins
+		$pd_ids = (isset($_POST['id']) && is_array($_POST['id'])) ? $_POST['id'] : explode(',', (string)(isset($_POST['id']) ? $_POST['id'] : ''));
+		$pd_ids = array_values(array_filter(array_map('intval', $pd_ids)));
+		if ($pd_table == 'tbl_admin') $pd_ids = array_values(array_diff($pd_ids, array((int)$_SESSION['id']))); // não exclui a si mesmo
+		if (!$pd_ids) pd_deny(400);
+		$_POST['id'] = $pd_ids;
+		$_POST['for_action'] = in_array(isset($_POST['for_action']) ? $_POST['for_action'] : '', array('enable', 'disable', 'delete'), true) ? $_POST['for_action'] : '';
+	} else if ($pd_action == 'check_smtp') {
+		if ($pd_type == 0) pd_deny();
+		if (!filter_var(isset($_POST['email']) ? trim($_POST['email']) : '', FILTER_VALIDATE_EMAIL)) pd_deny(400);
+	} else {
+		pd_deny(400);
+	}
+
+	switch ($pd_action) {
 	    
 	    case 'toggle_status':
         	$table_nm = $_POST['table'];

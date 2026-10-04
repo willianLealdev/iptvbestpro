@@ -65,14 +65,14 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Title</label>
                                 <div class="col-sm-10">
-                                     <input type="text" name="dns_title" class="form-control" value="<?php if(isset($_GET['dns_id'])){echo $row['dns_title'];}?>" required>
+                                     <input type="text" name="dns_title" class="form-control" value="<?php if(isset($_GET['dns_id'])){echo htmlspecialchars((string)$row['dns_title'], ENT_QUOTES, 'UTF-8', false);}?>" required>
                                 </div>
                             </div>
                             
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">http://url_here.com:port</label>
                                 <div class="col-sm-10">
-                                     <input type="text" name="dns_base" class="form-control" value="<?php if(isset($_GET['dns_id'])){echo $row['dns_base'];}?>" required>
+                                     <input type="text" name="dns_base" class="form-control" value="<?php if(isset($_GET['dns_id'])){echo htmlspecialchars((string)$row['dns_base'], ENT_QUOTES, 'UTF-8', false);}?>" required>
                                 </div>
                             </div>
                             

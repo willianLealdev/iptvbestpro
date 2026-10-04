@@ -89,7 +89,7 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">User name</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="user_name" value="<?php if(isset($_GET['user_id'])){echo $user_row['user_name'];}?>"  class="form-control" required>
+                                    <input type="text" name="user_name" value="<?php if(isset($_GET['user_id'])){echo htmlspecialchars((string)$user_row['user_name'], ENT_QUOTES, 'UTF-8', false);}?>"  class="form-control" required>
                                 </div>
                             </div>
                             
@@ -103,14 +103,14 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Dns base</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="dns_base" value="<?php if(isset($_GET['user_id'])){echo $user_row['dns_base'];}?>" class="form-control" required>
+                                    <input type="text" name="dns_base" value="<?php if(isset($_GET['user_id'])){echo htmlspecialchars((string)$user_row['dns_base'], ENT_QUOTES, 'UTF-8', false);}?>" class="form-control" required>
                                 </div>
                             </div>
                             
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Device ID</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="device_id" value="<?php if(isset($_GET['user_id'])){echo $user_row['device_id'];}?>" class="form-control" required>
+                                    <input type="text" name="device_id" value="<?php if(isset($_GET['user_id'])){echo htmlspecialchars((string)$user_row['device_id'], ENT_QUOTES, 'UTF-8', false);}?>" class="form-control" required>
                                 </div>
                             </div>
                             

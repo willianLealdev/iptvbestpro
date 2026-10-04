@@ -37,7 +37,7 @@
             
         <div class="card h-100">
             <div class="card-header d-md-inline-flex align-items-center justify-content-between py-3 px-4">
-                <a href="<?php echo (isset($_SERVER['HTTP_REFERER'])) ? $_SERVER['HTTP_REFERER'] : "dashboard.php" ?>" class="d-inline-flex align-items-center text-decoration-none fw-semibold nsofts-link">
+                <a href="<?php echo (isset($_SERVER['HTTP_REFERER'])) ? htmlspecialchars($_SERVER['HTTP_REFERER'], ENT_QUOTES, 'UTF-8') : "dashboard.php" ?>" class="d-inline-flex align-items-center text-decoration-none fw-semibold nsofts-link">
                     <i class="ri-arrow-left-line text-danger fw-bold"></i>
                     <span class="ps-2 lh-1"><?=$page_title ?></span>
                 </a>
@@ -56,8 +56,8 @@
                         <?php $i=0; while($row=mysqli_fetch_array($result)) { ?>
                             <div class="col-lg-3 col-sm-6">
                                 <div class="nsofts-card-light p-3">
-                                    <h5 class="mb-2"><?php echo $row['dns_title'];?></h5>
-                                    <p><?php echo $row['dns_base'];?></p>
+                                    <h5 class="mb-2"><?php echo htmlspecialchars((string)$row['dns_title'], ENT_QUOTES, 'UTF-8', false);?></h5>
+                                    <p><?php echo htmlspecialchars((string)$row['dns_base'], ENT_QUOTES, 'UTF-8', false);?></p>
                                     <div class="d-flex justify-content-between">
                                         <div class="d-flex">
                                            <a href="create_dns_stream.php?dns_id=<?php echo $row['id'];?>" class="btn btn-outline-primary rounded-pill me-2 btn-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">

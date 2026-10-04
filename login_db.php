@@ -47,7 +47,19 @@ if (!$ok) {
 if ((int)$row['status'] == 0) adm_back(__('Sua conta está bloqueada. Fale com o administrador.'));
 
 acc_clear_fails($mysqli, 'adm', $key);
+// senha antiga em md5: atualiza para password_hash (mais forte) agora que sabemos a senha
+if (strpos((string)$row['password'], '$2y$') !== 0 && strpos((string)$row['password'], '$argon') !== 0) {
+    $new_hash = password_hash($password, PASSWORD_DEFAULT);
+    $up = mysqli_prepare($mysqli, "UPDATE tbl_admin SET password = ? WHERE id = ?");
+    $aid = (int)$row['id'];
+    mysqli_stmt_bind_param($up, 'si', $new_hash, $aid);
+    mysqli_stmt_execute($up);
+    mysqli_stmt_close($up);
+}
 session_regenerate_id(true);
+// senha padrão ou fraca: obriga a trocar antes de usar o painel (includes/admin_guard.php)
+$weak = strlen($password) < 8 || in_array(strtolower($password), array('admin', 'admin123', 'password', '12345678', '123456789', 'senha123'), true) || strtolower($password) === strtolower((string)$row['username']);
+if ($weak) $_SESSION['admin_must_change_pw'] = 1; else unset($_SESSION['admin_must_change_pw']);
 $_SESSION['id'] = $row['id'];
 $_SESSION['admin_name'] = $row['username'];
 $_SESSION['admin_type'] = $row['admin_type'];

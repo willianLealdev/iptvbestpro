@@ -39,7 +39,7 @@
                 'username'  =>  $_POST['username'],
                 'email'  =>  $_POST['email'],
                 'admin_type'  =>  $_POST['admin_type'],
-                'password'  =>  md5(trim($_POST['password'])),
+                'password'  =>  password_hash(trim($_POST['password']), PASSWORD_DEFAULT),
                 'image'  =>  $image
             );
         } else {
@@ -93,7 +93,7 @@
                 'username'  =>  $_POST['username'],
                 'email'  =>  $_POST['email'],
                 'admin_type'  =>  $_POST['admin_type'],
-                'password'  =>  md5(trim($_POST['password'])),
+                'password'  =>  password_hash(trim($_POST['password']), PASSWORD_DEFAULT),
                 'image'  =>  $image
             );
         } else {
@@ -154,14 +154,14 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">User name</label>
                                 <div class="col-sm-10">
-                                     <input type="text" name="username" class="form-control" value="<?php if(isset($_GET['user_id'])){echo $row['username'];}?>" required>
+                                     <input type="text" name="username" class="form-control" value="<?php if(isset($_GET['user_id'])){echo htmlspecialchars((string)$row['username'], ENT_QUOTES, 'UTF-8', false);}?>" required>
                                 </div>
                             </div>
                             
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Email</label>
                                 <div class="col-sm-10">
-                                     <input type="text" name="email" class="form-control" value="<?php if(isset($_GET['user_id'])){echo $row['email'];}?>" required>
+                                     <input type="text" name="email" class="form-control" value="<?php if(isset($_GET['user_id'])){echo htmlspecialchars((string)$row['email'], ENT_QUOTES, 'UTF-8', false);}?>" required>
                                 </div>
                             </div>
                             

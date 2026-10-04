@@ -177,6 +177,7 @@ function i18n_handle_request($mysqli){
     $q = $_GET;
     unset($q['i18n'], $q['i18n_default']);
     $path = strtok(isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '', '?');
+    $path = '/'.ltrim((string)$path, "/\\"); // sempre caminho do próprio site (bloqueia //outro-site)
     header('Location: '.$path.($q ? '?'.http_build_query($q) : ''));
     exit;
 }
