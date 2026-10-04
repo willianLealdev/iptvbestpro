@@ -38,14 +38,19 @@
 ?>
 <?php
 require_once("includes/auth_layout.php");
+if (!$errors) require_once("includes/account_pages.php");
 $au_msg = '';
 $au_type = 'err';
-if (isset($_SESSION['msg'])) {
+if (isset($_SESSION['auth_msg'])) {
+    $au_msg = $_SESSION['auth_msg'];
+    $au_type = isset($_SESSION['auth_type']) ? $_SESSION['auth_type'] : 'err';
+    unset($_SESSION['auth_msg'], $_SESSION['auth_type']);
+} else if (isset($_SESSION['msg'])) {
     $au_msg = isset($client_lang[$_SESSION['msg']]) ? $client_lang[$_SESSION['msg']] : '';
     $au_type = (isset($_SESSION['class']) && $_SESSION['class'] == 'success') ? 'ok' : 'err';
     unset($_SESSION['msg'], $_SESSION['class']);
 }
-auth_start(array('prefix' => '', 'title' => 'Entrar', 'badge' => 'Painel administrativo', 'icon' => 'ri-shield-user-line', 'subtitle' => 'Acesso restrito à administração.'));
+auth_start(array('prefix' => '', 'title' => 'Entrar'));
 if ($errors) {
     $checks = array(
         array(phpversion() >= "7.4", 'PHP '.phpversion().' (mínimo 7.4)'),
@@ -59,7 +64,8 @@ if ($errors) {
 } else { ?>
         <?php auth_alert($au_type, $au_msg); ?>
         <form action="login_db.php" method="post" autocomplete="on">
-            <?php auth_input(array('name' => 'user_login', 'id' => 'user_login', 'label' => 'E-mail ou usuário', 'icon' => 'ri-user-3-line', 'placeholder' => 'admin', 'attrs' => 'autofocus autocomplete="username"')); ?>
+            <?php echo accp_csrf_field(); ?>
+            <?php auth_input(array('name' => 'user_login', 'id' => 'user_login', 'label' => 'E-mail ou usuário', 'icon' => 'ri-user-3-line', 'attrs' => 'autofocus autocomplete="username"')); ?>
             <?php auth_input(array('name' => 'nsofts_password_input', 'id' => 'nsofts_password_input', 'type' => 'password', 'label' => 'Senha', 'icon' => 'ri-lock-2-line', 'placeholder' => '••••••••', 'attrs' => 'autocomplete="current-password"')); ?>
             <div class="au-line">
                 <label class="au-check"><input type="checkbox" id="remember"> Lembrar de mim</label>

@@ -75,6 +75,16 @@ function auth_start($o){
         .au-alert.warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
         .au-hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
         .au-foot { color: #8f9ab3; font-size: 13px; margin-top: 22px; text-align: center; }
+        .au-done { text-align: center; margin-bottom: 20px; }
+        .au-done__ico { width: 70px; height: 70px; margin: 0 auto 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; background: #eef4ff; color: var(--blue); }
+        .au-done__ico.ok { background: #f0fdf4; color: #16a34a; }
+        .au-done__ico.err { background: #fef2f2; color: #dc2626; }
+        .au-done h2 { font-size: 20px; margin: 0 0 10px; }
+        .au-done p { color: #4b5875; font-size: 15px; line-height: 1.6; margin: 0 0 10px; }
+        .au-small { font-size: 13px !important; color: var(--muted) !important; }
+        a.au-btn { text-decoration: none; }
+        .au-link-btn { background: none; border: 0; color: var(--blue); font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+        .au-link-btn:hover { text-decoration: underline; }
         @media (max-width: 480px) { .au-card { padding: 26px 20px 22px; border-radius: 18px; } .au-row { grid-template-columns: 1fr; } }
     </style>
 </head>

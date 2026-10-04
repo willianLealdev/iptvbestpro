@@ -27,5 +27,15 @@ try {
     echo date('Y-m-d H:i:s').' [media-sync] erro: '.$e->getMessage()."\n";
 }
 
+// Cadastros que não confirmaram o e-mail em 5 dias são excluídos
+try {
+    require_once(__DIR__.'/../includes/reseller_helper.php');
+    require_once(__DIR__.'/../includes/account_auth.php');
+    $n = acc_cleanup_unverified($mysqli);
+    if ($n) echo date('Y-m-d H:i:s')." [contas] cadastros não confirmados excluídos=$n\n";
+} catch (\Throwable $e) {
+    echo date('Y-m-d H:i:s').' [contas] erro: '.$e->getMessage()."\n";
+}
+
 flock($lock, LOCK_UN);
 fclose($lock);
