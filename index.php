@@ -142,14 +142,17 @@ section{padding:90px 0}
 .tv{position:relative;border-radius:22px;padding:12px;background:linear-gradient(145deg,#1d2850,#0c1229);border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(47,107,255,.15)}
 .tv-screen{border-radius:14px;overflow:hidden;aspect-ratio:16/9;background:#050814;position:relative}
 .tv-screen img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
-.tv-ui{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);gap:4%;padding:12% 6% 6%;align-items:center}
-.tv-ui .logo{position:absolute;top:5%;left:5%;display:flex;align-items:center;gap:6px;font-weight:700;font-size:clamp(9px,1.2vw,13px)}
-.tv-ui .logo img{width:clamp(16px,2.2vw,26px);height:clamp(16px,2.2vw,26px);border-radius:6px}
-.tile{aspect-ratio:1/1;border-radius:12%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6%;font-weight:700;font-size:clamp(9px,1.25vw,14px);box-shadow:0 10px 20px rgba(0,0,0,.35)}
-.tile i{font-size:clamp(18px,3.2vw,38px)}
-.t1{background:linear-gradient(145deg,#3f7bff,#1c3fb5)}
-.t2{background:linear-gradient(145deg,#ffcf5a,#e09a12);color:#251800}
-.t3{background:linear-gradient(145deg,#a35cff,#5b25c9)}
+.tv-screen{container-type:inline-size}
+.tv-screen::after{content:"";position:absolute;left:0;right:0;bottom:0;height:24%;background:linear-gradient(rgba(5,8,20,0),#050814 75%);z-index:1}
+.app-top,.app-tiles{z-index:2}
+.app-top{position:absolute;top:4%;left:3.5%;right:3.5%;height:11%;display:flex;align-items:center;justify-content:space-between;padding:0 2.2%;border-radius:1.6cqw;background:rgba(5,10,24,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.app-brand{display:flex;align-items:center;gap:1.4cqw;font-weight:700;font-size:2.4cqw;color:#fff}
+.app-brand img{width:5cqw;height:5cqw;border-radius:1cqw;object-fit:cover}
+.app-icons{display:flex;gap:2.4cqw;color:#e6ebf7;font-size:2.3cqw}
+.app-tiles{position:absolute;left:3.5%;right:3.5%;bottom:5%;display:grid;grid-template-columns:repeat(5,1fr);gap:1.6cqw}
+.app-tile{aspect-ratio:1.55/1;border-radius:1.8cqw;background:rgba(3,22,48,.92);border:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4cqw;color:#fff;font-weight:800;font-size:1.65cqw;letter-spacing:.02em;text-align:center;line-height:1.15;box-shadow:0 1cqw 2.5cqw rgba(0,0,0,.45);text-transform:uppercase}
+.app-tile i{font-size:3.6cqw;font-weight:400}
+.app-tile.on{background:linear-gradient(180deg,#123a7a,#0a2350);border-color:rgba(245,184,46,.85);box-shadow:0 0 0 .35cqw rgba(245,184,46,.25),0 1cqw 2.5cqw rgba(0,0,0,.45)}
 .tv-foot{width:34%;height:10px;margin:10px auto 0;border-radius:0 0 12px 12px;background:#141c38}
 .checks{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;margin-top:28px}
 .checks div{display:flex;gap:10px;align-items:center;font-weight:500}
@@ -336,13 +339,18 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
             </div>
             <div class="reveal">
                 <div class="tv">
-                    <div class="tv-screen">
-                        <img class="bg" src="assets/images/brand/hero-bg.jpg" alt="">
-                        <div class="tv-ui">
-                            <div class="logo"><img src="<?php echo brand_logo_url(); ?>" alt=""><?php echo lp_e($name); ?></div>
-                            <div class="tile t1"><i class="ri-live-line"></i>Ao vivo</div>
-                            <div class="tile t2"><i class="ri-film-line"></i>Filmes</div>
-                            <div class="tile t3"><i class="ri-movie-2-line"></i>Séries</div>
+                    <div class="tv-screen" aria-label="Tela inicial do app">
+                        <img class="bg" src="assets/images/brand/iptvbestpro_full.jpg" alt="" style="opacity:1">
+                        <div class="app-top">
+                            <div class="app-brand"><img src="<?php echo brand_logo_url(); ?>" alt=""><span translate="no"><?php echo lp_e($name); ?></span></div>
+                            <div class="app-icons"><i class="ri-wifi-line"></i><i class="ri-notification-3-fill"></i><i class="ri-download-2-line"></i><i class="ri-calendar-2-line"></i><i class="ri-user-3-line"></i><i class="ri-group-line"></i><i class="ri-settings-3-line"></i></div>
+                        </div>
+                        <div class="app-tiles">
+                            <div class="app-tile on"><i class="ri-tv-2-line"></i>TV ao vivo</div>
+                            <div class="app-tile"><i class="ri-play-circle-line"></i>Filmes</div>
+                            <div class="app-tile"><i class="ri-slideshow-3-line"></i>Séries</div>
+                            <div class="app-tile"><i class="ri-file-list-3-line"></i>Ao vivo com EPG</div>
+                            <div class="app-tile"><i class="ri-layout-grid-line"></i>Multitela</div>
                         </div>
                     </div>
                 </div>
