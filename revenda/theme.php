@@ -135,6 +135,8 @@ theme_form_styles(); ?>
             'side_html' => $side_html,
             'actions_html' => $actions_html,
             'allow_keep_colors' => $is_model,
+            'theme_id' => $edit_id,
+            'model_img_base' => '../assets/images/themes/',
         ));
     ?>
 </form>

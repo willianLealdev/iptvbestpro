@@ -1,4 +1,6 @@
 <?php
+require_once(__DIR__.'/theme_preview.php');
+
 /**
  * Editor visual do tema BestPro (paletas, cores, imagens e pré-visualização de TV).
  * Usado em settings_theme.php (admin) e revenda/theme.php (revendedor).
@@ -67,7 +69,7 @@ function theme_gallery_render($state, $img_prefix, $edit_url_base, $hidden_html,
 </div>
 <?php }
 
-function theme_form_styles(){ ?>
+function theme_form_styles(){ theme_preview_styles(); ?>
 <style>
     .th-card { border: 0; border-radius: 14px; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); background: #fff; }
     .th-color { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -83,29 +85,6 @@ function theme_form_styles(){ ?>
     .th-img { border: 1px dashed #d6dbe4; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
     .th-img img { max-height: 70px; max-width: 100%; border-radius: 6px; display: block; margin-bottom: 8px; background: #f3f4f6; }
 
-    /* Pré-visualização (tela de TV) */
-    .tv { --p: #3B6CF6; --a: #22C55E; --bg: #0B1220; --s: #131C2E; --t: #FFFFFF; --r: 14px; --ov: .6;
-          position: relative; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: var(--bg); color: var(--t);
-          box-shadow: 0 0 0 8px #111827, 0 18px 40px rgba(0,0,0,.25); font-family: inherit; }
-    .tv__bgimg { position: absolute; inset: 0; background-size: cover; background-position: center; }
-    .tv__bgimg::after { content: ''; position: absolute; inset: 0; background: var(--bg); opacity: var(--ov); }
-    .tv__inner { position: relative; display: flex; height: 100%; }
-    .tv__side { width: 22%; background: color-mix(in srgb, var(--s) 85%, transparent); padding: 5% 3%; display: flex; flex-direction: column; gap: 6%; }
-    .tv__logo { height: 9%; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: clamp(8px, 1.2vw, 14px); min-width: 0; }
-    .tv__logo img { height: 100%; border-radius: 6px; object-fit: contain; }
-    .tv__logo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .tv__menu div { font-size: clamp(7px, .95vw, 12px); padding: 6% 8%; border-radius: calc(var(--r) * .6); opacity: .8; margin-bottom: 4%; }
-    .tv__menu div.on { background: var(--p); opacity: 1; font-weight: 600; }
-    .tv__main { flex: 1; padding: 4% 4%; display: flex; flex-direction: column; gap: 5%; min-width: 0; }
-    .tv__banner { height: 40%; border-radius: var(--r); background: linear-gradient(120deg, var(--p), var(--a)); background-size: cover; background-position: center;
-                  position: relative; overflow: hidden; display: flex; align-items: flex-end; padding: 3%; }
-    .tv__banner b { font-size: clamp(9px, 1.4vw, 18px); text-shadow: 0 2px 8px rgba(0,0,0,.5); }
-    .tv__row-title { font-size: clamp(7px, .95vw, 12px); font-weight: 600; opacity: .9; margin-bottom: 2%; }
-    .tv__row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3%; }
-    .tv__tile { aspect-ratio: 16 / 10; border-radius: var(--r); background: var(--s); position: relative; overflow: hidden; border: 2px solid transparent; }
-    .tv__tile.focus { border-color: var(--p); box-shadow: 0 0 0 3px color-mix(in srgb, var(--p) 35%, transparent); }
-    .tv__tile .live { position: absolute; top: 8%; left: 8%; background: var(--a); color: #000; font-size: clamp(5px, .6vw, 9px); font-weight: 700; padding: 2% 6%; border-radius: 4px; }
-    .tv__tile .bar { position: absolute; left: 0; bottom: 0; height: 6%; width: 55%; background: var(--a); }
 </style>
 <?php }
 
@@ -196,42 +175,17 @@ function theme_form_editor($t, $opts){
         <div class="card th-card" style="position: sticky; top: 90px;">
             <div class="card-body p-4">
                 <?php echo isset($opts['side_html']) ? $opts['side_html'] : ''; ?>
-                <div class="tv" id="tv">
-                    <div class="tv__bgimg" id="tv_bgimg" style="<?php echo $t['theme_bg_image'] != '' ? "background-image:url('".htmlspecialchars($img_base.$t['theme_bg_image'])."')" : ''; ?>"></div>
-                    <div class="tv__inner">
-                        <div class="tv__side">
-                            <div class="tv__logo"><img id="tv_logo" src="<?php echo htmlspecialchars($logo_url); ?>" alt="" onerror="this.style.display='none'"><span id="tv_name"><?php echo htmlspecialchars($opts['app_name']); ?></span></div>
-                            <div class="tv__menu">
-                                <div class="on">Início</div>
-                                <div>TV ao Vivo</div>
-                                <div>Filmes</div>
-                                <div>Séries</div>
-                                <div>Favoritos</div>
-                                <div>Configurações</div>
-                            </div>
-                        </div>
-                        <div class="tv__main">
-                            <div class="tv__banner" id="tv_banner" style="<?php echo $t['theme_banner'] != '' ? "background-image:url('".htmlspecialchars($img_base.$t['theme_banner'])."')" : ''; ?>"><b>Destaques da semana</b></div>
-                            <div>
-                                <div class="tv__row-title">Canais ao vivo</div>
-                                <div class="tv__row">
-                                    <div class="tv__tile focus"><span class="live">AO VIVO</span></div>
-                                    <div class="tv__tile"><span class="live">AO VIVO</span></div>
-                                    <div class="tv__tile"></div>
-                                    <div class="tv__tile"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="tv__row-title">Continuar assistindo</div>
-                                <div class="tv__row">
-                                    <div class="tv__tile"><span class="bar"></span></div>
-                                    <div class="tv__tile"><span class="bar" style="width:30%"></span></div>
-                                    <div class="tv__tile"></div>
-                                    <div class="tv__tile"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <?php
+                    $tid = isset($opts['theme_id']) ? (string)$opts['theme_id'] : THEME_BESTPRO_ID;
+                    $orig = theme_model_originals();
+                    $catalog = theme_catalog();
+                    $model_img = (isset($catalog[$tid]) && $catalog[$tid]['image'] != '' && isset($opts['model_img_base'])) ? $opts['model_img_base'].$catalog[$tid]['image'].'.png' : '';
+                ?>
+                <div class="tv" id="tv" data-theme="<?php echo htmlspecialchars($tid); ?>" data-original='<?php echo json_encode(isset($orig[$tid]) ? $orig[$tid] : $orig[THEME_BESTPRO_ID]); ?>'>
+                    <?php theme_preview_markup($tid, $logo_url, $opts['app_name'],
+                        $t['theme_bg_image'] != '' ? $img_base.$t['theme_bg_image'] : '',
+                        $t['theme_banner'] != '' ? $img_base.$t['theme_banner'] : '',
+                        $model_img); ?>
                 </div>
                 <p class="text-muted small mt-3 mb-0">A pré-visualização é aproximada. No app, o tema aplica estas cores e imagens nas telas de TV, celular e tablet.</p>
                 <?php echo isset($opts['actions_html']) ? $opts['actions_html'] : ''; ?>
@@ -246,53 +200,86 @@ function theme_form_script($fallback_logo){ ?>
 (function () {
     var tv = document.getElementById('tv');
     if (!tv) return;
+    var themeId = tv.getAttribute('data-theme');
+    var original = JSON.parse(tv.getAttribute('data-original') || '{}');
     var vars = { theme_primary: '--p', theme_accent: '--a', theme_background: '--bg', theme_surface: '--s', theme_text: '--t' };
+    var origKey = { theme_primary: 'p', theme_accent: 'a', theme_background: 'bg', theme_surface: 's', theme_text: 't' };
+    var keep = document.getElementById('theme_keep_colors');
+
+    function keeping() { return !!(keep && keep.checked); }
+
+    // Aplica na pré-visualização: cores escolhidas, ou as originais do modelo quando "manter cores" está ligado
+    function paint() {
+        Object.keys(vars).forEach(function (key) {
+            var v = keeping() ? original[origKey[key]] : document.getElementById(key).value;
+            if (/^#[0-9a-fA-F]{6}$/.test(v || '')) tv.style.setProperty(vars[key], v);
+        });
+        tv.classList.toggle('custom', !keeping());
+        var box = document.getElementById('th_colors_box');
+        if (box) box.style.opacity = keeping() ? '.45' : '1';
+    }
 
     function setColor(key, value) {
         if (!/^#[0-9a-fA-F]{6}$/.test(value)) return;
-        tv.style.setProperty(vars[key], value);
         document.getElementById(key).value = value.toUpperCase();
         var picker = document.querySelector('[data-color-for="' + key + '"]');
         if (picker) picker.value = value;
+        paint();
     }
-    Object.keys(vars).forEach(function (key) { setColor(key, document.getElementById(key).value); });
 
     document.querySelectorAll('[data-color-for]').forEach(function (p) {
-        p.addEventListener('input', function () { setColor(p.getAttribute('data-color-for'), p.value); });
+        p.addEventListener('input', function () { if (keep && keep.checked) { keep.checked = false; } setColor(p.getAttribute('data-color-for'), p.value); });
     });
     Object.keys(vars).forEach(function (key) {
         document.getElementById(key).addEventListener('input', function () { setColor(key, this.value.trim()); });
     });
-
     document.querySelectorAll('[data-preset]').forEach(function (b) {
         b.addEventListener('click', function () {
+            if (keep) keep.checked = false;
             var c = JSON.parse(b.getAttribute('data-preset'));
             ['theme_primary', 'theme_accent', 'theme_background', 'theme_surface', 'theme_text'].forEach(function (key, i) { setColor(key, c[i]); });
         });
     });
+    if (keep) keep.addEventListener('change', paint);
+    paint();
 
     var corner = document.getElementById('theme_corner');
-    function upCorner() { tv.style.setProperty('--r', corner.value + 'px'); document.getElementById('corner_val').textContent = corner.value + 'px'; }
+    function upCorner() { tv.style.setProperty('--r', (corner.value * 0.07) + 'cqw'); document.getElementById('corner_val').textContent = corner.value + 'px'; }
     corner.addEventListener('input', upCorner); upCorner();
 
     var overlay = document.getElementById('theme_bg_overlay');
     function upOverlay() { tv.style.setProperty('--ov', overlay.value / 100); document.getElementById('overlay_val').textContent = overlay.value + '%'; }
     overlay.addEventListener('input', upOverlay); upOverlay();
 
-    // "Manter cores originais": deixa as cores esmaecidas (continuam salvas para uso futuro)
-    var keep = document.getElementById('theme_keep_colors');
-    function upKeep() { var box = document.getElementById('th_colors_box'); if (box && keep) { box.style.opacity = keep.checked ? '.45' : '1'; } }
-    if (keep) { keep.addEventListener('change', upKeep); upKeep(); }
-
     // Nome da marca (portal do revendedor)
     var brand = document.getElementById('brand_name');
-    if (brand) brand.addEventListener('input', function () { document.getElementById('tv_name').textContent = brand.value || brand.getAttribute('placeholder'); });
+    if (brand) brand.addEventListener('input', function () { var n = document.getElementById('tv_name'); if (n) n.textContent = brand.value || brand.getAttribute('placeholder'); });
 
-    // Pré-visualização das imagens escolhidas antes de salvar
+    // MovieUI: o pôster de destaque usa o banner, senão a imagem de fundo, senão a tela original
+    var current = { bg: '', banner: '' };
+    var heroEl = document.getElementById('tv_banner');
+    var heroFallback = heroEl ? heroEl.getAttribute('data-hero-fallback') : null;
+    if (heroEl && themeId === '4') { current.bg = heroEl.getAttribute('data-bg') || ''; current.banner = heroEl.getAttribute('data-banner') || ''; }
+    function updateHero() {
+        if (themeId !== '4' || !heroEl) return;
+        var url = current.banner || current.bg || heroFallback;
+        heroEl.style.backgroundImage = url ? "url('" + url + "')" : 'none';
+    }
+
     var targets = {
-        theme_logo: function (url) { var i = document.getElementById('tv_logo'); i.style.display = ''; i.src = url; },
-        theme_bg_image: function (url) { document.getElementById('tv_bgimg').style.backgroundImage = url ? "url('" + url + "')" : 'none'; },
-        theme_banner: function (url) { document.getElementById('tv_banner').style.backgroundImage = url ? "url('" + url + "')" : ''; }
+        theme_logo: function (url) { var i = document.getElementById('tv_logo'); if (i) { i.style.visibility = ''; i.src = url; } },
+        theme_bg_image: function (url) {
+            current.bg = url;
+            var b = document.getElementById('tv_bgimg');
+            if (b) b.style.backgroundImage = url ? "url('" + url + "')" : 'none';
+            updateHero();
+        },
+        theme_banner: function (url) {
+            current.banner = url;
+            if (themeId === '4') { updateHero(); return; }
+            var el = document.getElementById('tv_banner');
+            if (el) el.style.backgroundImage = url ? "url('" + url + "')" : '';
+        }
     };
     document.querySelectorAll('[data-image-for]').forEach(function (input) {
         input.addEventListener('change', function () {
