@@ -179,6 +179,79 @@ function playlist_current_dns($mysqli, $row){
     return $base;
 }
 
+/* ---------- Saúde dos servidores DNS (bolinha online/offline) ---------- */
+
+function dns_health_migrate($mysqli){
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    $columns = array(
+        'health'      => "VARCHAR(10) NOT NULL DEFAULT ''",   // '' = nunca verificado | 'online' | 'offline'
+        'health_at'   => "INT(11) NOT NULL DEFAULT 0",
+        'latency_ms'  => "INT(11) NOT NULL DEFAULT 0",
+    );
+    foreach ($columns as $name => $definition) {
+        $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_xui_dns` LIKE '$name'");
+        if ($col && mysqli_num_rows($col) == 0) {
+            mysqli_query($mysqli, "ALTER TABLE `tbl_xui_dns` ADD `$name` $definition");
+        }
+    }
+}
+
+/**
+ * Testa se cada servidor DNS responde (player_api.php sem login: um servidor no ar devolve resposta,
+ * mesmo recusando o acesso). Atualiza health/latency em tbl_xui_dns. Retorna array id => 'online'|'offline'.
+ */
+function dns_health_check_all($mysqli, $timeout = 5){
+    dns_health_migrate($mysqli);
+    $rows = array();
+    $res = mysqli_query($mysqli, "SELECT id, dns_base FROM tbl_xui_dns");
+    while ($res && $r = mysqli_fetch_assoc($res)) $rows[$r['id']] = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/');
+    if (!$rows) return array();
+
+    $mh = curl_multi_init();
+    $handles = array();
+    foreach ($rows as $id => $base) {
+        $ch = curl_init($base.'/player_api.php');
+        curl_setopt_array($ch, array(
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 3,
+            CURLOPT_CONNECTTIMEOUT => $timeout,
+            CURLOPT_TIMEOUT => $timeout + 3,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_USERAGENT => 'IPTVSmartersPlayer',
+        ));
+        curl_multi_add_handle($mh, $ch);
+        $handles[$id] = $ch;
+    }
+    do {
+        $status = curl_multi_exec($mh, $running);
+        if ($running) curl_multi_select($mh, 1.0);
+    } while ($running && $status == CURLM_OK);
+
+    $now = time();
+    $out = array();
+    foreach ($handles as $id => $ch) {
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $ms = (int)round(curl_getinfo($ch, CURLINFO_TOTAL_TIME) * 1000);
+        $online = $code > 0 && $code < 500;
+        $out[$id] = $online ? 'online' : 'offline';
+        $health = $out[$id];
+        $latency = $online ? $ms : 0;
+        $stmt = mysqli_prepare($mysqli, "UPDATE tbl_xui_dns SET health = ?, health_at = ?, latency_ms = ? WHERE id = ?");
+        $iid = (int)$id;
+        mysqli_stmt_bind_param($stmt, 'siii', $health, $now, $latency, $iid);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        curl_multi_remove_handle($mh, $ch);
+        curl_close($ch);
+    }
+    curl_multi_close($mh);
+    return $out;
+}
+
 function playlist_set_dns_state($mysqli, $id, $base, $online){
     $now = time();
     $status = $online ? 'online' : 'offline';
@@ -197,7 +270,9 @@ function playlist_set_dns_state($mysqli, $id, $base, $online){
  */
 function playlist_monitor_run($mysqli){
     playlists_migrate($mysqli);
-    $stats = array('checked' => 0, 'online' => 0, 'switched' => 0, 'offline' => 0);
+    $health = dns_health_check_all($mysqli);
+    $stats = array('checked' => 0, 'online' => 0, 'switched' => 0, 'offline' => 0,
+                   'dns_online' => count(array_keys($health, 'online')), 'dns_offline' => count(array_keys($health, 'offline')));
     $dns = dns_list_active($mysqli);
     if (!$dns) return $stats;
     $active_norms = array();

@@ -2,8 +2,28 @@
     include("includes/header.php");
     require("includes/lb_helper.php");
     require("language/language.php");
-    
-    $tableName="tbl_xui_dns";   
+    require_once("includes/playlist_helper.php");
+
+    // Status online/offline dos servidores (o monitor atualiza a cada 5 minutos)
+    dns_health_migrate($mysqli);
+    $never_checked = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_xui_dns WHERE health = ''"));
+    if(isset($_POST['check_now']) || (int)$never_checked['num'] > 0){
+        dns_health_check_all($mysqli, 4);
+        if(isset($_POST['check_now'])){
+            header("Location:manage_dns.php");
+            exit;
+        }
+    }
+
+    function dns_checked_ago($ts){
+        if(!$ts){ return 'nunca verificado'; }
+        $s = time() - (int)$ts;
+        if($s < 60){ return 'agora'; }
+        if($s < 3600){ return 'há '.floor($s / 60).' min'; }
+        return 'há '.floor($s / 3600).' h';
+    }
+
+    $tableName="tbl_xui_dns";
     $targetpage = "manage_dns.php"; 
     $limit = 15; 
 
@@ -43,6 +63,12 @@
                 </a>
                 <span class="ps-2 lh-1">Total DNS (<?=$total_pages ?>)</span>
                 <div class="d-flex mt-2 mt-md-0">
+                    <form method="post" class="me-2">
+                        <button type="submit" name="check_now" class="btn btn-outline-secondary d-inline-flex align-items-center" data-bs-toggle="tooltip" title="Testar todos os servidores agora">
+                            <i class="ri-refresh-line"></i>
+                            <span class="ps-1 text-nowrap d-none d-sm-block">Verificar agora</span>
+                        </button>
+                    </form>
                     <a href="create_dns.php?add=yes" class="btn btn-primary d-inline-flex align-items-center justify-content-center">
                         <i class="ri-add-line"></i>
                         <span class="ps-1 text-nowrap d-none d-sm-block">Create DNS</span>
@@ -56,8 +82,21 @@
                         <?php $i=0; while($row=mysqli_fetch_array($result)) { ?>
                             <div class="col-lg-3 col-sm-6">
                                 <div class="nsofts-card-light p-3">
-                                    <h5 class="mb-2"><?php echo $row['dns_title'];?></h5>
-                                    <p><?php echo $row['dns_base'];?></p>
+                                    <?php
+                                        $h = isset($row['health']) ? $row['health'] : '';
+                                        $dot = $h == 'online' ? '#16a34a' : ($h == 'offline' ? '#dc2626' : '#9ca3af');
+                                        $label = $h == 'online' ? 'Online' : ($h == 'offline' ? 'Offline' : 'Não verificado');
+                                    ?>
+                                    <h5 class="mb-2 d-flex align-items-center gap-2">
+                                        <span style="width:12px;height:12px;border-radius:50%;background:<?php echo $dot; ?>;flex:0 0 12px;box-shadow:0 0 0 3px <?php echo $dot; ?>33;" title="<?php echo $label; ?>"></span>
+                                        <?php echo $row['dns_title'];?>
+                                    </h5>
+                                    <p class="mb-1"><?php echo $row['dns_base'];?></p>
+                                    <p class="small mb-3" style="color:<?php echo $dot; ?>;">
+                                        <b><?php echo $label; ?></b>
+                                        <?php if($h == 'online' && (int)$row['latency_ms'] > 0){ ?> · <?php echo (int)$row['latency_ms']; ?> ms<?php } ?>
+                                        <span class="text-muted"> · <?php echo dns_checked_ago(isset($row['health_at']) ? $row['health_at'] : 0); ?></span>
+                                    </p>
                                     <div class="d-flex justify-content-between">
                                         <div class="d-flex">
                                            <a href="create_dns.php?dns_id=<?php echo $row['id'];?>" class="btn btn-outline-primary rounded-pill me-2 btn-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">

@@ -24,8 +24,8 @@ require_once(__DIR__.'/../includes/playlist_helper.php');
 
 $start = microtime(true);
 $stats = playlist_monitor_run($mysqli);
-printf("%s [dns-monitor] verificadas=%d online=%d trocadas=%d sem_servidor=%d (%.1fs)\n",
-    date('Y-m-d H:i:s'), $stats['checked'], $stats['online'], $stats['switched'], $stats['offline'], microtime(true) - $start);
+printf("%s [dns-monitor] servidores online=%d offline=%d | playlists verificadas=%d online=%d trocadas=%d sem_servidor=%d (%.1fs)\n",
+    date('Y-m-d H:i:s'), $stats['dns_online'], $stats['dns_offline'], $stats['checked'], $stats['online'], $stats['switched'], $stats['offline'], microtime(true) - $start);
 
 flock($lock, LOCK_UN);
 fclose($lock);
