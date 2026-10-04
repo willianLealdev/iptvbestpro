@@ -108,7 +108,7 @@ theme_form_styles(); ?>
 </form>
 
 <div class="rv-card p-4 mb-4">
-    <?php theme_gallery_render($saved_list, $active, '../assets/images/themes/', $self, rv_csrf_field(), $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base); ?>
+    <?php theme_gallery_render($saved_list, $active, '../assets/images/themes/', $self, rv_csrf_field(), $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base, array('img_base' => '../images/', 'fallback_logo' => '../images/'.APP_LOGO, 'app_name' => $default_name)); ?>
 </div>
 
 <div id="editor" class="d-flex align-items-center gap-2 mb-3">

@@ -18,7 +18,7 @@ require_once(__DIR__.'/theme_preview.php');
  * Galeria: "Modelos" (originais) e "Meus temas" (personalizações salvas com nome).
  * $active = array('base' => id, 'saved_id' => id). $self_url: página atual (sem query).
  */
-function theme_gallery_render($saved, $active, $img_prefix, $self_url, $hidden_html, $editing){ ?>
+function theme_gallery_render($saved, $active, $img_prefix, $self_url, $hidden_html, $editing, $mini = array()){ ?>
 <style>
     .tg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
     .tg-card { border: 2px solid #eef0f4; border-radius: 12px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
@@ -52,10 +52,13 @@ function theme_gallery_render($saved, $active, $img_prefix, $self_url, $hidden_h
             $st = $s['settings_arr']; ?>
             <div class="tg-card <?php echo $in_use ? 'in-use' : ''; ?> <?php echo (string)$editing === 's'.$s['id'] ? 'editing' : ''; ?>">
                 <div class="tg-thumb">
-                    <?php if ($base['image'] != '') { ?><img src="<?php echo htmlspecialchars($img_prefix.$base['image']); ?>.png" alt="" loading="lazy">
+                    <?php if ($mini) {
+                        // Mostra o tema como ficou salvo (cores, logo, nome, fundo e banner)
+                        theme_mini_preview($st, $s['base_theme'], $mini['img_base'], $mini['fallback_logo'], $mini['app_name'], $img_prefix);
+                    } else if ($base['image'] != '') { ?><img src="<?php echo htmlspecialchars($img_prefix.$base['image']); ?>.png" alt="" loading="lazy">
                     <?php } else { ?><div class="tg-custom" style="background:linear-gradient(135deg, <?php echo htmlspecialchars($st['theme_primary']); ?>, <?php echo htmlspecialchars($st['theme_accent']); ?>)"><i class="ri-palette-line fs-3"></i>BestPro</div><?php } ?>
                     <div class="tg-badges"><?php if ($in_use) { ?><span class="tg-on">Em uso</span><?php } ?></div>
-                    <?php if ($st['theme_keep_colors'] != '1') { ?>
+                    <?php if (!$mini && $st['theme_keep_colors'] != '1') { ?>
                         <div class="tg-swatches"><?php foreach (array('theme_primary', 'theme_accent', 'theme_surface') as $k) { ?><i style="background:<?php echo htmlspecialchars($st[$k]); ?>"></i><?php } ?></div>
                     <?php } ?>
                 </div>

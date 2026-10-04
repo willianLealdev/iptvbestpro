@@ -25,7 +25,8 @@ function theme_preview_styles(){ ?>
           container-type: inline-size; position: relative; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden;
           background: var(--bg); color: var(--t); box-shadow: 0 0 0 8px #111827, 0 18px 40px rgba(0,0,0,.25); font-family: inherit; }
     .tv * { box-sizing: border-box; }
-    .tv.hide-name #tv_name { display: none; }
+    .tv.hide-name #tv_name, .tv.hide-name .pv-name, .tv.hide-name .m8 .brand span { display: none; }
+    .tv.tv--thumb { border-radius: 0; box-shadow: none; pointer-events: none; }
     .tv__bgimg { position: absolute; inset: 0; background-size: cover; background-position: center; }
     .tv__bgimg::after { content: ''; position: absolute; inset: 0; background: var(--bg); opacity: var(--ov); }
     .tv__layer { position: absolute; inset: 0; padding: 3.2cqw 3.4cqw; display: flex; flex-direction: column; gap: 2.4cqw; }
@@ -146,6 +147,32 @@ function theme_preview_styles(){ ?>
     .m8 .tile .bar { position: absolute; left: 0; bottom: 0; height: 6%; width: 55%; background: var(--a); }
 </style>
 <?php }
+
+/**
+ * Mini pré-visualização de um tema salvo (cartões de "Meus temas"): mesma tela do editor, em tamanho pequeno.
+ * Sem ids (para não conflitar com a pré-visualização grande do editor).
+ */
+function theme_mini_preview($settings, $base, $img_base, $fallback_logo, $default_name, $model_img_base){
+    $orig = theme_model_originals();
+    $o = isset($orig[(string)$base]) ? $orig[(string)$base] : $orig['8'];
+    $keep = $settings['theme_keep_colors'] == '1' && (string)$base !== '8';
+    $c = $keep ? $o : array('p' => $settings['theme_primary'], 'a' => $settings['theme_accent'], 'bg' => $settings['theme_background'], 's' => $settings['theme_surface'], 't' => $settings['theme_text']);
+    $style = sprintf('--p:%s;--a:%s;--bg:%s;--s:%s;--t:%s;--r:%scqw;--ov:%s',
+        $c['p'], $c['a'], $c['bg'], $c['s'], $c['t'], round((int)$settings['theme_corner'] * 0.07, 2), round((int)$settings['theme_bg_overlay'] / 100, 2));
+    $catalog = theme_catalog();
+    $model_img = (isset($catalog[(string)$base]) && $catalog[(string)$base]['image'] != '') ? $model_img_base.$catalog[(string)$base]['image'].'.png' : '';
+    $logo = $settings['theme_logo'] != '' ? $img_base.$settings['theme_logo'] : $fallback_logo;
+    $brand = $settings['theme_brand_text'] != '' ? $settings['theme_brand_text'] : $default_name;
+
+    ob_start();
+    theme_preview_markup($base, $logo, $brand,
+        $settings['theme_bg_image'] != '' ? $img_base.$settings['theme_bg_image'] : '',
+        $settings['theme_banner'] != '' ? $img_base.$settings['theme_banner'] : '',
+        $model_img);
+    $html = preg_replace('/ id="tv_[a-z]+"/', '', ob_get_clean());
+
+    echo '<div class="tv tv--thumb'.($keep ? '' : ' custom').($settings['theme_show_name'] == '0' ? ' hide-name' : '').'" style="'.htmlspecialchars($style).'">'.$html.'</div>';
+}
 
 /**
  * $theme_id: modelo (1..8). $logo_url / $brand: logo e nome mostrados. $banner_url: banner (BestPro/MovieUI).

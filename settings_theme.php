@@ -140,7 +140,7 @@
 
         <div class="card th-card mb-4">
             <div class="card-body p-4">
-                <?php theme_gallery_render($saved_list, $active, 'assets/images/themes/', $self, '', $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base); ?>
+                <?php theme_gallery_render($saved_list, $active, 'assets/images/themes/', $self, '', $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base, array('img_base' => 'images/', 'fallback_logo' => 'images/'.APP_LOGO, 'app_name' => APP_NAME)); ?>
             </div>
         </div>
 
