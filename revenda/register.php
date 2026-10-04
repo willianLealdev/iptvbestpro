@@ -37,8 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $code = activation_code_generate($mysqli);
         $hash = password_hash($password, PASSWORD_DEFAULT);
         $now = time();
-        $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_resellers (name, email, phone, password, code, credits, status, remark, created_at, updated_at) VALUES (?,?,?,?,?,0,1,'Cadastro pelo site',?,?)");
-        mysqli_stmt_bind_param($stmt, 'sssssii', $form['name'], $form['email'], $form['phone'], $hash, $code, $now, $now);
+        // Moeda pelo país do IP: Brasil = R$, demais países = US$
+        $country = devices_country(devices_client_ip());
+        $currency = ($country['code'] == '' || strtoupper($country['code']) == 'BR') ? 'BRL' : 'USD';
+        $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_resellers (name, email, phone, password, code, credits, status, remark, currency, created_at, updated_at) VALUES (?,?,?,?,?,0,1,'Cadastro pelo site',?,?,?)");
+        mysqli_stmt_bind_param($stmt, 'ssssssii', $form['name'], $form['email'], $form['phone'], $hash, $code, $currency, $now, $now);
         $ok = $code !== false && mysqli_stmt_execute($stmt);
         $new_id = mysqli_insert_id($mysqli);
         mysqli_stmt_close($stmt);

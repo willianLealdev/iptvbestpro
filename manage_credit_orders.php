@@ -34,6 +34,8 @@
     if(isset($_POST['save_settings'])){
         $price = str_replace(',', '.', preg_replace('/[^0-9,\.]/', '', $_POST['credit_price']));
         panel_config_set($mysqli, 'credit_price', number_format((float)$price, 2, '.', ''));
+        $price_usd = str_replace(',', '.', preg_replace('/[^0-9,\.]/', '', $_POST['credit_price_usd']));
+        panel_config_set($mysqli, 'credit_price_usd', number_format((float)$price_usd, 2, '.', ''));
         panel_config_set($mysqli, 'credit_min', max(1, (int)$_POST['credit_min']));
         panel_config_set($mysqli, 'payment_instructions', mb_substr(trim(strip_tags($_POST['payment_instructions'])), 0, 2000));
         panel_config_set($mysqli, 'payment_contact', mb_substr(trim(strip_tags($_POST['payment_contact'])), 0, 191));
@@ -49,7 +51,11 @@
     }
 
     $status_filter = (isset($_GET['status']) && in_array($_GET['status'], array('pending','paid','cancelled'))) ? $_GET['status'] : '';
-    $where_sql = $status_filter != '' ? "WHERE o.status = '$status_filter'" : '';
+    $currency_filter = (isset($_GET['currency']) && in_array($_GET['currency'], array('BRL','USD'))) ? $_GET['currency'] : '';
+    $where = array();
+    if($status_filter != '') $where[] = "o.status = '$status_filter'";
+    if($currency_filter != '') $where[] = "o.currency = '$currency_filter'";
+    $where_sql = $where ? 'WHERE '.implode(' AND ', $where) : '';
 
     $total_rows = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_credit_orders o $where_sql"));
     $total_rows = (int)$total_rows['num'];
@@ -64,9 +70,18 @@
                                      $where_sql ORDER BY (o.status = 'pending') DESC, o.id DESC LIMIT $start, $limit");
 
     $pending_count = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_credit_orders WHERE status = 'pending'"));
-    $paid_month = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COALESCE(SUM(total),0) AS total, COALESCE(SUM(credits),0) AS credits FROM tbl_credit_orders WHERE status = 'paid' AND paid_at >= ".strtotime(date('Y-m-01 00:00:00'))));
+    // Recebidos separados por moeda (R$ e US$): no mês e no total
+    $month_start = strtotime(date('Y-m-01 00:00:00'));
+    $paid_month = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT
+        COALESCE(SUM(IF(currency = 'BRL' AND paid_at >= $month_start, total, 0)),0) AS month_brl,
+        COALESCE(SUM(IF(currency = 'USD' AND paid_at >= $month_start, total, 0)),0) AS month_usd,
+        COALESCE(SUM(IF(currency = 'BRL', total, 0)),0) AS all_brl,
+        COALESCE(SUM(IF(currency = 'USD', total, 0)),0) AS all_usd,
+        COALESCE(SUM(IF(paid_at >= $month_start, credits, 0)),0) AS credits
+        FROM tbl_credit_orders WHERE status = 'paid'"));
 
     $cfg_price = panel_config_get($mysqli, 'credit_price', '0');
+    $cfg_price_usd = panel_config_get($mysqli, 'credit_price_usd', '0');
     $cfg_min = panel_config_get($mysqli, 'credit_min', '1');
     $cfg_instructions = panel_config_get($mysqli, 'payment_instructions', '');
     $cfg_contact = panel_config_get($mysqli, 'payment_contact', '');
@@ -97,16 +112,22 @@
         <div class="row g-4">
             <div class="col-xl-8">
                 <div class="row g-3 mb-4">
-                    <div class="col-sm-4"><div class="card co-card p-3"><div class="text-muted small">Pedidos pendentes</div><div class="fs-3 fw-bold" style="color:#d46b08;"><?php echo (int)$pending_count['num']; ?></div></div></div>
-                    <div class="col-sm-4"><div class="card co-card p-3"><div class="text-muted small">Recebido este mês</div><div class="fs-3 fw-bold" style="color:#15803d;"><?php echo money_br($paid_month['total']); ?></div></div></div>
-                    <div class="col-sm-4"><div class="card co-card p-3"><div class="text-muted small">Créditos vendidos no mês</div><div class="fs-3 fw-bold"><?php echo (int)$paid_month['credits']; ?></div></div></div>
+                    <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Pedidos pendentes</div><div class="fs-3 fw-bold" style="color:#d46b08;"><?php echo (int)$pending_count['num']; ?></div></div></div>
+                    <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Recebido no mês em R$</div><div class="fs-4 fw-bold" style="color:#15803d;"><?php echo money_currency($paid_month['month_brl'], 'BRL'); ?></div><small class="text-muted">Total: <?php echo money_currency($paid_month['all_brl'], 'BRL'); ?></small></div></div>
+                    <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Recebido no mês em US$</div><div class="fs-4 fw-bold" style="color:#1d4ed8;"><?php echo money_currency($paid_month['month_usd'], 'USD'); ?></div><small class="text-muted">Total: <?php echo money_currency($paid_month['all_usd'], 'USD'); ?></small></div></div>
+                    <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Créditos vendidos no mês</div><div class="fs-3 fw-bold"><?php echo (int)$paid_month['credits']; ?></div></div></div>
                 </div>
 
                 <div class="card co-card">
                     <div class="card-body p-4">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                             <h5 class="mb-0">Pedidos</h5>
-                            <form method="get">
+                            <form method="get" class="d-flex gap-2">
+                                <select name="currency" class="form-select" onchange="this.form.submit()">
+                                    <option value="">R$ e US$</option>
+                                    <option value="BRL" <?php if($currency_filter=='BRL'){echo 'selected';} ?>>Só R$</option>
+                                    <option value="USD" <?php if($currency_filter=='USD'){echo 'selected';} ?>>Só US$</option>
+                                </select>
                                 <select name="status" class="form-select" onchange="this.form.submit()">
                                     <option value="">Todos</option>
                                     <option value="pending" <?php if($status_filter=='pending'){echo 'selected';} ?>>Aguardando pagamento</option>
@@ -128,14 +149,14 @@
                                             <small class="text-muted"><?php echo htmlspecialchars((string)$o['reseller_email']); ?><?php echo $o['reseller_phone'] != '' ? ' · '.htmlspecialchars($o['reseller_phone']) : ''; ?></small>
                                         </td>
                                         <td><?php echo (int)$o['credits']; ?></td>
-                                        <td><?php echo money_br($o['total']); ?></td>
+                                        <td><?php echo money_currency($o['total'], $o['currency']); ?></td>
                                         <td>
                                             <?php echo credit_order_status_badge($o['status']); ?>
                                             <?php if($o['status'] == 'paid' && $o['paid_at']){ ?><br><small class="text-muted"><?php echo date('d/m/Y H:i', $o['paid_at']); ?><?php echo $o['reference'] != '' ? ' · '.htmlspecialchars($o['reference']) : ''; ?></small><?php } ?>
                                         </td>
                                         <td>
                                             <?php if($o['status'] == 'pending'){ ?>
-                                                <button type="button" class="btn btn-sm btn-success btn_pay" data-id="<?php echo (int)$o['id']; ?>" data-info="<?php echo htmlspecialchars('#'.$o['id'].' · '.$o['credits'].' créditos · '.money_br($o['total']).' · '.$o['reseller_name']); ?>"><i class="ri-check-line"></i> Confirmar pagamento</button>
+                                                <button type="button" class="btn btn-sm btn-success btn_pay" data-id="<?php echo (int)$o['id']; ?>" data-info="<?php echo htmlspecialchars('#'.$o['id'].' · '.$o['credits'].' créditos · '.money_currency($o['total'], $o['currency']).' · '.$o['reseller_name']); ?>"><i class="ri-check-line"></i> Confirmar pagamento</button>
                                                 <form method="post" class="d-inline" onsubmit="return confirm('Cancelar este pedido?');">
                                                     <input type="hidden" name="order_id" value="<?php echo (int)$o['id']; ?>">
                                                     <button type="submit" name="cancel_order" class="btn btn-sm btn-outline-danger"><i class="ri-close-line"></i></button>
@@ -173,7 +194,11 @@
                             <div class="mb-3">
                                 <label class="form-label">Preço por crédito (R$)</label>
                                 <input type="text" name="credit_price" class="form-control" value="<?php echo htmlspecialchars(number_format((float)$cfg_price, 2, ',', '')); ?>" placeholder="Ex.: 15,00">
-                                <small class="text-muted">1 crédito = 1 ano de ativação. Com preço 0 a compra fica desativada.</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Preço por crédito (US$)</label>
+                                <input type="text" name="credit_price_usd" class="form-control" value="<?php echo htmlspecialchars(number_format((float)$cfg_price_usd, 2, ',', '')); ?>" placeholder="Ex.: 3,00">
+                                <small class="text-muted">1 crédito = 1 ano de ativação. Revendedores do Brasil pagam em R$ (Pix ou cartão) e os de fora em US$ (cartão). A moeda de cada revendedor pode ser trocada em Resellers. Com preço 0 a compra fica desativada naquela moeda.</small>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Compra mínima (créditos)</label>
@@ -193,7 +218,6 @@
                             </div>
                             <button type="submit" name="save_settings" class="btn btn-primary w-100">Salvar</button>
                         </form>
-                        <p class="small text-muted mt-3 mb-0">Pagamento automático (Stripe e Mercado Pago) será adicionado na próxima etapa.</p>
                     </div>
                 </div>
             </div>

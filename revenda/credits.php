@@ -3,10 +3,11 @@ require_once(__DIR__."/_init.php");
 $reseller = rv_require_login($mysqli);
 $rid = (int)$reseller['id'];
 
-$price = credit_price($mysqli);
+$currency = reseller_currency($reseller);
+$price = credit_price($mysqli, $currency);
 $min = max(1, (int)panel_config_get($mysqli, 'credit_min', '1'));
 require_once(__DIR__."/../includes/payment_helper.php");
-$pix_on = pay_mp_enabled($mysqli);
+$pix_on = pay_mp_enabled($mysqli) && $currency == 'BRL'; // Pix só em reais
 $card_on = pay_stripe_enabled($mysqli);
 $instructions = trim(panel_config_get($mysqli, 'payment_instructions', ''));
 $contact = trim(panel_config_get($mysqli, 'payment_contact', ''));
@@ -52,7 +53,8 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
         </div>
 
         <div class="rv-card p-4">
-            <h2 class="rv-title fs-5 mb-3">Comprar créditos</h2>
+            <h2 class="rv-title fs-5 mb-1">Comprar créditos</h2>
+            <p class="rv-muted small mb-3">Preços em <?php echo $currency == 'USD' ? 'dólar (US$) · pagamento com cartão' : 'real (R$) · Pix ou cartão'; ?>.</p>
             <?php if ($price <= 0) { ?>
                 <div class="alert alert-info mb-0">A venda de créditos ainda não foi configurada. <?php echo $contact != '' ? 'Contato: '.rv_e($contact) : 'Fale com o administrador.'; ?></div>
             <?php } else { ?>
@@ -61,7 +63,7 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
                     <label class="form-label">Quantidade de créditos</label>
                     <input type="number" name="credits" id="buy_qty" class="form-control form-control-lg" min="<?php echo $min; ?>" step="1" value="<?php echo max($min, 10); ?>" required>
                     <div class="d-flex justify-content-between mt-3">
-                        <span class="rv-muted">Preço por crédito</span><b><?php echo money_br($price); ?></b>
+                        <span class="rv-muted">Preço por crédito</span><b><?php echo money_currency($price, $currency); ?></b>
                     </div>
                     <div class="d-flex justify-content-between mt-1 fs-5">
                         <span>Total</span><b id="buy_total"></b>
@@ -86,12 +88,12 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
                                 <td><?php echo (int)$o['id']; ?></td>
                                 <td><?php echo date('d/m/Y H:i', $o['created_at']); ?></td>
                                 <td><?php echo (int)$o['credits']; ?></td>
-                                <td><?php echo money_br($o['total']); ?></td>
+                                <td><?php echo money_currency($o['total'], $o['currency']); ?></td>
                                 <td><?php echo credit_order_status_badge($o['status']); ?></td>
                                 <td>
                                     <?php if ($o['status'] == 'pending') { ?>
                                         <div class="d-flex flex-wrap gap-1 justify-content-center mb-1">
-                                            <?php if ($pix_on) { ?>
+                                            <?php if ($pix_on && $o['currency'] == 'BRL') { ?>
                                                 <form method="post" action="../pagamento/checkout.php">
                                                     <?php echo rv_csrf_field(); ?>
                                                     <input type="hidden" name="as" value="reseller"><input type="hidden" name="type" value="credit">
@@ -165,9 +167,12 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
     var qty = document.getElementById('buy_qty');
     if (!qty) return;
     var price = <?php echo json_encode($price); ?>;
+    var cur = <?php echo json_encode($currency); ?>;
     function upd() {
         var n = Math.max(0, parseInt(qty.value || '0', 10));
-        document.getElementById('buy_total').textContent = (n * price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        document.getElementById('buy_total').textContent = cur === 'USD'
+            ? 'US$ ' + (n * price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : (n * price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
     qty.addEventListener('input', upd);
     upd();

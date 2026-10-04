@@ -22,6 +22,15 @@
         exit;
     }
 
+    // Moeda do revendedor (R$ ou US$): define o preço do crédito e a moeda dos pedidos
+    if(isset($_POST['set_currency'])){
+        $rid = (int)$_POST['reseller_id'];
+        $cur = $_POST['currency'] == 'USD' ? 'USD' : 'BRL';
+        mysqli_query($mysqli, "UPDATE tbl_resellers SET currency = '$cur' WHERE id = $rid");
+        header("Location:manage_resellers.php".(!empty($_SERVER['QUERY_STRING']) ? '?'.$_SERVER['QUERY_STRING'] : ''));
+        exit;
+    }
+
     // Filtros
     $keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
     $status_filter = (isset($_GET['status']) && ($_GET['status'] === '1' || $_GET['status'] === '0')) ? $_GET['status'] : '';
@@ -140,6 +149,7 @@
                                     <th><?php echo rs_sort_link('email', 'E-mail', $sort, $dir); ?></th>
                                     <th>Código</th>
                                     <th><?php echo rs_sort_link('credits', 'Créditos', $sort, $dir); ?></th>
+                                    <th>Moeda</th>
                                     <th><?php echo rs_sort_link('devices', 'Dispositivos Ativados', $sort, $dir); ?></th>
                                     <th><?php echo rs_sort_link('created', 'Criado em', $sort, $dir); ?></th>
                                     <th><?php echo rs_sort_link('status', 'Status', $sort, $dir); ?></th>
@@ -156,6 +166,16 @@
                                         <td><?php echo htmlspecialchars($row['email']); ?><?php if($row['phone'] != ''){ ?><br><small class="text-muted"><?php echo htmlspecialchars($row['phone']); ?></small><?php } ?></td>
                                         <td><span style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:2px;color:#3b6cf6;"><?php echo htmlspecialchars((string)$row['code']); ?></span></td>
                                         <td><span class="rs-credits"><?php echo thousandsNumberFormat($row['credits']); ?></span></td>
+                                        <td>
+                                            <form method="post" class="d-inline">
+                                                <input type="hidden" name="reseller_id" value="<?php echo (int)$row['id']; ?>">
+                                                <input type="hidden" name="set_currency" value="1">
+                                                <select name="currency" class="form-select form-select-sm d-inline-block" style="width:auto;" onchange="this.form.submit()">
+                                                    <option value="BRL" <?php if(reseller_currency($row)=='BRL'){echo 'selected';} ?>>R$</option>
+                                                    <option value="USD" <?php if(reseller_currency($row)=='USD'){echo 'selected';} ?>>US$</option>
+                                                </select>
+                                            </form>
+                                        </td>
                                         <td><?php echo thousandsNumberFormat($row['devices']); ?></td>
                                         <td><?php echo date('d/m/Y H:i', $row['created_at']); ?></td>
                                         <td>
@@ -173,7 +193,7 @@
                                     </tr>
                                 <?php } ?>
                             <?php } else { ?>
-                                <tr><td colspan="10"><div class="rs-empty"><i class="ri-inbox-line"></i>Nenhum revendedor encontrado</div></td></tr>
+                                <tr><td colspan="11"><div class="rs-empty"><i class="ri-inbox-line"></i>Nenhum revendedor encontrado</div></td></tr>
                             <?php } ?>
                             </tbody>
                         </table>

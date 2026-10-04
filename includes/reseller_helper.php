@@ -39,6 +39,7 @@ function resellers_migrate($mysqli){
         'code'       => "VARCHAR(10) NULL DEFAULT NULL",
         'phone'      => "VARCHAR(30) NOT NULL DEFAULT ''",
         'last_login' => "INT(11) NOT NULL DEFAULT 0",
+        'currency'   => "CHAR(3) NOT NULL DEFAULT 'BRL'",
     );
     foreach ($extra as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_resellers` LIKE '$name'");
@@ -84,6 +85,12 @@ function resellers_migrate($mysqli){
         KEY `idx_reseller` (`reseller_id`),
         KEY `idx_status` (`status`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Moeda do pedido (BRL ou USD), para separar os valores recebidos
+    $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_credit_orders` LIKE 'currency'");
+    if ($col && mysqli_num_rows($col) == 0) {
+        mysqli_query($mysqli, "ALTER TABLE `tbl_credit_orders` ADD `currency` CHAR(3) NOT NULL DEFAULT 'BRL' AFTER `total`");
+    }
 
     // Configurações da revenda (código do admin, preço do crédito, instruções de pagamento...)
     mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `tbl_panel_config` (
@@ -286,8 +293,19 @@ function credit_type_label($type){
 
 /* ---------- Pedidos de créditos ---------- */
 
-function credit_price($mysqli){
-    return (float)str_replace(',', '.', panel_config_get($mysqli, 'credit_price', '0'));
+// Preço do crédito na moeda do revendedor: BRL (credit_price) ou USD (credit_price_usd)
+function credit_price($mysqli, $currency = 'BRL'){
+    $key = $currency == 'USD' ? 'credit_price_usd' : 'credit_price';
+    return (float)str_replace(',', '.', panel_config_get($mysqli, $key, '0'));
+}
+
+function reseller_currency($reseller){
+    return (isset($reseller['currency']) && $reseller['currency'] == 'USD') ? 'USD' : 'BRL';
+}
+
+function money_currency($value, $currency){
+    if ($currency == 'USD') return 'US$ '.number_format((float)$value, 2, '.', ',');
+    return money_br($value);
 }
 
 function money_br($value){
@@ -298,12 +316,16 @@ function credit_orders_create($mysqli, $reseller_id, $credits){
     $credits = (int)$credits;
     $min = max(1, (int)panel_config_get($mysqli, 'credit_min', '1'));
     if ($credits < $min || $credits > 10000) return false;
-    $unit = credit_price($mysqli);
+    $reseller_id = (int)$reseller_id;
+    $reseller = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT currency FROM tbl_resellers WHERE id = $reseller_id"));
+    if (!$reseller) return false;
+    $currency = reseller_currency($reseller);
+    $unit = credit_price($mysqli, $currency);
+    if ($unit <= 0) return false;
     $total = round($unit * $credits, 2);
     $now = time();
-    $reseller_id = (int)$reseller_id;
-    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_credit_orders (reseller_id, credits, unit_price, total, status, method, created_at) VALUES (?,?,?,?,'pending','manual',?)");
-    mysqli_stmt_bind_param($stmt, 'iiddi', $reseller_id, $credits, $unit, $total, $now);
+    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_credit_orders (reseller_id, credits, unit_price, total, currency, status, method, created_at) VALUES (?,?,?,?,?,'pending','manual',?)");
+    mysqli_stmt_bind_param($stmt, 'iiddsi', $reseller_id, $credits, $unit, $total, $currency, $now);
     $ok = mysqli_stmt_execute($stmt);
     $id = mysqli_insert_id($mysqli);
     mysqli_stmt_close($stmt);

@@ -103,7 +103,7 @@ function pay_load_order($mysqli, $order_type, $order_id, $owner_type, $owner_id)
         $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT o.*, r.email, r.name FROM tbl_credit_orders o JOIN tbl_resellers r ON r.id = o.reseller_id
                                                        WHERE o.id = $order_id AND o.reseller_id = $owner_id"));
         if (!$r) return null;
-        return array('type' => 'credit', 'id' => (int)$r['id'], 'status' => $r['status'], 'amount' => (float)$r['total'], 'currency' => 'BRL',
+        return array('type' => 'credit', 'id' => (int)$r['id'], 'status' => $r['status'], 'amount' => (float)$r['total'], 'currency' => ($r['currency'] == 'USD' ? 'USD' : 'BRL'),
                      'description' => brand_name().' - '.(int)$r['credits'].' créditos (pedido #'.$r['id'].')', 'email' => $r['email'], 'name' => $r['name']);
     }
     return null;
@@ -117,8 +117,8 @@ function pay_load_order_any($mysqli, $order_type, $order_id){
         return $r ? array('status' => $r['status'], 'amount' => (float)$r['amount'], 'currency' => $r['currency']) : null;
     }
     if ($order_type == 'credit') {
-        $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id, status, total FROM tbl_credit_orders WHERE id = $order_id"));
-        return $r ? array('status' => $r['status'], 'amount' => (float)$r['total'], 'currency' => 'BRL') : null;
+        $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id, status, total, currency FROM tbl_credit_orders WHERE id = $order_id"));
+        return $r ? array('status' => $r['status'], 'amount' => (float)$r['total'], 'currency' => ($r['currency'] == 'USD' ? 'USD' : 'BRL')) : null;
     }
     return null;
 }
