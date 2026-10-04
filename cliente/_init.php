@@ -35,7 +35,7 @@ function cl_current($mysqli){
     $id = (int)$_SESSION['cl_id'];
     $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM tbl_customers WHERE id = $id"));
     if (!$row || (int)$row['status'] != 1) { unset($_SESSION['cl_id']); return null; }
-    return $row;
+    return geo_sync_account($mysqli, 'tbl_customers', $row);
 }
 function cl_require_login($mysqli){
     $c = cl_current($mysqli);

@@ -32,6 +32,11 @@ function customers_migrate($mysqli){
         UNIQUE KEY `uq_customer_email` (`email`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+    foreach (array('currency_locked' => "TINYINT(1) NOT NULL DEFAULT 0", 'last_ip' => "VARCHAR(45) NOT NULL DEFAULT ''") as $name => $definition) {
+        $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_customers` LIKE '$name'");
+        if ($col && mysqli_num_rows($col) == 0) mysqli_query($mysqli, "ALTER TABLE `tbl_customers` ADD `$name` $definition");
+    }
+
     mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `tbl_sub_plans` (
         `id` INT(11) NOT NULL AUTO_INCREMENT,
         `name` VARCHAR(80) NOT NULL,

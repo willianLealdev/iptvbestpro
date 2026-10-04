@@ -39,7 +39,7 @@ function rv_current($mysqli){
         unset($_SESSION['rv_id']);
         return null;
     }
-    return $row;
+    return geo_sync_account($mysqli, 'tbl_resellers', $row);
 }
 function rv_require_login($mysqli){
     $r = rv_current($mysqli);

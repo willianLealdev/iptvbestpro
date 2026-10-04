@@ -26,9 +26,8 @@
     }
     if(isset($_POST['set_currency'])){
         $id = (int)$_POST['customer_id'];
-        $cur = $_POST['currency'] == 'USD' ? 'USD' : 'BRL';
-        mysqli_query($mysqli, "UPDATE tbl_customers SET currency = '$cur' WHERE id = $id");
-        cu_flash(true, 'Moeda do cliente alterada para '.$cur.'.');
+        currency_mode_save($mysqli, 'tbl_customers', $id, (string)$_POST['currency']);
+        cu_flash(true, $_POST['currency'] == 'AUTO' ? 'Moeda do cliente volta a seguir o IP (geolocalização).' : 'Moeda do cliente fixada.');
         header("Location:".$back);
         exit;
     }
@@ -119,10 +118,7 @@
                                     <form method="post" class="d-inline ms-1">
                                         <input type="hidden" name="customer_id" value="<?php echo (int)$c['id']; ?>">
                                         <input type="hidden" name="set_currency" value="1">
-                                        <select name="currency" class="form-select form-select-sm d-inline-block" style="width:auto;" onchange="this.form.submit()">
-                                            <option value="BRL" <?php if($c['currency']=='BRL'){echo 'selected';} ?>>R$</option>
-                                            <option value="USD" <?php if($c['currency']=='USD'){echo 'selected';} ?>>US$</option>
-                                        </select>
+                                        <?php echo currency_mode_select($c, false); ?>
                                     </form>
                                 </td>
                                 <td class="text-center"><b style="color:#16a34a;"><?php echo (int)$c['active_subs']; ?></b></td>

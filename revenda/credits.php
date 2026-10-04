@@ -7,7 +7,7 @@ $currency = reseller_currency($reseller);
 $price = credit_price($mysqli, $currency);
 $min = max(1, (int)panel_config_get($mysqli, 'credit_min', '1'));
 require_once(__DIR__."/../includes/payment_helper.php");
-$pix_on = pay_mp_enabled($mysqli) && $currency == 'BRL'; // Pix só em reais
+$pix_on = pay_mp_enabled($mysqli); // Pix só em pedidos em reais (conferido em cada pedido)
 $card_on = pay_stripe_enabled($mysqli);
 $instructions = trim(panel_config_get($mysqli, 'payment_instructions', ''));
 $contact = trim(panel_config_get($mysqli, 'payment_contact', ''));
@@ -58,17 +58,55 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
             <?php if ($price <= 0) { ?>
                 <div class="alert alert-info mb-0">A venda de créditos ainda não foi configurada. <?php echo $contact != '' ? 'Contato: '.rv_e($contact) : 'Fale com o administrador.'; ?></div>
             <?php } else { ?>
-                <form method="post">
+                <style>
+                    .buy-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+                    .buy-chip { border: 1px solid #dbe3f4; background: #fff; color: #1f2a44; border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 14px; cursor: pointer; transition: .15s; }
+                    .buy-chip:hover, .buy-chip.on { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
+                    .buy-stepper { display: flex; align-items: stretch; border: 1px solid #dbe3f4; border-radius: 12px; overflow: hidden; transition: .15s; }
+                    .buy-stepper:focus-within { border-color: #86b7fe; box-shadow: 0 0 0 .2rem rgba(13,110,253,.15); }
+                    .buy-stepper.bad { border-color: #f59e0b; box-shadow: 0 0 0 .2rem rgba(245,158,11,.18); }
+                    .buy-stepper button { width: 54px; border: 0; background: #f7f9fe; font-size: 22px; color: #3b4a6b; cursor: pointer; }
+                    .buy-stepper button:hover { background: #eef2fb; }
+                    .buy-stepper input { border: 0; text-align: center; font-size: 22px; font-weight: 700; flex: 1; min-width: 0; padding: 10px; outline: none; -moz-appearance: textfield; }
+                    .buy-stepper input::-webkit-outer-spin-button, .buy-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+                    .buy-warn { display: none; align-items: flex-start; gap: 12px; margin-top: 12px; padding: 14px 16px; border-radius: 12px; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #78350f; animation: buyIn .25s ease; }
+                    .buy-warn.show { display: flex; }
+                    .buy-warn i { font-size: 24px; color: #d97706; line-height: 1; }
+                    .buy-warn b { display: block; color: #92400e; }
+                    .buy-warn button { margin-top: 8px; border: 0; border-radius: 8px; background: #f59e0b; color: #fff; font-weight: 600; font-size: 13px; padding: 6px 12px; cursor: pointer; }
+                    .buy-warn button:hover { background: #d97706; }
+                    @keyframes buyIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+                    #buy_btn:disabled { opacity: .55; cursor: not-allowed; }
+                </style>
+                <form method="post" id="buy_form" novalidate>
                     <?php echo rv_csrf_field(); ?>
                     <label class="form-label">Quantidade de créditos</label>
-                    <input type="number" name="credits" id="buy_qty" class="form-control form-control-lg" min="<?php echo $min; ?>" step="1" value="<?php echo max($min, 10); ?>" required>
+                    <div class="buy-chips">
+                        <?php foreach (array_unique(array($min, max($min, 10), max($min, 20), max($min, 50), max($min, 100))) as $chip) { ?>
+                            <button type="button" class="buy-chip" data-qty="<?php echo (int)$chip; ?>"><?php echo (int)$chip; ?></button>
+                        <?php } ?>
+                    </div>
+                    <div class="buy-stepper" id="buy_box">
+                        <button type="button" id="buy_minus" aria-label="Diminuir">−</button>
+                        <input type="number" name="credits" id="buy_qty" inputmode="numeric" step="1" value="<?php echo max($min, 10); ?>" data-min="<?php echo $min; ?>">
+                        <button type="button" id="buy_plus" aria-label="Aumentar">+</button>
+                    </div>
+                    <div class="buy-warn" id="buy_warn" role="alert">
+                        <i class="ri-error-warning-fill"></i>
+                        <div>
+                            <b>Compra mínima de <?php echo $min; ?> créditos</b>
+                            Cada crédito ativa 1 aparelho por 1 ano. Escolha <?php echo $min; ?> ou mais para gerar o pedido.
+                            <div><button type="button" id="buy_fix">Usar <?php echo $min; ?> créditos</button></div>
+                        </div>
+                    </div>
                     <div class="d-flex justify-content-between mt-3">
                         <span class="rv-muted">Preço por crédito</span><b><?php echo money_currency($price, $currency); ?></b>
                     </div>
                     <div class="d-flex justify-content-between mt-1 fs-5">
                         <span>Total</span><b id="buy_total"></b>
                     </div>
-                    <button type="submit" name="buy_submit" class="btn rv-btn-green btn-lg w-100 mt-3"><i class="ri-shopping-cart-2-line"></i> Gerar pedido</button>
+                    <input type="hidden" name="buy_submit" value="1">
+                    <button type="submit" id="buy_btn" class="btn rv-btn-green btn-lg w-100 mt-3"><i class="ri-shopping-cart-2-line"></i> Gerar pedido</button>
                     <?php if ($min > 1) { ?><p class="rv-muted small mt-2 mb-0">Compra mínima: <?php echo $min; ?> créditos.</p><?php } ?>
                 </form>
             <?php } ?>
@@ -168,8 +206,24 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
     if (!qty) return;
     var price = <?php echo json_encode($price); ?>;
     var cur = <?php echo json_encode($currency); ?>;
+    var min = parseInt(qty.getAttribute('data-min'), 10) || 1;
+    var warn = document.getElementById('buy_warn'), box = document.getElementById('buy_box'), btn = document.getElementById('buy_btn');
+    var chips = document.querySelectorAll('.buy-chip');
+    function setQty(n) { qty.value = Math.max(0, n); upd(); }
+    document.getElementById('buy_minus').addEventListener('click', function () { setQty((parseInt(qty.value || '0', 10) || 0) - 1); });
+    document.getElementById('buy_plus').addEventListener('click', function () { setQty((parseInt(qty.value || '0', 10) || 0) + 1); });
+    document.getElementById('buy_fix').addEventListener('click', function () { setQty(min); qty.focus(); });
+    chips.forEach(function (c) { c.addEventListener('click', function () { setQty(parseInt(c.getAttribute('data-qty'), 10)); }); });
+    document.getElementById('buy_form').addEventListener('submit', function (e) {
+        if ((parseInt(qty.value || '0', 10) || 0) < min) { e.preventDefault(); upd(); warn.classList.remove('show'); void warn.offsetWidth; warn.classList.add('show'); }
+    });
     function upd() {
-        var n = Math.max(0, parseInt(qty.value || '0', 10));
+        var n = Math.max(0, parseInt(qty.value || '0', 10) || 0);
+        var bad = n < min;
+        warn.classList.toggle('show', bad);
+        box.classList.toggle('bad', bad);
+        btn.disabled = bad;
+        chips.forEach(function (c) { c.classList.toggle('on', parseInt(c.getAttribute('data-qty'), 10) === n); });
         document.getElementById('buy_total').textContent = cur === 'USD'
             ? 'US$ ' + (n * price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             : (n * price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

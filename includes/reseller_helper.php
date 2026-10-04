@@ -40,6 +40,9 @@ function resellers_migrate($mysqli){
         'phone'      => "VARCHAR(30) NOT NULL DEFAULT ''",
         'last_login' => "INT(11) NOT NULL DEFAULT 0",
         'currency'   => "CHAR(3) NOT NULL DEFAULT 'BRL'",
+        'currency_locked' => "TINYINT(1) NOT NULL DEFAULT 0",
+        'country_code'    => "CHAR(2) NOT NULL DEFAULT ''",
+        'last_ip'         => "VARCHAR(45) NOT NULL DEFAULT ''",
     );
     foreach ($extra as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_resellers` LIKE '$name'");
@@ -297,6 +300,66 @@ function credit_type_label($type){
 function credit_price($mysqli, $currency = 'BRL'){
     $key = $currency == 'USD' ? 'credit_price_usd' : 'credit_price';
     return (float)str_replace(',', '.', panel_config_get($mysqli, $key, '0'));
+}
+
+/**
+ * Geolocalização por IP para contas (revendedor e cliente): a cada acesso confere o país do IP atual
+ * e ajusta a moeda (Brasil = BRL, outros países = USD). Se o admin fixou a moeda manualmente
+ * (currency_locked = 1), só registra país/IP. IP sem país identificado não altera nada.
+ * $table: 'tbl_resellers' | 'tbl_customers'. Retorna a linha atualizada.
+ */
+function geo_sync_account($mysqli, $table, $row){
+    if (!in_array($table, array('tbl_resellers', 'tbl_customers')) || empty($row['id'])) return $row;
+    $ip = devices_client_ip();
+    $key = 'geo_'.$table.'_'.(int)$row['id'];
+    if (isset($_SESSION[$key]) && $_SESSION[$key] === $ip) return $row; // já conferido neste IP nesta sessão
+    $_SESSION[$key] = $ip;
+
+    $country = devices_country($ip);
+    $cc = strtoupper((string)$country['code']);
+    if ($cc == '') return $row;
+    $currency = ($cc == 'BR') ? 'BRL' : 'USD';
+    $locked = !empty($row['currency_locked']);
+    $new_currency = $locked ? $row['currency'] : $currency;
+
+    if ($cc != (string)$row['country_code'] || $new_currency != $row['currency'] || $ip != (string)$row['last_ip']) {
+        $id = (int)$row['id'];
+        $stmt = mysqli_prepare($mysqli, "UPDATE $table SET country_code = ?, currency = ?, last_ip = ? WHERE id = ?");
+        $ip_db = mb_substr($ip, 0, 45);
+        mysqli_stmt_bind_param($stmt, 'sssi', $cc, $new_currency, $ip_db, $id);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        $row['country_code'] = $cc;
+        $row['currency'] = $new_currency;
+        $row['last_ip'] = $ip_db;
+    }
+    return $row;
+}
+
+// Select de moeda usado no admin: Automático (pelo IP) / fixo em R$ / fixo em US$
+function currency_mode_select($row, $show_country = true){
+    $locked = !empty($row['currency_locked']);
+    $cur = (isset($row['currency']) && $row['currency'] == 'USD') ? 'USD' : 'BRL';
+    $cc = isset($row['country_code']) ? $row['country_code'] : '';
+    $o = '<select name="currency" class="form-select form-select-sm d-inline-block" style="width:auto;" onchange="this.form.submit()">';
+    $o .= '<option value="AUTO"'.(!$locked ? ' selected' : '').'>Auto pelo IP ('.($cur == 'USD' ? 'US$' : 'R$').')</option>';
+    $o .= '<option value="BRL"'.($locked && $cur == 'BRL' ? ' selected' : '').'>Fixo em R$</option>';
+    $o .= '<option value="USD"'.($locked && $cur == 'USD' ? ' selected' : '').'>Fixo em US$</option>';
+    $o .= '</select>';
+    if ($show_country && $cc != '') $o .= '<br><small class="text-muted">País: '.htmlspecialchars($cc).'</small>';
+    return $o;
+}
+
+// Grava a escolha do admin: AUTO libera a moeda para seguir o IP; BRL/USD fixa
+function currency_mode_save($mysqli, $table, $id, $value){
+    if (!in_array($table, array('tbl_resellers', 'tbl_customers'))) return;
+    $id = (int)$id;
+    if ($value == 'AUTO') {
+        mysqli_query($mysqli, "UPDATE $table SET currency_locked = 0 WHERE id = $id");
+    } else {
+        $cur = $value == 'USD' ? 'USD' : 'BRL';
+        mysqli_query($mysqli, "UPDATE $table SET currency = '$cur', currency_locked = 1 WHERE id = $id");
+    }
 }
 
 function reseller_currency($reseller){

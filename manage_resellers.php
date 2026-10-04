@@ -25,8 +25,7 @@
     // Moeda do revendedor (R$ ou US$): define o preço do crédito e a moeda dos pedidos
     if(isset($_POST['set_currency'])){
         $rid = (int)$_POST['reseller_id'];
-        $cur = $_POST['currency'] == 'USD' ? 'USD' : 'BRL';
-        mysqli_query($mysqli, "UPDATE tbl_resellers SET currency = '$cur' WHERE id = $rid");
+        currency_mode_save($mysqli, 'tbl_resellers', $rid, (string)$_POST['currency']);
         header("Location:manage_resellers.php".(!empty($_SERVER['QUERY_STRING']) ? '?'.$_SERVER['QUERY_STRING'] : ''));
         exit;
     }
@@ -170,10 +169,7 @@
                                             <form method="post" class="d-inline">
                                                 <input type="hidden" name="reseller_id" value="<?php echo (int)$row['id']; ?>">
                                                 <input type="hidden" name="set_currency" value="1">
-                                                <select name="currency" class="form-select form-select-sm d-inline-block" style="width:auto;" onchange="this.form.submit()">
-                                                    <option value="BRL" <?php if(reseller_currency($row)=='BRL'){echo 'selected';} ?>>R$</option>
-                                                    <option value="USD" <?php if(reseller_currency($row)=='USD'){echo 'selected';} ?>>US$</option>
-                                                </select>
+                                                <?php echo currency_mode_select($row); ?>
                                             </form>
                                         </td>
                                         <td><?php echo thousandsNumberFormat($row['devices']); ?></td>
