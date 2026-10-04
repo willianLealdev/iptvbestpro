@@ -294,7 +294,7 @@ $mysqli->set_charset("utf8mb4");
                                     <a href="settings_app_ui.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_app_ui.php") { ?>active<?php } ?>">App UI</a>
                                 </li>
                                 <li>
-                                    <a href="settings_theme.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_theme.php") { ?>active<?php } ?>">Personalizar Tema</a>
+                                    <a href="settings_theme.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_theme.php") { ?>active<?php } ?>">Temas do App</a>
                                 </li>
                                 <li>
                                     <a href="settings_web.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_web.php") { ?>active<?php } ?>">Web Settings</a>

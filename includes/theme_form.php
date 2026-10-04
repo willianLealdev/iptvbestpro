@@ -9,7 +9,63 @@
  *   fallback_logo=> URL do logo usado quando não há logo próprio
  *   side_html    => HTML extra no topo da coluna da pré-visualização (avisos, status)
  *   actions_html => HTML dos botões abaixo da pré-visualização
+ *   allow_keep_colors => true nos modelos prontos (mostra "Manter as cores originais")
  */
+
+/**
+ * Galeria de modelos: cada cartão tem "Usar este" e "Personalizar".
+ * $state[id] = array('active' => bool, 'customized' => bool). $edit_url / $use_name: link de edição e nome do botão de ativar.
+ */
+function theme_gallery_render($state, $img_prefix, $edit_url_base, $hidden_html, $editing_id){ ?>
+<style>
+    .tg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+    .tg-card { border: 2px solid #eef0f4; border-radius: 12px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+    .tg-card.editing { border-color: #3b6cf6; box-shadow: 0 0 0 3px rgba(59,108,246,.15); }
+    .tg-thumb { position: relative; aspect-ratio: 16 / 9; background: #f3f4f6; }
+    .tg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .tg-thumb .tg-custom { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #fff; font-weight: 700; background: linear-gradient(135deg, #3B6CF6, #22C55E); }
+    .tg-badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 4px; flex-wrap: wrap; }
+    .tg-badges span { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    .tg-on { background: #16a34a; color: #fff; }
+    .tg-cus { background: #3b6cf6; color: #fff; }
+    .tg-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .tg-name { font-weight: 600; font-size: 14px; }
+    .tg-actions { display: flex; gap: 6px; margin-top: auto; }
+    .tg-actions .btn { flex: 1; font-size: 13px; padding: 5px 6px; }
+</style>
+<div class="tg-grid">
+    <?php foreach (theme_catalog() as $id => $th) { $s = isset($state[$id]) ? $state[$id] : array('active' => false, 'customized' => false); ?>
+        <div class="tg-card <?php echo (string)$editing_id === (string)$id ? 'editing' : ''; ?>">
+            <div class="tg-thumb">
+                <?php if ($th['image'] != '') { ?>
+                    <img src="<?php echo htmlspecialchars($img_prefix.$th['image']); ?>.png" alt="" loading="lazy">
+                <?php } else { ?>
+                    <div class="tg-custom"><i class="ri-palette-line fs-3"></i>BestPro</div>
+                <?php } ?>
+                <div class="tg-badges">
+                    <?php if ($s['active']) { ?><span class="tg-on">Em uso</span><?php } ?>
+                    <?php if ($s['customized'] && $th['image'] != '') { ?><span class="tg-cus">Personalizado</span><?php } ?>
+                </div>
+            </div>
+            <div class="tg-body">
+                <div class="tg-name"><?php echo htmlspecialchars($th['name']); ?></div>
+                <div class="tg-actions">
+                    <?php if (!$s['active']) { ?>
+                        <form method="post" style="flex:1;display:flex;">
+                            <?php echo $hidden_html; ?>
+                            <input type="hidden" name="use_theme" value="<?php echo $id; ?>">
+                            <button type="submit" class="btn btn-outline-success w-100">Usar este</button>
+                        </form>
+                    <?php } else { ?>
+                        <button type="button" class="btn btn-success" disabled>Em uso</button>
+                    <?php } ?>
+                    <a href="<?php echo htmlspecialchars($edit_url_base.$id); ?>#editor" class="btn btn-primary"><i class="ri-palette-line"></i> Personalizar</a>
+                </div>
+            </div>
+        </div>
+    <?php } ?>
+</div>
+<?php }
 
 function theme_form_styles(){ ?>
 <style>
@@ -76,6 +132,16 @@ function theme_form_editor($t, $opts){
         <div class="card th-card mb-4">
             <div class="card-body p-4">
                 <h5 class="mb-3">Cores</h5>
+                <?php if (!empty($opts['allow_keep_colors'])) { ?>
+                    <div class="form-check form-switch mb-3 p-3 rounded" style="background:#f7f9fe;padding-left:3.2rem !important;">
+                        <input class="form-check-input" type="checkbox" name="theme_keep_colors" id="theme_keep_colors" value="1" <?php if ($t['theme_keep_colors'] == '1') { echo 'checked'; } ?>>
+                        <label class="form-check-label" for="theme_keep_colors">
+                            <b>Manter as cores originais do modelo</b>
+                            <small class="text-muted d-block">Troca só logo, fundo, banner e nome. Desligue para usar as cores abaixo.</small>
+                        </label>
+                    </div>
+                <?php } ?>
+                <div id="th_colors_box">
                 <?php
                     $colors = array(
                         'theme_primary'    => array('Cor principal', 'Botões, item selecionado e foco do controle'),
@@ -93,6 +159,7 @@ function theme_form_editor($t, $opts){
                 <?php } ?>
                 <label class="form-label mt-2">Arredondamento dos cartões: <b id="corner_val"><?php echo (int)$t['theme_corner']; ?>px</b></label>
                 <input type="range" class="form-range" name="theme_corner" id="theme_corner" min="0" max="32" value="<?php echo (int)$t['theme_corner']; ?>">
+                </div>
             </div>
         </div>
 
@@ -211,6 +278,11 @@ function theme_form_script($fallback_logo){ ?>
     var overlay = document.getElementById('theme_bg_overlay');
     function upOverlay() { tv.style.setProperty('--ov', overlay.value / 100); document.getElementById('overlay_val').textContent = overlay.value + '%'; }
     overlay.addEventListener('input', upOverlay); upOverlay();
+
+    // "Manter cores originais": deixa as cores esmaecidas (continuam salvas para uso futuro)
+    var keep = document.getElementById('theme_keep_colors');
+    function upKeep() { var box = document.getElementById('th_colors_box'); if (box && keep) { box.style.opacity = keep.checked ? '.45' : '1'; } }
+    if (keep) { keep.addEventListener('change', upKeep); upKeep(); }
 
     // Nome da marca (portal do revendedor)
     var brand = document.getElementById('brand_name');

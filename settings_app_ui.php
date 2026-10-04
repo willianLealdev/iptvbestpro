@@ -93,7 +93,7 @@
                                         </div>
                                     </div>
                                     <button type="submit" name="app_theme" class="btn btn-primary" style="min-width: 120px;">Save</button>
-                                    <a href="settings_theme.php" class="btn btn-outline-primary ms-2"><i class="ri-palette-line"></i> Personalizar tema BestPro</a>
+                                    <a href="settings_theme.php" class="btn btn-outline-primary ms-2"><i class="ri-palette-line"></i> Personalizar temas</a>
                                     <div class="row g-4 mb-3 mt-3">
                                         <div class="col-lg-6 col-sm-6 col-xs-12">
                                             <a href="assets/images/themes/OneUI.png" data-bs-toggle="tooltip" data-bs-placement="top" title="View UI">

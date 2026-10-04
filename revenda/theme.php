@@ -6,107 +6,135 @@ require_once(__DIR__."/../includes/theme_form.php");
 $reseller = rv_require_login($mysqli);
 $rid = (int)$reseller['id'];
 theme_reseller_migrate($mysqli);
+theme_custom_migrate($mysqli);
 
 $allowed = theme_reseller_allowed($mysqli);
-$row = theme_reseller_row($mysqli, $rid);
-$current = theme_get($mysqli, $rid);
 $catalog = theme_catalog();
+$row = theme_reseller_row($mysqli, $rid);
+$active_theme = isset($catalog[(string)$row['theme_id']]) ? (string)$row['theme_id'] : THEME_BESTPRO_ID;
+$edit_id = (isset($_GET['theme']) && isset($catalog[(string)$_GET['theme']])) ? (string)$_GET['theme'] : $active_theme;
+$is_model = $edit_id !== THEME_BESTPRO_ID;
+$current = theme_get($mysqli, $rid, $edit_id);
+
+// Configurações do BestPro do revendedor (guardadas junto da marca)
+function rv_bestpro_settings($mysqli, $rid){ return theme_get($mysqli, $rid, THEME_BESTPRO_ID); }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && $allowed) {
     if (!rv_csrf_ok()) {
         rv_flash('error', 'Sessão expirada. Tente novamente.');
-    } else if (isset($_POST['save_brand'])) {
-        $theme_id = isset($_POST['theme_id']) ? (string)$_POST['theme_id'] : THEME_BESTPRO_ID;
-        $r = theme_process_form($current, $_POST, 'theme_r'.$rid.'_');
-        theme_reseller_save_row($mysqli, $rid, !empty($_POST['enabled']), $theme_id, isset($_POST['brand_name']) ? $_POST['brand_name'] : '', $r['settings']);
-        rv_flash($r['errors'] ? 'error' : 'success', $r['errors'] ? implode(' ', $r['errors']) : 'Marca salva. Seus clientes veem o novo visual na próxima abertura do app.');
-    } else if (isset($_POST['reset_brand'])) {
-        foreach (array('theme_logo', 'theme_bg_image', 'theme_banner') as $key) theme_delete_file($current[$key]);
-        theme_reseller_save_row($mysqli, $rid, false, THEME_BESTPRO_ID, '', theme_defaults());
-        rv_flash('success', 'Marca removida. Seus clientes voltam a ver o visual padrão.');
+        rv_redirect('theme.php?theme='.$edit_id);
     }
-    rv_redirect('theme.php');
+    if (isset($_POST['save_basic'])) {
+        theme_reseller_save_row($mysqli, $rid, !empty($_POST['enabled']), $active_theme, isset($_POST['brand_name']) ? $_POST['brand_name'] : '', rv_bestpro_settings($mysqli, $rid));
+        rv_flash('success', !empty($_POST['enabled']) ? 'Sua marca está ativa no app dos seus clientes.' : 'Marca desligada. Seus clientes veem o visual padrão.');
+    } else if (isset($_POST['use_theme']) && isset($catalog[(string)$_POST['use_theme']])) {
+        $use = (string)$_POST['use_theme'];
+        theme_reseller_save_row($mysqli, $rid, (int)$row['enabled'] == 1, $use, $row['brand_name'], rv_bestpro_settings($mysqli, $rid));
+        rv_flash('success', 'Modelo "'.$catalog[$use]['name'].'" selecionado.');
+        rv_redirect('theme.php?theme='.$use);
+    } else if (isset($_POST['save_model'])) {
+        $r = theme_process_form($current, $_POST, theme_file_prefix($rid, $edit_id));
+        if ($is_model) {
+            theme_custom_save($mysqli, $rid, $edit_id, !empty($_POST['customize_enabled']), $r['settings']);
+        } else {
+            theme_reseller_save_row($mysqli, $rid, (int)$row['enabled'] == 1, $active_theme, $row['brand_name'], $r['settings']);
+        }
+        if (!empty($_POST['activate_theme'])) {
+            theme_reseller_save_row($mysqli, $rid, (int)$row['enabled'] == 1, $edit_id, $row['brand_name'], rv_bestpro_settings($mysqli, $rid));
+        }
+        rv_flash($r['errors'] ? 'error' : 'success', $r['errors'] ? implode(' ', $r['errors']) : 'Personalização do modelo "'.$catalog[$edit_id]['name'].'" salva.');
+    } else if (isset($_POST['reset_model'])) {
+        foreach (array('theme_logo', 'theme_bg_image', 'theme_banner') as $key) theme_delete_file($current[$key]);
+        if ($is_model) theme_custom_save($mysqli, $rid, $edit_id, false, theme_defaults($edit_id));
+        else theme_reseller_save_row($mysqli, $rid, (int)$row['enabled'] == 1, $active_theme, $row['brand_name'], theme_defaults(THEME_BESTPRO_ID));
+        rv_flash('success', 'Modelo "'.$catalog[$edit_id]['name'].'" voltou ao original.');
+    }
+    rv_redirect('theme.php?theme='.$edit_id);
 }
+
+$customized = theme_is_customized($mysqli, $rid, $edit_id);
+$state = array();
+foreach ($catalog as $id => $th) $state[$id] = array('active' => $active_theme === (string)$id, 'customized' => theme_is_customized($mysqli, $rid, $id));
 
 rv_header($mysqli, $reseller, 'Minha Marca', 'theme');
 theme_form_styles(); ?>
-
-<style>
-    .bt-themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
-    .bt-theme { position: relative; border: 2px solid #eef0f4; border-radius: 12px; overflow: hidden; cursor: pointer; background: #fff; display: block; margin: 0; }
-    .bt-theme input { position: absolute; opacity: 0; }
-    .bt-theme img, .bt-theme .bt-custom { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; background: #f3f4f6; }
-    .bt-theme .bt-custom { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; color: #fff; font-weight: 700;
-                           background: linear-gradient(135deg, <?php echo rv_e($current['theme_primary']); ?>, <?php echo rv_e($current['theme_accent']); ?>); }
-    .bt-theme span.bt-name { display: block; padding: 8px 10px; font-size: 13px; font-weight: 600; }
-    .bt-theme:has(input:checked) { border-color: #3b6cf6; box-shadow: 0 0 0 3px rgba(59,108,246,.18); }
-    .bt-theme:has(input:checked)::after { content: '\2713'; position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: #3b6cf6; color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: center; }
-</style>
 
 <?php if (!$allowed) { ?>
     <div class="rv-card p-4">
         <div class="rv-empty"><i class="ri-palette-line"></i>A personalização de marca não está disponível no momento. Fale com o administrador.</div>
     </div>
 <?php } else { ?>
-<form method="post" enctype="multipart/form-data">
+
+<form method="post" class="rv-card p-4 mb-4">
     <?php echo rv_csrf_field(); ?>
-
-    <div class="rv-card p-4 mb-4">
-        <div class="row g-4 align-items-center">
-            <div class="col-lg-7">
-                <h1 class="rv-title mb-1">Minha Marca</h1>
-                <p class="rv-muted mb-0">Deixe o app com a cara da sua marca. Os clientes vinculados ao seu código <b><?php echo rv_e($reseller['code']); ?></b> veem este visual.</p>
-            </div>
-            <div class="col-lg-5">
-                <div class="form-check form-switch fs-5">
-                    <input class="form-check-input" type="checkbox" name="enabled" id="enabled" value="1" <?php if ((int)$row['enabled'] == 1) { echo 'checked'; } ?>>
-                    <label class="form-check-label fs-6 fw-semibold" for="enabled">Usar minha marca no app dos meus clientes</label>
-                </div>
-            </div>
+    <div class="row g-3 align-items-end">
+        <div class="col-lg-5">
+            <h1 class="rv-title mb-1">Minha Marca</h1>
+            <p class="rv-muted mb-0">Os clientes vinculados ao seu código <b><?php echo rv_e($reseller['code']); ?></b> veem o app com a sua marca.</p>
         </div>
-        <hr>
-        <label class="form-label fw-semibold">Nome da marca</label>
-        <input type="text" name="brand_name" id="brand_name" class="form-control" maxlength="60" value="<?php echo rv_e($row['brand_name']); ?>" placeholder="<?php echo rv_e($reseller['name']); ?>">
-        <small class="rv-muted">Aparece no app ao lado do logo. O ícone e o nome do app na tela inicial do aparelho não mudam.</small>
-    </div>
-
-    <div class="rv-card p-4 mb-4">
-        <h2 class="rv-title fs-5 mb-3">Escolha o tema</h2>
-        <div class="bt-themes">
-            <?php foreach ($catalog as $id => $th) { ?>
-                <label class="bt-theme">
-                    <input type="radio" name="theme_id" value="<?php echo $id; ?>" <?php if ((string)$row['theme_id'] === (string)$id) { echo 'checked'; } ?>>
-                    <?php if ($th['image'] != '') { ?>
-                        <img src="../assets/images/themes/<?php echo $th['image']; ?>.png" alt="" loading="lazy">
-                    <?php } else { ?>
-                        <div class="bt-custom"><i class="ri-palette-line fs-3"></i>Personalizado</div>
-                    <?php } ?>
-                    <span class="bt-name"><?php echo rv_e($th['name']); ?></span>
-                </label>
-            <?php } ?>
+        <div class="col-lg-4">
+            <label class="form-label fw-semibold">Nome da marca</label>
+            <input type="text" name="brand_name" id="brand_name" class="form-control" maxlength="60" value="<?php echo rv_e($row['brand_name']); ?>" placeholder="<?php echo rv_e($reseller['name']); ?>">
         </div>
-        <p class="rv-muted small mt-3 mb-0">Nos temas prontos, o app usa o seu <b>nome de marca</b> e o seu <b>logo</b>. No <b>Personalizado</b>, você também escolhe cores, fundo e banner.</p>
+        <div class="col-lg-3">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" name="enabled" id="enabled" value="1" <?php if ((int)$row['enabled'] == 1) { echo 'checked'; } ?>>
+                <label class="form-check-label fw-semibold" for="enabled">Usar minha marca</label>
+            </div>
+            <button type="submit" name="save_basic" class="btn rv-btn-green w-100">Salvar</button>
+        </div>
     </div>
+    <small class="rv-muted d-block mt-2">O ícone e o nome do app na tela inicial do aparelho não mudam; tudo dentro do app fica com a sua marca.</small>
+</form>
 
+<div class="rv-card p-4 mb-4">
+    <h2 class="rv-title fs-5 mb-1">Modelos</h2>
+    <p class="rv-muted small mb-3">Escolha um modelo para seus clientes e clique em <b>Personalizar</b> para colocar seu logo, cores, fundo e banner.</p>
+    <?php theme_gallery_render($state, '../assets/images/themes/', 'theme.php?theme=', rv_csrf_field(), $edit_id); ?>
+</div>
+
+<div id="editor" class="d-flex align-items-center gap-2 mb-3">
+    <h2 class="rv-title fs-4 mb-0">Personalizar: <?php echo rv_e($catalog[$edit_id]['name']); ?></h2>
+    <?php if ($is_model) { ?><span class="badge <?php echo $customized ? 'bg-primary' : 'bg-secondary'; ?>"><?php echo $customized ? 'Personalização ligada' : 'Original'; ?></span><?php } ?>
+</div>
+
+<form method="post" enctype="multipart/form-data" action="theme.php?theme=<?php echo rv_e($edit_id); ?>">
+    <?php echo rv_csrf_field(); ?>
     <?php
         ob_start(); ?>
             <h5 class="mb-3">Pré-visualização</h5>
+            <?php if ($is_model) { ?>
+                <div class="d-flex align-items-center gap-3 mb-3 p-2 rounded" style="background:#f7f9fe;">
+                    <img src="../assets/images/themes/<?php echo $catalog[$edit_id]['image']; ?>.png" alt="" style="width:120px;border-radius:8px;">
+                    <small class="rv-muted">Modelo base: <b><?php echo rv_e($catalog[$edit_id]['name']); ?></b>. A pré-visualização mostra o que será aplicado por cima dele.</small>
+                </div>
+            <?php } ?>
         <?php $side_html = ob_get_clean();
         ob_start(); ?>
             <hr class="my-4">
+            <?php if ($is_model) { ?>
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" name="customize_enabled" id="customize_enabled" value="1" <?php if ($customized || !$state[$edit_id]['customized']) { echo 'checked'; } ?>>
+                    <label class="form-check-label fw-semibold" for="customize_enabled">Aplicar esta personalização no modelo</label>
+                </div>
+            <?php } ?>
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" name="activate_theme" id="activate_theme" value="1" <?php if ($active_theme === $edit_id) { echo 'checked disabled'; } ?>>
+                <label class="form-check-label" for="activate_theme">Usar este modelo para meus clientes</label>
+            </div>
             <div class="d-flex flex-wrap gap-2">
-                <button type="submit" name="save_brand" class="btn rv-btn-green" style="min-width:150px;"><i class="ri-save-3-line"></i> Salvar minha marca</button>
-                <button type="submit" name="reset_brand" class="btn btn-outline-secondary" formnovalidate onclick="return confirm('Remover sua marca e voltar ao visual padrão?');"><i class="ri-arrow-go-back-line"></i> Remover minha marca</button>
+                <button type="submit" name="save_model" class="btn rv-btn-green" style="min-width:150px;"><i class="ri-save-3-line"></i> Salvar</button>
+                <button type="submit" name="reset_model" class="btn btn-outline-secondary" formnovalidate onclick="return confirm('Voltar este modelo ao original?');"><i class="ri-arrow-go-back-line"></i> Voltar ao original</button>
             </div>
         <?php $actions_html = ob_get_clean();
 
-        $brand_preview = $row['brand_name'] != '' ? $row['brand_name'] : $reseller['name'];
         theme_form_editor($current, array(
             'img_base' => '../images/',
-            'app_name' => $brand_preview,
+            'app_name' => $row['brand_name'] != '' ? $row['brand_name'] : $reseller['name'],
             'fallback_logo' => '../images/'.APP_LOGO,
             'side_html' => $side_html,
             'actions_html' => $actions_html,
+            'allow_keep_colors' => $is_model,
         ));
     ?>
 </form>
