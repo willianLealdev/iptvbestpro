@@ -32,7 +32,11 @@ function playlist_form_styles(){ ?>
     .pl-item__icon { width: 40px; height: 40px; border-radius: 10px; background: #eef3ff; color: #3b6cf6; display: flex; align-items: center; justify-content: center; font-size: 20px; flex: 0 0 40px; }
     .pl-item__body { flex: 1 1 auto; min-width: 0; }
     .pl-item__name { font-weight: 600; }
-    .pl-item__meta { color: #6b7280; font-size: 13px; word-break: break-all; }
+    .pl-item__meta { color: #6b7280; font-size: 13px; margin-top: 2px; }
+    .pl-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+    .pl-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .pl-status--on { color: #16a34a; }
+    .pl-status--off { color: #dc2626; }
 </style>
 <?php }
 
@@ -83,7 +87,7 @@ function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = ''){ ?>
         <button type="submit" class="pl-submit" <?php if (!$dns_list) { echo 'disabled'; } ?>>Upload Now</button>
 
         <?php if ($dns_list) { ?>
-            <div class="pl-dns">Servidores ativos: <?php $t = array(); foreach ($dns_list as $d) { $t[] = htmlspecialchars($d['title']); } echo implode(' · ', $t); ?></div>
+            <div class="pl-dns"><?php echo count($dns_list); ?> servidor(es) DNS ativo(s) para a busca automática.</div>
         <?php } else { ?>
             <div class="pl-dns pl-dns--warn">
                 Nenhum servidor DNS ativo. Para usar usuário e senha, cadastre pelo menos um servidor
@@ -133,11 +137,15 @@ function playlist_list_render($playlists, $hidden_html){ ?>
                     <div class="pl-item__icon"><i class="ri-play-list-2-line"></i></div>
                     <div class="pl-item__body">
                         <div class="pl-item__name"><?php echo htmlspecialchars(isset($p['playlist_name']) && $p['playlist_name'] != '' ? $p['playlist_name'] : $p['user_name']); ?></div>
-                        <div class="pl-item__meta">
-                            Usuário: <?php echo htmlspecialchars($p['user_name']); ?> · Servidor: <?php echo htmlspecialchars($p['dns_base']); ?>
-                            <?php if (isset($p['source']) && $p['source'] == 'url') { ?> · <span title="Servidor fixo da URL">URL</span><?php } else { ?> · <span title="Troca de servidor automática">DNS automático</span><?php } ?>
-                            <?php if (!empty($p['registered_on']) && ctype_digit((string)$p['registered_on'])) { ?> · <?php echo date('d/m/Y', (int)$p['registered_on']); ?><?php } ?>
-                        </div>
+                        <?php if (!isset($p['source']) || $p['source'] != 'url') {
+                            $online = !isset($p['dns_status']) || $p['dns_status'] != 'offline'; ?>
+                            <div class="pl-item__meta">
+                                <span class="pl-status <?php echo $online ? 'pl-status--on' : 'pl-status--off'; ?>"
+                                      title="<?php echo !empty($p['dns_checked_at']) ? 'Última verificação: '.date('d/m/Y H:i', (int)$p['dns_checked_at']) : 'Aguardando primeira verificação'; ?>">
+                                    <?php echo $online ? 'Online' : 'Procurando servidor...'; ?>
+                                </span>
+                            </div>
+                        <?php } ?>
                     </div>
                     <form method="post" onsubmit="return confirm('Remover esta playlist do aparelho?');">
                         <?php echo $hidden_html; ?>

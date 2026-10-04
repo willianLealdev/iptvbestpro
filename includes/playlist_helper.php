@@ -15,6 +15,8 @@ function playlists_migrate($mysqli){
         'created_by'    => "VARCHAR(191) NOT NULL DEFAULT ''",
         'dns_checked_at'=> "INT(11) NOT NULL DEFAULT 0",   // última verificação do servidor (failover)
         'source'        => "VARCHAR(10) NOT NULL DEFAULT 'account'", // 'url' = servidor fixo da URL | 'account' = DNS automático
+        'dns_status'    => "VARCHAR(10) NOT NULL DEFAULT 'online'",  // 'online' | 'offline' (procurando servidor)
+        'dns_last_ok'   => "INT(11) NOT NULL DEFAULT 0",
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_users` LIKE '$name'");
@@ -71,42 +73,52 @@ function playlist_parse_url($url){
 }
 
 /**
- * Testa vários DNS ao mesmo tempo (curl_multi). Retorna array indexado como $list com o resultado de cada um.
+ * Executa vários testes player_api ao mesmo tempo, no máximo $concurrency por vez.
+ * $tasks: array de array('base' => url, 'username' => .., 'password' => ..). Retorna resultados com as mesmas chaves.
  */
-function playlist_probe_parallel($list, $username, $password, $timeout = PLAYLIST_PROBE_TIMEOUT){
-    $mh = curl_multi_init();
-    $handles = array();
-    foreach ($list as $i => $d) {
-        $url = rtrim($d['base'], '/').'/player_api.php?username='.rawurlencode($username).'&password='.rawurlencode($password);
-        $ch = curl_init($url);
-        curl_setopt_array($ch, array(
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 3,
-            CURLOPT_CONNECTTIMEOUT => $timeout,
-            CURLOPT_TIMEOUT => $timeout + 3,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_USERAGENT => 'IPTVSmartersPlayer',
-        ));
-        curl_multi_add_handle($mh, $ch);
-        $handles[$i] = $ch;
-    }
-    do {
-        $status = curl_multi_exec($mh, $running);
-        if ($running) curl_multi_select($mh, 1.0);
-    } while ($running && $status == CURLM_OK);
-
+function playlist_probe_tasks($tasks, $timeout = PLAYLIST_PROBE_TIMEOUT, $concurrency = 20){
     $results = array();
-    foreach ($handles as $i => $ch) {
-        $body = curl_multi_getcontent($ch);
-        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $results[$i] = playlist_probe_result($body, $code);
-        curl_multi_remove_handle($mh, $ch);
-        curl_close($ch);
+    foreach (array_chunk($tasks, max(1, $concurrency), true) as $chunk) {
+        $mh = curl_multi_init();
+        $handles = array();
+        foreach ($chunk as $key => $t) {
+            $url = rtrim($t['base'], '/').'/player_api.php?username='.rawurlencode($t['username']).'&password='.rawurlencode($t['password']);
+            $ch = curl_init($url);
+            curl_setopt_array($ch, array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 3,
+                CURLOPT_CONNECTTIMEOUT => $timeout,
+                CURLOPT_TIMEOUT => $timeout + 3,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
+                CURLOPT_USERAGENT => 'IPTVSmartersPlayer',
+            ));
+            curl_multi_add_handle($mh, $ch);
+            $handles[$key] = $ch;
+        }
+        do {
+            $status = curl_multi_exec($mh, $running);
+            if ($running) curl_multi_select($mh, 1.0);
+        } while ($running && $status == CURLM_OK);
+
+        foreach ($handles as $key => $ch) {
+            $body = curl_multi_getcontent($ch);
+            $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $results[$key] = playlist_probe_result($body, $code);
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+        }
+        curl_multi_close($mh);
     }
-    curl_multi_close($mh);
     return $results;
+}
+
+// Testa um usuário em vários DNS ao mesmo tempo. Retorna resultados indexados como $list.
+function playlist_probe_parallel($list, $username, $password, $timeout = PLAYLIST_PROBE_TIMEOUT){
+    $tasks = array();
+    foreach ($list as $i => $d) $tasks[$i] = array('base' => $d['base'], 'username' => $username, 'password' => $password);
+    return playlist_probe_tasks($tasks, $timeout);
 }
 
 function playlist_probe_result($body, $code){
@@ -144,7 +156,7 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
     $unreachable = array();
     foreach ($list as $i => $d) { if ($results[$i]['result'] == 'unreachable') $unreachable[] = $d['title']; }
     if ($unreachable) {
-        return array('ok' => false, 'msg' => 'Nenhum servidor aceitou este usuário. Sem resposta de: '.implode(', ', $unreachable).'.', 'dns' => null, 'probe' => null);
+        return array('ok' => false, 'msg' => 'Nenhum servidor aceitou este usuário agora (alguns servidores não responderam). Tente novamente em alguns minutos.', 'dns' => null, 'probe' => null);
     }
     return array('ok' => false, 'msg' => 'Usuário ou senha incorretos em todos os servidores DNS cadastrados.', 'dns' => null, 'probe' => null);
 }
@@ -156,20 +168,78 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
 function playlist_current_dns($mysqli, $row){
     // Playlist cadastrada por URL: o servidor é o da própria URL, sem troca automática
     if (isset($row['source']) && $row['source'] == 'url') return $row['dns_base'];
-    $cache_seconds = 300;
+    // O monitor (a cada 5 min) mantém dns_base atualizado. Só testa aqui se a verificação estiver atrasada.
+    $stale_after = 600;
     $now = time();
-    if (!empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < $cache_seconds) return $row['dns_base'];
+    if (!empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < $stale_after) return $row['dns_base'];
 
     $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], dns_normalize($row['dns_base']), 4);
     $base = $find['ok'] ? $find['dns']['base'] : $row['dns_base'];
-    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_users SET dns_base = ?, dns_checked_at = ? WHERE id = ?");
-    $id = (int)$row['id'];
-    // Sem servidor disponível: mantém o último e tenta de novo em 1 minuto
-    $checked = $find['ok'] ? $now : $now - $cache_seconds + 60;
-    mysqli_stmt_bind_param($stmt, 'sii', $base, $checked, $id);
+    playlist_set_dns_state($mysqli, $row['id'], $base, $find['ok']);
+    return $base;
+}
+
+function playlist_set_dns_state($mysqli, $id, $base, $online){
+    $now = time();
+    $status = $online ? 'online' : 'offline';
+    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_users SET dns_base = ?, dns_status = ?, dns_checked_at = ?, dns_last_ok = IF(? = 'online', ?, dns_last_ok) WHERE id = ?");
+    $id = (int)$id;
+    mysqli_stmt_bind_param($stmt, 'ssisii', $base, $status, $now, $status, $now, $id);
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
-    return $base;
+}
+
+/**
+ * Monitor (roda a cada 5 minutos em segundo plano): para cada playlist cadastrada por usuário/senha,
+ * confere se o servidor atual ainda aceita o login. Se caiu ou o usuário foi migrado,
+ * procura entre todos os DNS cadastrados e troca. Sem servidor: fica 'offline' e tenta no próximo ciclo.
+ * Retorna array com contadores.
+ */
+function playlist_monitor_run($mysqli){
+    playlists_migrate($mysqli);
+    $stats = array('checked' => 0, 'online' => 0, 'switched' => 0, 'offline' => 0);
+    $dns = dns_list_active($mysqli);
+    if (!$dns) return $stats;
+    $active_norms = array();
+    foreach ($dns as $d) $active_norms[$d['norm']] = $d;
+
+    $rows = array();
+    $res = mysqli_query($mysqli, "SELECT id, user_name, user_password, dns_base FROM tbl_users WHERE status = '1' AND source = 'account'");
+    while ($res && $r = mysqli_fetch_assoc($res)) $rows[$r['id']] = $r;
+    if (!$rows) return $stats;
+
+    // 1) Uma consulta por playlist no servidor atual (em grupos paralelos)
+    $tasks = array();
+    $failed = array();
+    foreach ($rows as $id => $r) {
+        $norm = dns_normalize($r['dns_base']);
+        if (!isset($active_norms[$norm])) { $failed[$id] = $r; continue; } // DNS removido ou desligado
+        $tasks[$id] = array('base' => $active_norms[$norm]['base'], 'username' => $r['user_name'], 'password' => $r['user_password']);
+    }
+    $results = playlist_probe_tasks($tasks, 5, 20);
+    foreach ($results as $id => $probe) {
+        $stats['checked']++;
+        if ($probe['result'] == 'ok') {
+            playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true);
+            $stats['online']++;
+        } else {
+            $failed[$id] = $rows[$id];
+        }
+    }
+
+    // 2) Falhou: procura em todos os DNS cadastrados
+    foreach ($failed as $id => $r) {
+        $find = playlist_find_dns($mysqli, $r['user_name'], $r['user_password'], dns_normalize($r['dns_base']), 5);
+        if ($find['ok']) {
+            $switched = dns_normalize($find['dns']['base']) != dns_normalize($r['dns_base']);
+            playlist_set_dns_state($mysqli, $id, $find['dns']['base'], true);
+            $stats[$switched ? 'switched' : 'online']++;
+        } else {
+            playlist_set_dns_state($mysqli, $id, $r['dns_base'], false);
+            $stats['offline']++;
+        }
+    }
+    return $stats;
 }
 
 function playlist_save($mysqli, $device_id, $name, $username, $password, $dns_base, $created_by, $source = 'account'){
@@ -224,7 +294,7 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
         if (!playlist_save($mysqli, $device_id, $name, $parsed['username'], $parsed['password'], $parsed['server'], $created_by, 'url')) {
             return array('ok' => false, 'msg' => 'Erro ao salvar a playlist.');
         }
-        return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada (servidor '.$parsed['server'].').');
+        return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada.');
     }
 
     // Account: procura sozinho qual DNS cadastrado aceita este usuário
@@ -237,7 +307,5 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
     if (!playlist_save($mysqli, $device_id, $name, $username, $password, $find['dns']['base'], $created_by, 'account')) {
         return array('ok' => false, 'msg' => 'Erro ao salvar a playlist.');
     }
-    $msg = 'Playlist "'.$name.'" adicionada. '.$find['msg'];
-    if (!empty($find['probe']['exp_date'])) $msg .= ' Vencimento no servidor: '.date('d/m/Y', $find['probe']['exp_date']).'.';
-    return array('ok' => true, 'msg' => $msg);
+    return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada. Servidor encontrado automaticamente.');
 }

@@ -24,4 +24,13 @@ ln -s "$DATA/.lic" "$APP/includes/.lic"
 
 chown -R www-data:www-data "$DATA"
 
+# Monitor de DNS das playlists: a cada 5 minutos (primeiro ciclo 1 minuto após iniciar)
+(
+    sleep 60
+    while true; do
+        su -p -s /bin/sh www-data -c "php $APP/cron/dns_monitor.php" || true
+        sleep 300
+    done
+) &
+
 exec docker-php-entrypoint "$@"
