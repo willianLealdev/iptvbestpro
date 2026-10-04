@@ -90,6 +90,9 @@ $mysqli->set_charset("utf8mb4");
 
         <!-- Header options -->
         <ul class="nsofts-header-nav ms-auto">
+            <li class="nsofts-header-nav__item d-flex align-items-center me-2">
+                <?php echo i18n_switcher(); ?>
+            </li>
             <li class="nsofts-header-nav__item">
                 <a href="javascript:void(0)" id="nsofts_theme_toggler" class="nsofts-header-nav__link">
                     <i class="ri-moon-fill nsofts-theme-dark"></i>
@@ -295,11 +298,11 @@ $mysqli->set_charset("utf8mb4");
                         </li>
                         
                         <li class="nsofts-sidebar-nav__item nsofts-has-menu">
-                            <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($currentFile == "settings_theme.php" or $currentFile == "settings_payments.php" or $currentFile == "manage_movie_ui.php" or $currentFile == "settings_api.php" or $currentFile == "settings_ads.php" or $currentFile == "settings_app.php" or $currentFile == "settings_app_ui.php" or $currentFile == "settings.php" or $currentFile == "settings_web.php" or $currentFile == "create_sidebar.php" or $currentFile == "manage_movie_ui.php") { ?>open active<?php } ?>">
+                            <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($currentFile == "settings_theme.php" or $currentFile == "manage_translations.php" or $currentFile == "settings_payments.php" or $currentFile == "manage_movie_ui.php" or $currentFile == "settings_api.php" or $currentFile == "settings_ads.php" or $currentFile == "settings_app.php" or $currentFile == "settings_app_ui.php" or $currentFile == "settings.php" or $currentFile == "settings_web.php" or $currentFile == "create_sidebar.php" or $currentFile == "manage_movie_ui.php") { ?>open active<?php } ?>">
                                 <i class="ri-settings-line nsofts-sidebar-nav__icon"></i>
                                 <span class="nsofts-sidebar-nav__text">Settings</span>
                             </a>
-                            <ul class="nsofts-submenu <?php if ($currentFile == "settings_theme.php" or $currentFile == "settings_payments.php" or $currentFile == "manage_movie_ui.php" or $currentFile == "settings_api.php" or $currentFile == "settings_ads.php" or $currentFile == "settings_app.php" or $currentFile == "settings.php" or $currentFile == "settings_app_ui.php" or $currentFile == "settings_web.php" or $currentFile == "create_sidebar.php" or $currentFile == "manage_movie_ui.php") { ?>show<?php } ?>">
+                            <ul class="nsofts-submenu <?php if ($currentFile == "settings_theme.php" or $currentFile == "manage_translations.php" or $currentFile == "settings_payments.php" or $currentFile == "manage_movie_ui.php" or $currentFile == "settings_api.php" or $currentFile == "settings_ads.php" or $currentFile == "settings_app.php" or $currentFile == "settings.php" or $currentFile == "settings_app_ui.php" or $currentFile == "settings_web.php" or $currentFile == "create_sidebar.php" or $currentFile == "manage_movie_ui.php") { ?>show<?php } ?>">
                                 <li>
                                     <a href="settings.php" class="nsofts-submenu__link <?php if ($currentFile == "settings.php") { ?>active<?php } ?>">Admin Settings</a>
                                 </li>
@@ -318,6 +321,9 @@ $mysqli->set_charset("utf8mb4");
                                 <?php if(isset($_SESSION['admin_type']) && $_SESSION['admin_type'] == 3){ ?>
                                 <li>
                                     <a href="settings_payments.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_payments.php") { ?>active<?php } ?>">Gateways de Pagamento</a>
+                                </li>
+                                <li>
+                                    <a href="manage_translations.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_translations.php") { ?>active<?php } ?>">Traduções</a>
                                 </li>
                                 <?php } ?>
                                 <li>

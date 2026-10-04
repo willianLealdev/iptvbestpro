@@ -33,6 +33,11 @@ if ($mysqli->connect_errno) {
     define("APP_NAME",$settings_details['app_name']);
     define("APP_LOGO",$settings_details['app_logo']);
     require_once(__DIR__."/brand_helper.php"); // brand_logo_url(): mesmo logo em todas as telas
+    // Idiomas: pt / en / es (seletor + tradução das páginas). Se algo falhar, o sistema segue no idioma original.
+    try { require_once(__DIR__."/i18n.php"); } catch (\Throwable $e) { error_log('i18n: '.$e->getMessage()); }
+    if (!function_exists('__')) { function __($t){ $a = func_get_args(); array_shift($a); $r = array(); foreach ($a as $i => $v) $r['{'.$i.'}'] = $v; return strtr($t, $r); } }
+    if (!function_exists('i18n_switcher')) { function i18n_switcher($theme = 'light', $prefix = ''){ return ''; } }
+    if (!function_exists('i18n_switcher_fixed')) { function i18n_switcher_fixed($theme = 'light'){ return ''; } }
     
     if(isset($_SESSION['id'])){
     	

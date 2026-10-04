@@ -106,6 +106,7 @@
     
 </head>
 <body>
+<?php echo i18n_switcher_fixed(); ?>
     
     <!-- Loader -->
     <div id="nsofts_loader">
@@ -233,7 +234,7 @@
         <script type="text/javascript">
             $('.notifyjs-corner').empty();
             $.notify(
-            '<?php echo $client_lang[$_SESSION["msg"]]; ?>', {
+            '<?php echo str_replace("'", "\'", __($client_lang[$_SESSION["msg"]])); ?>', {
                 position: "top right",
                 className: '<?= $_SESSION["class"] ?>'
             }

@@ -52,6 +52,7 @@
 </style>
 
 <body>
+<?php echo i18n_switcher_fixed(); ?>
     
     <!-- Start: 404 -->
     <main class="d-flex justify-content-center align-items-center py-1 min-vh-100">

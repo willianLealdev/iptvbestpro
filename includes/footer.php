@@ -126,7 +126,7 @@
     <?php if (isset($_SESSION['msg'])) { ?>
         <script type="text/javascript">
             var _class='<?php echo $_class = ($_SESSION["class"]) ? $_SESSION["class"] : "success" ?>';
-            var _msg='<?php echo $client_lang[$_SESSION["msg"]]; ?>';
+            var _msg='<?php echo str_replace("'", "\'", __($client_lang[$_SESSION["msg"]])); ?>';
             _msg=_msg.replace(/(<([^>]+)>)/ig,"");
             $('.notifyjs-corner').empty();
             $.notify(_msg,{position: "top right",className: _class});

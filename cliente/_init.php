@@ -43,7 +43,7 @@ function cl_require_login($mysqli){
     return $c;
 }
 
-function cl_head($title){ ?>
+function cl_head($title, $switcher = true){ ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -86,10 +86,11 @@ function cl_head($title){ ?>
     </style>
 </head>
 <body>
+<?php if ($switcher) echo i18n_switcher_fixed(); ?>
 <?php }
 
 function cl_header($customer, $title, $active){
-    cl_head($title); ?>
+    cl_head($title, false); ?>
     <nav class="navbar navbar-expand-lg cl-nav mb-4">
         <div class="container-xl">
             <a class="navbar-brand" href="dashboard.php">
@@ -102,13 +103,16 @@ function cl_header($customer, $title, $active){
                     <li class="nav-item"><a class="nav-link <?php if($active=='dashboard'){echo 'active';} ?>" href="dashboard.php"><i class="ri-vip-crown-line me-1"></i>Minhas assinaturas</a></li>
                     <li class="nav-item"><a class="nav-link <?php if($active=='plans'){echo 'active';} ?>" href="dashboard.php#planos"><i class="ri-shopping-cart-2-line me-1"></i>Assinar</a></li>
                 </ul>
-                <div class="dropdown py-2 py-lg-0">
+                <div class="d-flex align-items-center gap-3 py-2 py-lg-0">
+                <?php echo i18n_switcher(); ?>
+                <div class="dropdown">
                     <a href="#" class="text-decoration-none text-dark dropdown-toggle" data-bs-toggle="dropdown"><?php echo cl_e($customer['name']); ?></a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><span class="dropdown-item-text small cl-muted"><?php echo cl_e($customer['email']); ?></span></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="logout.php"><i class="ri-logout-box-r-line me-1"></i>Sair</a></li>
                     </ul>
+                </div>
                 </div>
             </div>
         </div>

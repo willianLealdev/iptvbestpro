@@ -49,7 +49,7 @@ function rv_require_login($mysqli){
 
 function rv_signup_enabled($mysqli){ return panel_config_get($mysqli, 'reseller_signup', '1') == '1'; }
 
-function rv_head($title){ ?>
+function rv_head($title, $switcher = true){ ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -97,10 +97,11 @@ function rv_head($title){ ?>
     </style>
 </head>
 <body>
+<?php if ($switcher) echo i18n_switcher_fixed(); ?>
 <?php }
 
 function rv_header($mysqli, $reseller, $title, $active){
-    rv_head($title); ?>
+    rv_head($title, false); ?>
     <nav class="navbar navbar-expand-lg rv-nav mb-4">
         <div class="container-xl">
             <a class="navbar-brand" href="dashboard.php">
@@ -118,6 +119,7 @@ function rv_header($mysqli, $reseller, $title, $active){
                     <li class="nav-item"><a class="nav-link <?php if($active=='posters'){echo 'active';} ?>" href="posters.php"><i class="ri-image-line me-1"></i>Pôsteres</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-3 py-2 py-lg-0">
+                    <?php echo i18n_switcher(); ?>
                     <span class="rv-balance"><i class="ri-coin-fill me-1"></i><?php echo (int)$reseller['credits']; ?> créditos</span>
                     <div class="dropdown">
                         <a href="#" class="text-decoration-none text-dark dropdown-toggle" data-bs-toggle="dropdown"><?php echo rv_e($reseller['name']); ?></a>

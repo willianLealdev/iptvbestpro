@@ -52,6 +52,7 @@ $amount_txt = money_format_currency($p['amount'], $p['currency']);
     </style>
 </head>
 <body>
+<?php echo i18n_switcher_fixed(); ?>
 <div class="pay-card">
     <?php brand_auth_header('../', $p['provider'] == 'mercadopago' ? 'Pagamento via Pix' : 'Pagamento com cartão'); ?>
     <div class="text-center mb-3"><div class="text-muted small">Valor</div><div class="pay-amount"><?php echo $amount_txt; ?></div></div>

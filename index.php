@@ -103,6 +103,8 @@ img{max-width:100%;display:block}
 .btn-ghost{border-color:rgba(255,255,255,.18);color:var(--text)}
 .btn-ghost:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.04)}
 .btn-lg{padding:15px 28px;font-size:16px}
+.lang-m{display:none;margin-left:auto}
+.nav-cta{align-items:center}
 .burger{display:none;margin-left:auto;background:none;border:0;color:var(--text);font-size:28px;cursor:pointer}
 .mobile{display:none;border-top:1px solid var(--line);padding:12px 20px 20px}
 .mobile a{display:block;padding:12px 4px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--line)}
@@ -242,7 +244,8 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
 
 @media (max-width:1020px){
     .menu,.nav-cta{display:none}
-    .burger{display:block}
+    .burger{display:block;margin-left:10px}
+    .lang-m{display:block}
     .platforms{grid-template-columns:repeat(3,1fr)}
     .grid4{grid-template-columns:repeat(2,1fr)}
     .about,.reseller{grid-template-columns:1fr}
@@ -277,9 +280,11 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
             <a href="#faq">Dúvidas</a>
         </nav>
         <div class="nav-cta">
+            <?php echo i18n_switcher('dark'); ?>
             <a href="revenda/" class="btn btn-ghost"><i class="ri-store-2-line"></i> Revenda</a>
             <a href="cliente/" class="btn btn-gold"><i class="ri-user-3-line"></i> Cliente</a>
         </div>
+        <div class="lang-m"><?php echo i18n_switcher('dark'); ?></div>
         <button class="burger" type="button" aria-label="Abrir menu" aria-expanded="false" id="burger"><i class="ri-menu-line"></i></button>
     </div>
     <div class="mobile" id="mobile">
