@@ -21,7 +21,7 @@ $mysqli->set_charset("utf8mb4");
 
 	<!-- Seo Meta -->
     <meta name="description" content="Admin panel | Nemosofts">
-    <meta name="keywords" content="css3, html5, nemosofts, codecanyon, themeforest">
+    <meta name="robots" content="noindex, nofollow">
     
     <!-- Website Title -->
     <title><?php echo (isset($page_title)) ? $page_title.' | '.APP_NAME : APP_NAME; ?></title>

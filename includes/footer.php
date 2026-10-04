@@ -1,14 +1,3 @@
-    <!-- Start: footer -->
-    <footer id="nsofts_footer">
-        <div class="nsofts-container d-sm-flex justify-content-between text-center">
-            <span>Copyright &copy; <?php echo date('Y'); ?> <a target="_blank" href="https://nemosofts.com"><span class="fw-semibold">nemosofts</a> All rights reserved.</span></span>
-            <div class="d-flex justify-content-center mt-2 mt-sm-0">
-                <a href="https://codecanyon.net/user/nemosofts/portfolio" class="me-3" target="_blank">Codecanyon</a>
-                <a href="https://t.me/nemosofts" class="me-3" target="_blank">Telegram</a>
-            </div>
-        </div>
-    </footer>
-    <!-- End: footer -->
     
 
     <!-- Vendor scripts -->
