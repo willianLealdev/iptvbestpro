@@ -88,7 +88,7 @@
 
         <div class="row g-4">
             <div class="col-xl-7">
-                <?php playlist_form_render('', $dns_list); ?>
+                <?php playlist_form_render('', $dns_list, 'manage_dns.php'); ?>
             </div>
             <div class="col-xl-5">
                 <div class="card h-100" style="border:0;border-radius:14px;box-shadow:0 4px 14px rgba(15,23,42,.06);">

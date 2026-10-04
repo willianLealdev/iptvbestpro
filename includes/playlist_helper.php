@@ -14,6 +14,7 @@ function playlists_migrate($mysqli){
         'playlist_name' => "VARCHAR(120) NOT NULL DEFAULT ''",
         'created_by'    => "VARCHAR(191) NOT NULL DEFAULT ''",
         'dns_checked_at'=> "INT(11) NOT NULL DEFAULT 0",   // última verificação do servidor (failover)
+        'source'        => "VARCHAR(10) NOT NULL DEFAULT 'account'", // 'url' = servidor fixo da URL | 'account' = DNS automático
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_users` LIKE '$name'");
@@ -40,8 +41,9 @@ function dns_list_active($mysqli){
     $list = array();
     $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base FROM tbl_xui_dns WHERE status = '1' ORDER BY id ASC");
     while ($res && $r = mysqli_fetch_assoc($res)) {
-        $norm = dns_normalize($r['dns_base']);
-        if ($norm != '') $list[] = array('id' => $r['id'], 'title' => $r['dns_title'], 'base' => rtrim(trim($r['dns_base']), '/'), 'norm' => $norm);
+        $base = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/'); // a página de DNS grava com htmlentities
+        $norm = dns_normalize($base);
+        if ($norm != '') $list[] = array('id' => $r['id'], 'title' => $r['dns_title'], 'base' => $base, 'norm' => $norm);
     }
     return $list;
 }
@@ -152,6 +154,8 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
  * Usa cache curto; se o último servidor parar de aceitar (queda ou migração), procura em todos e atualiza.
  */
 function playlist_current_dns($mysqli, $row){
+    // Playlist cadastrada por URL: o servidor é o da própria URL, sem troca automática
+    if (isset($row['source']) && $row['source'] == 'url') return $row['dns_base'];
     $cache_seconds = 300;
     $now = time();
     if (!empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < $cache_seconds) return $row['dns_base'];
@@ -168,14 +172,15 @@ function playlist_current_dns($mysqli, $row){
     return $base;
 }
 
-function playlist_save($mysqli, $device_id, $name, $username, $password, $dns_base, $created_by){
+function playlist_save($mysqli, $device_id, $name, $username, $password, $dns_base, $created_by, $source = 'account'){
     $now = time();
     $type = 'xui';
-    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_users (user_type, user_name, user_password, dns_base, device_id, registered_on, status, playlist_name, created_by, dns_checked_at) VALUES (?,?,?,?,?,?,1,?,?,?)");
+    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_users (user_type, user_name, user_password, dns_base, device_id, registered_on, status, playlist_name, created_by, dns_checked_at, source) VALUES (?,?,?,?,?,?,1,?,?,?,?)");
     $now_s = (string)$now;
     $name = mb_substr(trim(strip_tags((string)$name)), 0, 120);
     $created_by = mb_substr((string)$created_by, 0, 191);
-    mysqli_stmt_bind_param($stmt, 'ssssssssi', $type, $username, $password, $dns_base, $device_id, $now_s, $name, $created_by, $now);
+    $source = $source == 'url' ? 'url' : 'account';
+    mysqli_stmt_bind_param($stmt, 'ssssssssis', $type, $username, $password, $dns_base, $device_id, $now_s, $name, $created_by, $now, $source);
     $ok = mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
     return $ok;
@@ -213,20 +218,23 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
     if ($name == '') return array('ok' => false, 'msg' => 'Informe o nome da lista.');
 
     if ($mode == 'url') {
+        // URL: o servidor já vem na própria URL; salva direto, sem verificar DNS
         $parsed = playlist_parse_url(isset($post['playlist_url']) ? $post['playlist_url'] : '');
         if (!$parsed) return array('ok' => false, 'msg' => 'URL inválida. Use uma URL Xtream com username e password (ex.: http://servidor/get.php?username=...&password=...).');
-        // A URL serve só para extrair usuário e senha; o servidor dela é testado primeiro, mas qualquer DNS cadastrado vale
-        $username = $parsed['username']; $password = $parsed['password'];
-        $find = playlist_find_dns($mysqli, $username, $password, $parsed['server']);
-    } else {
-        $username = trim(isset($post['username']) ? $post['username'] : '');
-        $password = trim(isset($post['password']) ? $post['password'] : '');
-        if ($username == '' || $password == '') return array('ok' => false, 'msg' => 'Informe usuário e senha.');
-        $find = playlist_find_dns($mysqli, $username, $password);
+        if (!playlist_save($mysqli, $device_id, $name, $parsed['username'], $parsed['password'], $parsed['server'], $created_by, 'url')) {
+            return array('ok' => false, 'msg' => 'Erro ao salvar a playlist.');
+        }
+        return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada (servidor '.$parsed['server'].').');
     }
+
+    // Account: procura sozinho qual DNS cadastrado aceita este usuário
+    $username = trim(isset($post['username']) ? $post['username'] : '');
+    $password = trim(isset($post['password']) ? $post['password'] : '');
+    if ($username == '' || $password == '') return array('ok' => false, 'msg' => 'Informe usuário e senha.');
+    $find = playlist_find_dns($mysqli, $username, $password);
     if (!$find['ok']) return array('ok' => false, 'msg' => $find['msg']);
 
-    if (!playlist_save($mysqli, $device_id, $name, $username, $password, $find['dns']['base'], $created_by)) {
+    if (!playlist_save($mysqli, $device_id, $name, $username, $password, $find['dns']['base'], $created_by, 'account')) {
         return array('ok' => false, 'msg' => 'Erro ao salvar a playlist.');
     }
     $msg = 'Playlist "'.$name.'" adicionada. '.$find['msg'];

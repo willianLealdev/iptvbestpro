@@ -6,22 +6,27 @@
 
 function playlist_form_styles(){ ?>
 <style>
-    .pl-box { background: #0d1520; color: #e5e7eb; border: 1px solid rgba(255,255,255,.55); border-radius: 18px; padding: 26px 32px 32px; max-width: 760px; margin: 0 auto; }
-    .pl-tabs { display: flex; justify-content: center; gap: 40px; border-bottom: 1px solid rgba(255,255,255,.12); margin-bottom: 26px; }
-    .pl-tab { background: none; border: 0; color: #fff; font-weight: 600; font-size: 17px; padding: 10px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
-    .pl-tab.active { color: #3b8de0; border-bottom-color: #3b8de0; }
+    .pl-box { background: #fff; color: #1f2a44; border: 0; border-radius: 14px; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); padding: 22px 28px 28px; height: 100%; }
+    .pl-tabs { display: flex; justify-content: center; gap: 36px; border-bottom: 1px solid #eef0f4; margin-bottom: 24px; }
+    .pl-tab { background: none; border: 0; color: #6b7a99; font-weight: 600; font-size: 16px; padding: 10px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+    .pl-tab:hover { color: #1f2a44; }
+    .pl-tab.active { color: #3b6cf6; border-bottom-color: #3b6cf6; }
     .pl-pane { display: none; }
     .pl-pane.active { display: block; }
-    .pl-field { margin-bottom: 26px; }
-    .pl-field label { display: block; color: #9ca3af; font-size: 15px; margin-bottom: 6px; }
-    .pl-field input { width: 100%; background: transparent; border: 0; border-bottom: 1px solid rgba(255,255,255,.35); color: #fff; font-size: 16px; padding: 6px 0; outline: none; }
-    .pl-field input:focus { border-bottom-color: #3b8de0; }
+    .pl-field { margin-bottom: 18px; }
+    .pl-field label { display: block; color: #4b5563; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+    .pl-field input { width: 100%; background: #fff; border: 1px solid #dfe3ea; border-radius: 8px; color: #1f2a44; font-size: 15px; padding: 9px 12px; outline: none; transition: border-color .15s, box-shadow .15s; }
+    .pl-field input:focus { border-color: #3b6cf6; box-shadow: 0 0 0 3px rgba(59, 108, 246, .12); }
+    .pl-field input::placeholder { color: #a3abb9; }
     .pl-pass { position: relative; }
-    .pl-pass button { position: absolute; right: 0; bottom: 6px; background: none; border: 0; color: #9ca3af; font-size: 20px; cursor: pointer; }
-    .pl-submit { display: block; margin: 8px auto 0; min-width: 216px; border: 0; border-radius: 22px; padding: 10px 26px; color: #fff; font-weight: 600; background: linear-gradient(90deg, #1f5f9e, #1b3a6e); }
-    .pl-submit:disabled { opacity: .55; }
-    .pl-hint { color: #8b95a5; font-size: 13px; margin-top: -14px; margin-bottom: 22px; }
-    .pl-dns { color: #8b95a5; font-size: 13px; text-align: center; margin-top: 18px; }
+    .pl-pass input { padding-right: 42px; }
+    .pl-pass button { position: absolute; right: 8px; bottom: 6px; background: none; border: 0; color: #6b7280; font-size: 19px; cursor: pointer; }
+    .pl-submit { display: block; margin: 6px auto 0; min-width: 200px; border: 0; border-radius: 8px; padding: 10px 26px; color: #fff; font-weight: 600; background: #3b6cf6; }
+    .pl-submit:hover { background: #2f5be0; }
+    .pl-submit:disabled { opacity: .6; }
+    .pl-hint { color: #6b7a99; font-size: 13px; margin-top: -6px; margin-bottom: 20px; }
+    .pl-dns { color: #6b7a99; font-size: 13px; text-align: center; margin-top: 16px; }
+    .pl-dns.pl-dns--warn { color: #b45309; background: #fff7e6; border: 1px solid #ffe7ba; border-radius: 8px; padding: 8px 12px; }
     .pl-list .pl-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f1f3f7; }
     .pl-list .pl-item:last-child { border-bottom: 0; }
     .pl-item__icon { width: 40px; height: 40px; border-radius: 10px; background: #eef3ff; color: #3b6cf6; display: flex; align-items: center; justify-content: center; font-size: 20px; flex: 0 0 40px; }
@@ -34,7 +39,7 @@ function playlist_form_styles(){ ?>
 /**
  * $hidden_html: campos extras (ex.: CSRF). $dns_list: servidores ativos (só para informação).
  */
-function playlist_form_render($hidden_html, $dns_list){ ?>
+function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = ''){ ?>
 <div class="pl-box">
     <div class="pl-tabs" role="tablist">
         <button type="button" class="pl-tab active" data-pl-tab="url">URL</button>
@@ -52,7 +57,7 @@ function playlist_form_render($hidden_html, $dns_list){ ?>
             <label>Playlist URL</label>
             <input type="url" name="playlist_url" required placeholder="http://servidor:porta/get.php?username=...&password=...">
         </div>
-        <div class="pl-hint">A URL é usada só para pegar usuário e senha. O app sempre usa o servidor DNS cadastrado que estiver funcionando.</div>
+        <div class="pl-hint">O servidor já vem na URL, então ela é salva direto, sem verificação.</div>
         <button type="submit" name="playlist_submit" class="pl-submit">Upload Now</button>
     </form>
 
@@ -73,16 +78,17 @@ function playlist_form_render($hidden_html, $dns_list){ ?>
             <button type="button" data-pl-eye title="Mostrar senha"><i class="ri-eye-line"></i></button>
         </div>
         <div class="pl-hint">O sistema procura sozinho qual servidor DNS aceita este usuário. Se o servidor cair ou você migrar o usuário, o app passa a usar o outro automaticamente.</div>
-        <button type="submit" name="playlist_submit" class="pl-submit">Upload Now</button>
-    </form>
+        <button type="submit" name="playlist_submit" class="pl-submit" <?php if (!$dns_list) { echo 'disabled'; } ?>>Upload Now</button>
 
-    <div class="pl-dns">
         <?php if ($dns_list) { ?>
-            Servidores ativos: <?php $t = array(); foreach ($dns_list as $d) { $t[] = htmlspecialchars($d['title']); } echo implode(' · ', $t); ?>
+            <div class="pl-dns">Servidores ativos: <?php $t = array(); foreach ($dns_list as $d) { $t[] = htmlspecialchars($d['title']); } echo implode(' · ', $t); ?></div>
         <?php } else { ?>
-            Nenhum servidor DNS ativo cadastrado.
+            <div class="pl-dns pl-dns--warn">
+                Nenhum servidor DNS ativo. Para usar usuário e senha, cadastre pelo menos um servidor
+                <?php if ($dns_manage_url != '') { ?>em <a href="<?php echo htmlspecialchars($dns_manage_url); ?>">Servidores DNS → DNS</a><?php } else { ?>(fale com o administrador)<?php } ?>.
+            </div>
         <?php } ?>
-    </div>
+    </form>
 </div>
 <?php }
 
@@ -127,6 +133,7 @@ function playlist_list_render($playlists, $hidden_html){ ?>
                         <div class="pl-item__name"><?php echo htmlspecialchars(isset($p['playlist_name']) && $p['playlist_name'] != '' ? $p['playlist_name'] : $p['user_name']); ?></div>
                         <div class="pl-item__meta">
                             Usuário: <?php echo htmlspecialchars($p['user_name']); ?> · Servidor: <?php echo htmlspecialchars($p['dns_base']); ?>
+                            <?php if (isset($p['source']) && $p['source'] == 'url') { ?> · <span title="Servidor fixo da URL">URL</span><?php } else { ?> · <span title="Troca de servidor automática">DNS automático</span><?php } ?>
                             <?php if (!empty($p['registered_on']) && ctype_digit((string)$p['registered_on'])) { ?> · <?php echo date('d/m/Y', (int)$p['registered_on']); ?><?php } ?>
                         </div>
                     </div>
