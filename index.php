@@ -76,6 +76,7 @@ $faq = array(
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
+section[id],[id].wrap{scroll-margin-top:84px}
 body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:inherit;text-decoration:none}
 img{max-width:100%;display:block}
@@ -524,6 +525,20 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
         b.innerHTML = open ? '<i class="ri-close-line"></i>' : '<i class="ri-menu-line"></i>';
     });
     m.querySelectorAll('a[href^="#"]').forEach(function (a) { a.addEventListener('click', function () { m.classList.remove('open'); b.innerHTML = '<i class="ri-menu-line"></i>'; }); });
+    // Links do menu (#revenda, #faq...): rola até a seção e já mostra o conteúdo dela
+    document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+        a.addEventListener('click', function (e) {
+            var id = a.getAttribute('href').slice(1);
+            var t = id ? document.getElementById(id) : null;
+            if (!t) return;
+            e.preventDefault();
+            t.querySelectorAll('.reveal').forEach(function (r) { r.classList.add('in'); });
+            if (t.classList.contains('reveal')) t.classList.add('in');
+            var top = t.getBoundingClientRect().top + window.pageYOffset - 80;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+            if (history.replaceState) history.replaceState(null, '', '#' + id);
+        });
+    });
     var els = document.querySelectorAll('.reveal');
     if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); return; }
     var io = new IntersectionObserver(function (entries) {
