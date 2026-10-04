@@ -48,8 +48,9 @@ RUN { \
 COPY docker/apache-security.conf /etc/apache2/conf-available/painel-security.conf
 RUN a2enconf painel-security
 
-# Imagem que sumiu da pasta (ex.: após deploy) é entregue pela cópia do banco (media.php)
-RUN {       echo "<Directory /var/www/html>";       echo "    RewriteEngine On";       echo "    RewriteCond %{REQUEST_FILENAME} !-f";       echo "    RewriteRule ^(images|uploads)/(.+)\$ media.php?p=\$1/\$2 [L,QSA]";       echo "</Directory>";     } > /etc/apache2/conf-available/media-fallback.conf     && a2enconf media-fallback
+# URLs limpas (sem .php) e imagens restauradas do banco (media.php)
+COPY docker/apache-rewrite.conf /etc/apache2/conf-available/painel-rewrite.conf
+RUN a2enconf painel-rewrite
 
 COPY --from=geo /geo /opt/geo
 COPY . /var/www/html/

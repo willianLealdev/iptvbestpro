@@ -383,7 +383,36 @@ function i18n_translate_js_literals($code, $lang){
     }, $code);
 }
 
+// Links e formulários sem .php (o Apache entende o endereço limpo). API, pagamento e imagens ficam como estão.
+function i18n_clean_url($u){
+    if ($u === '' || $u[0] === '#' || preg_match('#^(mailto:|tel:|javascript:|data:)#i', $u)) return $u;
+    if (preg_match('#^(https?:)?//([^/]+)(.*)$#i', $u, $m)) {
+        $host = isset($_SERVER['HTTP_HOST']) ? strtolower($_SERVER['HTTP_HOST']) : '';
+        if (strtolower($m[2]) !== $host) return $u;
+    }
+    $cut = strcspn($u, '?#');
+    $path = substr($u, 0, $cut);
+    $rest = substr($u, $cut);
+    if (!preg_match('/\.php$/i', $path)) return $u;
+    if (preg_match('#(^|/)(pagamento|install|deactivate)/#i', $path)) return $u;
+    $base = strtolower(basename($path, '.php'));
+    if (in_array($base, array('api', 'api_web', 'api_urls', 'media', 'processdata'), true)) return $u;
+    if ($base === 'index') {
+        $path = substr($path, 0, -9);
+        if ($path === '' || substr($path, -1) === ':') $path = './';
+    } else {
+        $path = substr($path, 0, -4);
+    }
+    return $path.$rest;
+}
+
 function i18n_translate_tag($tag, $lang){
+    if (stripos($tag, '.php') !== false && preg_match('/^<(a|form|link|area)/i', $tag)) {
+        $tag = preg_replace_callback('/(href|action)="([^"]*)"/i', function ($m) {
+            $clean = i18n_clean_url(html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            return $m[1].'="'.htmlspecialchars($clean, ENT_QUOTES, 'UTF-8', false).'"';
+        }, $tag);
+    }
     // atributos visíveis
     $tag = preg_replace_callback('/\b(placeholder|title|alt|aria-label|data-bs-title|data-confirm)="([^"]*)"/u', function ($m) use ($lang) {
         if (!preg_match('/\p{L}{2,}/u', $m[2])) return $m[0];
