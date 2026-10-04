@@ -23,6 +23,27 @@ function resend_migrate($mysqli){
     }
 }
 
+/**
+ * Todo e-mail do sistema sai com a identidade da marca: cabeçalho com o logo e o nome, rodapé com © e o site.
+ * E-mails que já vêm montados no modelo da marca (marcados com data-brand-mail) não são embrulhados de novo.
+ */
+function mail_brand_wrap($html, $subject = ''){
+    $html = (string)$html;
+    if (strpos($html, 'data-brand-mail') !== false) return $html;
+    $brand = htmlspecialchars(function_exists('brand_name') ? brand_name() : 'IPTV Best Pro');
+    $logo = htmlspecialchars(function_exists('brand_email_logo_url') ? brand_email_logo_url() : '');
+    $site = function_exists('brand_mail_base_url') ? brand_mail_base_url() : '';
+    return '<div data-brand-mail="1" style="background:#f2f5fb;padding:30px 12px;font-family:Arial,Helvetica,sans-serif;">'
+        .'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;">'
+        .'<tr><td style="background:#070b18;padding:22px;text-align:center;">'
+        .($logo != '' ? '<img src="'.$logo.'" alt="'.$brand.'" width="64" height="64" style="display:inline-block;border-radius:14px;border:0;">' : '')
+        .'<div style="color:#ffffff;font-size:18px;font-weight:700;margin-top:8px;">'.$brand.'</div></td></tr>'
+        .'<tr><td style="padding:28px;color:#3b4560;font-size:15px;line-height:1.6;">'.$html.'</td></tr>'
+        .'<tr><td style="padding:16px 28px;background:#f8fafc;font-size:12px;color:#8a94ab;text-align:center;">© '.date('Y').' '.$brand
+        .($site != '' ? ' · <a href="'.htmlspecialchars($site).'" style="color:#8a94ab;">'.htmlspecialchars(preg_replace('#^https?://#', '', $site)).'</a>' : '')
+        .'</td></tr></table></div>';
+}
+
 // Guarda os últimos 15 envios (data, destino, provedor, resultado, erro) em tbl_panel_config
 function mail_log_result($mysqli, $provider, $to, $subject, $ok, $error = '', $id = ''){
     if (!$mysqli) return;

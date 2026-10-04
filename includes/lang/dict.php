@@ -416,6 +416,7 @@ return array(
   'Nenhum envio registrado ainda.' => array('pt' => 'Nenhum envio registrado ainda.', 'en' => 'No e-mails logged yet.', 'es' => 'Aún no hay envíos registrados.'),
   'O provedor aceitou o e-mail para {}. Se não chegar em alguns minutos, confira o spam e o painel do provedor.' => array('pt' => 'O provedor aceitou o e-mail para {0}. Se não chegar em alguns minutos, confira o spam e o painel do provedor.', 'en' => 'The provider accepted the e-mail to {0}. If it doesn\'t arrive in a few minutes, check spam and the provider dashboard.', 'es' => 'El proveedor aceptó el correo para {0}. Si no llega en unos minutos, revisa el spam y el panel del proveedor.'),
   'Não enviado: {}' => array('pt' => 'Não enviado: {0}', 'en' => 'Not sent: {0}', 'es' => 'No enviado: {0}'),
+  'E-mail de teste' => array('pt' => 'E-mail de teste', 'en' => 'Test e-mail', 'es' => 'Correo de prueba'),
   'Créditos iniciais' => array('pt' => 'Créditos iniciais', 'en' => 'Initial credits', 'es' => 'Créditos iniciales'),
   'Créditos insuficientes (precisa de {}).' => array('pt' => 'Créditos insuficientes (precisa de {0}).', 'en' => 'Not enough credits (needs {0}).', 'es' => 'Créditos insuficientes (necesita {0}).'),
   'Créditos insuficientes (precisa de' => array('pt' => 'Créditos insuficientes (precisa de', 'en' => 'Not enough credits (needs', 'es' => 'Créditos insuficientes (necesita'),

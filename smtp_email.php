@@ -52,6 +52,7 @@ function send_email($recipient_email,$recipient_name,$subject,$message, $is_test
 {
     global $mysqli;
     $GLOBALS['mail_last_error'] = '';
+    $message = mail_brand_wrap($message, $subject); // logo da marca em todo e-mail
     if(MAIL_PROVIDER == 'resend'){
         $r = resend_send(RESEND_API_KEY, SMTP_EMAIL, RESEND_FROM_NAME, $recipient_email, $recipient_name, $subject, $message);
         $GLOBALS['mail_last_error'] = $r['error'];

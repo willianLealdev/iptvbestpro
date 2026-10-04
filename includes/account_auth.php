@@ -191,15 +191,15 @@ function acc_mail($to, $name, $subject, $html){
 
 function acc_email_html($title, $paragraphs, $button = '', $url = '', $note = ''){
     $brand = htmlspecialchars(brand_name());
-    $logo = htmlspecialchars(acc_base_url().'/'.ltrim(brand_logo_url(''), '/'));
+    $logo = htmlspecialchars(function_exists('brand_email_logo_url') && brand_mail_base_url() != '' ? brand_email_logo_url() : acc_base_url().'/assets/images/brand/email_logo.png');
     $p = '';
     foreach ((array)$paragraphs as $t) $p .= '<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3b4560;">'.$t.'</p>';
     $btn = $button != '' ? '<p style="margin:26px 0;text-align:center;"><a href="'.htmlspecialchars($url).'" style="display:inline-block;background:#f5b82e;color:#1b1300;font-weight:700;font-size:16px;text-decoration:none;padding:14px 30px;border-radius:10px;">'.htmlspecialchars($button).'</a></p>'
         .'<p style="margin:0 0 14px;font-size:12.5px;line-height:1.6;color:#8a94ab;">'.htmlspecialchars(__('Se o botão não funcionar, copie e cole este endereço no navegador:')).'<br><span style="word-break:break-all;color:#2f6bff;">'.htmlspecialchars($url).'</span></p>' : '';
     $n = $note != '' ? '<p style="margin:18px 0 0;font-size:12.5px;line-height:1.6;color:#8a94ab;">'.$note.'</p>' : '';
-    return '<div style="background:#f2f5fb;padding:30px 12px;font-family:Arial,Helvetica,sans-serif;">'
+    return '<div data-brand-mail="1" style="background:#f2f5fb;padding:30px 12px;font-family:Arial,Helvetica,sans-serif;">'
         .'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;">'
-        .'<tr><td style="background:#070b18;padding:22px;text-align:center;"><img src="'.$logo.'" alt="" width="56" height="56" style="border-radius:12px;"><div style="color:#ffffff;font-size:18px;font-weight:700;margin-top:8px;">'.$brand.'</div></td></tr>'
+        .'<tr><td style="background:#070b18;padding:22px;text-align:center;"><img src="'.$logo.'" alt="'.$brand.'" width="64" height="64" style="display:inline-block;border-radius:14px;border:0;"><div style="color:#ffffff;font-size:18px;font-weight:700;margin-top:8px;">'.$brand.'</div></td></tr>'
         .'<tr><td style="padding:30px 28px;"><h1 style="margin:0 0 16px;font-size:21px;color:#1f2a44;">'.htmlspecialchars($title).'</h1>'.$p.$btn.$n.'</td></tr>'
         .'<tr><td style="padding:16px 28px;background:#f8fafc;font-size:12px;color:#8a94ab;text-align:center;">© '.date('Y').' '.$brand.'</td></tr>'
         .'</table></div>';

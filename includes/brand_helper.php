@@ -47,6 +47,21 @@ function brand_remember_base_url($mysqli){
     $_SESSION['brand_base_saved'] = 1;
 }
 
+// Endereço do site para links e imagens dos e-mails (com navegador: domínio atual; em segundo plano: o salvo)
+function brand_mail_base_url(){
+    if (!empty($_SERVER['HTTP_HOST'])) {
+        $proto = !empty($_SERVER['HTTP_X_FORWARDED_PROTO']) ? $_SERVER['HTTP_X_FORWARDED_PROTO'] : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') ? 'https' : 'http');
+        $host = !empty($_SERVER['HTTP_X_FORWARDED_HOST']) ? $_SERVER['HTTP_X_FORWARDED_HOST'] : $_SERVER['HTTP_HOST'];
+        return strtolower(trim(explode(',', $proto)[0])).'://'.trim(explode(',', $host)[0]);
+    }
+    return brand_saved_base_url();
+}
+
+// Logo oficial para e-mails (versão leve, 144 px, fundo escuro da marca)
+function brand_email_logo_url(){
+    return rtrim(brand_mail_base_url(), '/').'/assets/images/brand/email_logo.png';
+}
+
 function brand_saved_base_url(){
     global $mysqli;
     if (!isset($mysqli) || !$mysqli) return '';

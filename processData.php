@@ -185,42 +185,12 @@
     		$to = trim($_POST['email']);
     		$recipient_name='Check User';
     
-    		$subject = '[IMPORTANT] '.APP_NAME.' Check SMTP Configuration';
+    		$subject = APP_NAME.' - E-mail de teste';
     
-    		$message='<div style="background-color: #f9f9f9;" align="center"><br />
-    		<table style="font-family: OpenSans,sans-serif; color: #666666;" border="0" width="600" cellspacing="0" cellpadding="0" align="center" bgcolor="#FFFFFF">
-    		<tbody>
-    		<tr>
-    		<td colspan="2" bgcolor="#FFFFFF" align="center"><img src="'.$file_path.brand_logo_url().'" alt="header" /></td>
-    		</tr>
-    		<tr>
-    		<td width="600" valign="top" bgcolor="#FFFFFF"><br>
-    		<table style="font-family:OpenSans,sans-serif; color: #666666; font-size: 10px; padding: 15px;" border="0" width="100%" cellspacing="0" cellpadding="0" align="left">
-    		<tbody>
-    		<tr>
-    		<td valign="top"><table border="0" align="left" cellpadding="0" cellspacing="0" style="font-family:OpenSans,sans-serif; color: #666666; font-size: 10px; width:100%;">
-    		<tbody>
-    		<tr>
-    		<td>
-    		<p style="color: #262626; font-size: 24px; margin-top:0px;">Hi, '.$_SESSION['admin_name'].'</p>
-    		<p style="color: #262626; font-size: 18px; margin-top:0px;">This is the demo mail to check SMTP Configuration. </p>
-    		<p style="color:#262626; font-size:17px; line-height:32px;font-weight:500;margin-bottom:30px;">'.$app_lang['thank_you_lbl'].' '.APP_NAME.'</p>
-    
-    		</td>
-    		</tr>
-    		</tbody>
-    		</table></td>
-    		</tr>
-    
-    		</tbody>
-    		</table></td>
-    		</tr>
-    		<tr>
-    		<td style="color: #262626; padding: 20px 0; font-size: 18px; border-top:5px solid #52bfd3;" colspan="2" align="center" bgcolor="#ffffff">'.$app_lang['email_copyright'].' '.APP_NAME.'.</td>
-    		</tr>
-    		</tbody>
-    		</table>
-    		</div>';
+    		$message = '<h1 style="margin:0 0 14px;font-size:21px;color:#1f2a44;">E-mail de teste</h1>'
+    			.'<p style="margin:0 0 12px;">Olá, '.htmlspecialchars((string)$_SESSION['admin_name']).'!</p>'
+    			.'<p style="margin:0 0 12px;">Este é um e-mail de teste para confirmar que o envio de e-mails do '.htmlspecialchars(APP_NAME).' está funcionando.</p>'
+    			.'<p style="margin:0;color:#16a34a;font-weight:700;">Se você recebeu esta mensagem, está tudo certo.</p>';
     
     		$ok = send_email($to,$recipient_name,$subject,$message, false);
     		unset($_SESSION['msg'], $_SESSION['class'], $_SESSION['mail_error_detail']);
