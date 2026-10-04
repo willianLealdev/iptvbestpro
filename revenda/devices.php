@@ -112,6 +112,7 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
                         <button type="button" class="btn btn-sm <?php echo $st == 'active' ? 'btn-outline-primary' : 'rv-btn-green'; ?> btn_activate" data-pk="<?php echo (int)$d['id']; ?>" data-mac="<?php echo rv_e($d['device_id']); ?>">
                             <i class="ri-flashlight-line"></i> <?php echo $st == 'inactive' ? 'Ativar' : 'Renovar'; ?>
                         </button>
+                        <a href="playlist.php?device=<?php echo (int)$d['id']; ?>" class="btn btn-sm btn-outline-secondary ms-1"><i class="ri-play-list-line"></i> Playlist</a>
                     </td>
                 </tr>
             <?php } } else { ?>

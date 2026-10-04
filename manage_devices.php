@@ -12,6 +12,9 @@
     resellers_migrate($mysqli);
     $packages = devices_packages();
     $admin_label = 'admin: '.(isset($_SESSION['admin_name']) ? $_SESSION['admin_name'] : '');
+    // Somente o Super Admin escolhe "Ativar como" (cobrar de um revendedor) e gera novo código
+    $is_super_admin = isset($_SESSION['admin_type']) && $_SESSION['admin_type'] == 3;
+    $charge_reseller = ($is_super_admin && isset($_POST['reseller_id'])) ? (int)$_POST['reseller_id'] : 0;
     $admin_id = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
     $default_app_id = isset($settings_details['envato_package_name']) ? $settings_details['envato_package_name'] : '';
 
@@ -24,7 +27,7 @@
 
     // Ativar / renovar dispositivo existente
     if(isset($_POST['activate_submit'])){
-        $r = devices_activate($mysqli, $_POST['device_pk'], $_POST['package'], (int)$_POST['reseller_id'], $admin_label, $admin_id);
+        $r = devices_activate($mysqli, $_POST['device_pk'], $_POST['package'], $charge_reseller, $admin_label, $admin_id);
         dev_flash($r['ok'], $r['msg']);
         header("Location:".$back_url);
         exit;
@@ -50,7 +53,7 @@
             $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
             mysqli_stmt_close($stmt);
 
-            $r = $row ? devices_activate($mysqli, $row['id'], $_POST['package'], (int)$_POST['reseller_id'], $admin_label, $admin_id)
+            $r = $row ? devices_activate($mysqli, $row['id'], $_POST['package'], $charge_reseller, $admin_label, $admin_id)
                       : array('ok' => false, 'msg' => 'Não foi possível criar o dispositivo.');
             dev_flash($r['ok'], $r['msg']);
         }
@@ -67,7 +70,6 @@
     }
 
     // Gerar novo código de ativação do admin: somente o Super Admin (admin_type 3)
-    $is_super_admin = isset($_SESSION['admin_type']) && $_SESSION['admin_type'] == 3;
     if(isset($_POST['regen_admin_code']) && $is_super_admin){
         $new_code = activation_code_generate($mysqli);
         if($new_code){ panel_config_set($mysqli, 'admin_code', $new_code); }
@@ -332,7 +334,7 @@
                                                 <ul class="dropdown-menu dropdown-menu-end">
                                                     <li><a class="dropdown-item btn_activate" href="javascript:void(0)" data-pk="<?php echo $row['id']; ?>" data-mac="<?php echo htmlspecialchars($row['device_id']); ?>">
                                                         <i class="ri-flashlight-line me-1"></i><?php echo $status == 'inactive' ? 'Ativar' : 'Renovar / trocar pacote'; ?></a></li>
-                                                    <li><a class="dropdown-item" href="manage_users.php?keyword=<?php echo urlencode($row['device_id']); ?>"><i class="ri-play-list-line me-1"></i>Login da playlist</a></li>
+                                                    <li><a class="dropdown-item" href="device_playlist.php?device=<?php echo $row['id']; ?>"><i class="ri-play-list-line me-1"></i>Playlist</a></li>
                                                     <?php if($status != 'inactive'){ ?>
                                                         <li>
                                                             <form method="post" onsubmit="return confirm('Remover a ativação deste dispositivo? Os créditos usados não são devolvidos.');">
@@ -375,7 +377,7 @@
 
 <?php
     // Campos compartilhados pelos dois modais
-    function dv_package_reseller_fields($packages, $resellers){ ?>
+    function dv_package_reseller_fields($packages, $resellers, $show_charge){ ?>
         <div class="mb-3">
             <label class="form-label">Pacote</label>
             <select name="package" class="form-select" required>
@@ -386,6 +388,7 @@
                 <?php } ?>
             </select>
         </div>
+        <?php if($show_charge){ ?>
         <div class="mb-0">
             <label class="form-label">Ativar como</label>
             <select name="reseller_id" class="form-select">
@@ -396,6 +399,7 @@
             </select>
             <small class="text-muted">Escolhendo um revendedor, os créditos do pacote são descontados do saldo dele.</small>
         </div>
+        <?php } ?>
 <?php } ?>
 
 <!-- Modal: ativar / renovar -->
@@ -409,7 +413,7 @@
             <div class="modal-body">
                 <input type="hidden" name="device_pk" id="activate_pk">
                 <p class="text-muted small">Se o dispositivo ainda estiver válido, os dias do novo pacote são somados ao vencimento atual.</p>
-                <?php dv_package_reseller_fields($packages, $resellers); ?>
+                <?php dv_package_reseller_fields($packages, $resellers, $is_super_admin); ?>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -441,7 +445,7 @@
                         <?php } ?>
                     </select>
                 </div>
-                <?php dv_package_reseller_fields($packages, $resellers); ?>
+                <?php dv_package_reseller_fields($packages, $resellers, $is_super_admin); ?>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>

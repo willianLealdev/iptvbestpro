@@ -380,22 +380,27 @@ else if($get_helper['helper_name']=="get_device_user"){
     
     $jsonObj= array();
     
-    $device_id=isset($get_helper['device_id']) ? trim($get_helper['device_id']) : 0;
+    require_once("includes/playlist_helper.php");
+    playlists_migrate($mysqli);
 
-    $sql="SELECT * FROM tbl_users WHERE tbl_users.status='1' AND tbl_users.device_id='".$device_id."' ORDER BY tbl_users.id DESC";
-    $result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
-    if(mysqli_num_rows($result) > 0){
-        while($data = mysqli_fetch_assoc($result)){
-            
-            $row['id'] = $data['id'];
-            $row['user_type'] = $data['user_type'];
-            $row['user_name'] = $data['user_name'];
-            $row['user_password'] = $data['user_password'];
-            $row['dns_base'] = $data['dns_base'];
-            $row['device_id'] = $data['device_id'];
-            array_push($jsonObj,$row);
-        }
+    $device_id=isset($get_helper['device_id']) ? trim($get_helper['device_id']) : '';
+
+    $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_users WHERE status='1' AND device_id = ? ORDER BY id DESC");
+    mysqli_stmt_bind_param($stmt, 's', $device_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    while($data = mysqli_fetch_assoc($result)){
+        $row['id'] = $data['id'];
+        $row['user_type'] = $data['user_type'];
+        $row['user_name'] = $data['user_name'];
+        $row['user_password'] = $data['user_password'];
+        // Failover: devolve o servidor DNS que aceita este usuário agora (queda ou migração de servidor)
+        $row['dns_base'] = playlist_current_dns($mysqli, $data);
+        $row['device_id'] = $data['device_id'];
+        $row['playlist_name'] = isset($data['playlist_name']) ? $data['playlist_name'] : '';
+        array_push($jsonObj,$row);
     }
+    mysqli_stmt_close($stmt);
     $set[$API_NAME] = $jsonObj;
     header( 'Content-Type: application/json; charset=utf-8' );
     echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
