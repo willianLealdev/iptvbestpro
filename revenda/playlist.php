@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 $playlists = playlist_list($mysqli, $device['device_id']);
-$dns_list = dns_list_active($mysqli);
+$dns_list = dns_list_active($mysqli, $rid);
 $status = devices_activation_status($device);
 
 rv_header($mysqli, $reseller, 'Playlist', 'devices');
@@ -53,7 +53,7 @@ playlist_form_styles(); ?>
 
 <div class="row g-4">
     <div class="col-xl-7">
-        <?php playlist_form_render(rv_csrf_field(), $dns_list); ?>
+        <?php playlist_form_render(rv_csrf_field(), $dns_list, 'dns.php'); ?>
     </div>
     <div class="col-xl-5">
         <div class="rv-card p-4 h-100">

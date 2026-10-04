@@ -6,7 +6,7 @@
 
     // Status online/offline dos servidores (o monitor atualiza a cada 5 minutos)
     dns_health_migrate($mysqli);
-    $never_checked = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_xui_dns WHERE health = ''"));
+    $never_checked = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_xui_dns WHERE health = '' AND reseller_id = 0"));
     if(isset($_POST['check_now']) || (int)$never_checked['num'] > 0){
         dns_health_check_all($mysqli, 4);
         if(isset($_POST['check_now'])){
@@ -27,7 +27,8 @@
     $targetpage = "manage_dns.php"; 
     $limit = 15; 
 
-    $query = "SELECT COUNT(*) as num FROM $tableName";
+    // Somente os DNS do admin; os dos revendedores ficam em "DNS das Revendas"
+    $query = "SELECT COUNT(*) as num FROM $tableName WHERE reseller_id = 0";
     $total_pages = mysqli_fetch_array(mysqli_query($mysqli,$query));
     $total_pages = $total_pages['num'];
     
@@ -41,7 +42,7 @@
     }else{
         $start = 0; 
     } 
-    $sql_query="SELECT * FROM tbl_xui_dns ORDER BY tbl_xui_dns.`id` DESC LIMIT $start, $limit"; 
+    $sql_query="SELECT * FROM tbl_xui_dns WHERE reseller_id = 0 ORDER BY tbl_xui_dns.`id` DESC LIMIT $start, $limit";
     $result=mysqli_query($mysqli,$sql_query) or die(mysqli_error($mysqli));
 ?>
 

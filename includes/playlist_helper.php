@@ -39,9 +39,16 @@ function dns_normalize($url){
     return $scheme.'://'.strtolower($p['host']).($port ? ':'.$port : '');
 }
 
-function dns_list_active($mysqli){
+/**
+ * DNS ativos usados na busca automática.
+ * $scope = 0: só os DNS do admin. $scope = id do revendedor: DNS dele + DNS do admin.
+ */
+function dns_list_active($mysqli, $scope = 0){
+    dns_health_migrate($mysqli);
     $list = array();
-    $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base FROM tbl_xui_dns WHERE status = '1' ORDER BY id ASC");
+    $scope = (int)$scope;
+    $where = $scope > 0 ? "(reseller_id = 0 OR reseller_id = $scope)" : "reseller_id = 0";
+    $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base FROM tbl_xui_dns WHERE status = '1' AND $where ORDER BY (reseller_id = 0) ASC, id ASC");
     while ($res && $r = mysqli_fetch_assoc($res)) {
         $base = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/'); // a página de DNS grava com htmlentities
         $norm = dns_normalize($base);
@@ -138,8 +145,8 @@ function playlist_probe_result($body, $code){
  * $prefer_norm: servidor a testar primeiro (o da URL colada ou o último que funcionou).
  * Retorna array('ok' => bool, 'msg' => string, 'dns' => item|null, 'probe' => array|null)
  */
-function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $timeout = PLAYLIST_PROBE_TIMEOUT){
-    $list = dns_list_active($mysqli);
+function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $timeout = PLAYLIST_PROBE_TIMEOUT, $scope = 0){
+    $list = dns_list_active($mysqli, $scope);
     if (!$list) return array('ok' => false, 'msg' => 'Nenhum servidor DNS ativo. Cadastre em Servidores DNS.', 'dns' => null, 'probe' => null);
 
     $results = playlist_probe_parallel($list, $username, $password, $timeout);
@@ -173,7 +180,7 @@ function playlist_current_dns($mysqli, $row){
     $now = time();
     if (!empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < $stale_after) return $row['dns_base'];
 
-    $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], dns_normalize($row['dns_base']), 4);
+    $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']));
     $base = $find['ok'] ? $find['dns']['base'] : $row['dns_base'];
     playlist_set_dns_state($mysqli, $row['id'], $base, $find['ok']);
     return $base;
@@ -186,9 +193,12 @@ function dns_health_migrate($mysqli){
     if ($done) return;
     $done = true;
     $columns = array(
-        'health'      => "VARCHAR(10) NOT NULL DEFAULT ''",   // '' = nunca verificado | 'online' | 'offline'
-        'health_at'   => "INT(11) NOT NULL DEFAULT 0",
-        'latency_ms'  => "INT(11) NOT NULL DEFAULT 0",
+        'health'        => "VARCHAR(10) NOT NULL DEFAULT ''",   // '' = nunca verificado | 'online' | 'offline'
+        'health_at'     => "INT(11) NOT NULL DEFAULT 0",
+        'latency_ms'    => "INT(11) NOT NULL DEFAULT 0",
+        'offline_since' => "INT(11) NOT NULL DEFAULT 0",        // desde quando está offline (0 = online)
+        'reseller_id'   => "INT(11) NOT NULL DEFAULT 0",        // 0 = DNS do admin | id = DNS exclusivo do revendedor
+        'created_at'    => "INT(11) NOT NULL DEFAULT 0",
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_xui_dns` LIKE '$name'");
@@ -196,16 +206,106 @@ function dns_health_migrate($mysqli){
             mysqli_query($mysqli, "ALTER TABLE `tbl_xui_dns` ADD `$name` $definition");
         }
     }
+    $idx = mysqli_query($mysqli, "SHOW INDEX FROM `tbl_xui_dns` WHERE Key_name = 'idx_dns_reseller'");
+    if ($idx && mysqli_num_rows($idx) == 0) {
+        mysqli_query($mysqli, "ALTER TABLE `tbl_xui_dns` ADD KEY `idx_dns_reseller` (`reseller_id`)");
+    }
+}
+
+define('DNS_OFFLINE_DELETE_DAYS', 15);
+define('DNS_MAX_PER_RESELLER', 30);
+
+// Dias restantes até a exclusão automática de um DNS de revendedor offline (null = não está offline)
+function dns_days_until_delete($row){
+    if (empty($row['offline_since'])) return null;
+    $left = DNS_OFFLINE_DELETE_DAYS - floor((time() - (int)$row['offline_since']) / 86400);
+    return max(0, (int)$left);
+}
+
+/**
+ * Exclui DNS de revendedores offline há mais de DNS_OFFLINE_DELETE_DAYS dias.
+ * Os DNS do admin nunca são excluídos automaticamente. Retorna quantos foram removidos.
+ */
+function dns_auto_cleanup($mysqli){
+    dns_health_migrate($mysqli);
+    $limit = time() - DNS_OFFLINE_DELETE_DAYS * 86400;
+    mysqli_query($mysqli, "DELETE FROM tbl_xui_dns WHERE reseller_id > 0 AND offline_since > 0 AND offline_since < $limit");
+    return mysqli_affected_rows($mysqli);
+}
+
+/* ---------- DNS exclusivos do revendedor ---------- */
+
+function dns_reseller_list($mysqli, $reseller_id){
+    dns_health_migrate($mysqli);
+    $rows = array();
+    $rid = (int)$reseller_id;
+    $res = mysqli_query($mysqli, "SELECT * FROM tbl_xui_dns WHERE reseller_id = $rid ORDER BY id DESC");
+    while ($res && $r = mysqli_fetch_assoc($res)) $rows[] = $r;
+    return $rows;
+}
+
+// Retorna array('ok' => bool, 'msg' => string)
+function dns_reseller_add($mysqli, $reseller_id, $title, $base){
+    dns_health_migrate($mysqli);
+    $rid = (int)$reseller_id;
+    $title = mb_substr(trim(strip_tags((string)$title)), 0, 120);
+    $base = trim((string)$base);
+    if ($title == '') return array('ok' => false, 'msg' => 'Informe o nome do servidor.');
+    if (!preg_match('#^https?://#i', $base)) $base = 'http://'.$base;
+    $norm = dns_normalize($base);
+    if ($norm == '' || !filter_var($base, FILTER_VALIDATE_URL)) return array('ok' => false, 'msg' => 'Endereço inválido. Ex.: http://servidor.com:8080');
+
+    $count = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_xui_dns WHERE reseller_id = $rid"));
+    if ((int)$count['num'] >= DNS_MAX_PER_RESELLER) return array('ok' => false, 'msg' => 'Limite de '.DNS_MAX_PER_RESELLER.' servidores atingido.');
+    foreach (dns_reseller_list($mysqli, $rid) as $d) {
+        if (dns_normalize(html_entity_decode($d['dns_base'], ENT_QUOTES, 'UTF-8')) == $norm) return array('ok' => false, 'msg' => 'Este servidor já está cadastrado.');
+    }
+
+    $now = time();
+    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_xui_dns (dns_title, dns_base, status, reseller_id, created_at) VALUES (?, ?, 1, ?, ?)");
+    mysqli_stmt_bind_param($stmt, 'ssii', $title, $norm, $rid, $now);
+    $ok = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    if ($ok) dns_health_check_all($mysqli, 4, $rid);
+    return $ok ? array('ok' => true, 'msg' => 'Servidor "'.$title.'" cadastrado.') : array('ok' => false, 'msg' => 'Erro ao salvar o servidor.');
+}
+
+function dns_reseller_delete($mysqli, $reseller_id, $dns_id){
+    $rid = (int)$reseller_id;
+    $id = (int)$dns_id;
+    if ($rid <= 0) return false;
+    mysqli_query($mysqli, "DELETE FROM tbl_xui_dns WHERE id = $id AND reseller_id = $rid");
+    return mysqli_affected_rows($mysqli) > 0;
+}
+
+function dns_reseller_toggle($mysqli, $reseller_id, $dns_id){
+    $rid = (int)$reseller_id;
+    $id = (int)$dns_id;
+    if ($rid <= 0) return false;
+    mysqli_query($mysqli, "UPDATE tbl_xui_dns SET status = IF(status = 1, 0, 1) WHERE id = $id AND reseller_id = $rid");
+    return mysqli_affected_rows($mysqli) > 0;
+}
+
+// Escopo de DNS do aparelho: id do revendedor dono (0 = admin / sem dono)
+function playlist_dns_scope($mysqli, $device_id){
+    $stmt = mysqli_prepare($mysqli, "SELECT reseller_id FROM tbl_devices WHERE device_id = ? AND owner = 'reseller' ORDER BY id DESC LIMIT 1");
+    if (!$stmt) return 0;
+    mysqli_stmt_bind_param($stmt, 's', $device_id);
+    mysqli_stmt_execute($stmt);
+    $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    return $row ? (int)$row['reseller_id'] : 0;
 }
 
 /**
  * Testa se cada servidor DNS responde (player_api.php sem login: um servidor no ar devolve resposta,
  * mesmo recusando o acesso). Atualiza health/latency em tbl_xui_dns. Retorna array id => 'online'|'offline'.
  */
-function dns_health_check_all($mysqli, $timeout = 5){
+function dns_health_check_all($mysqli, $timeout = 5, $only_reseller = null){
     dns_health_migrate($mysqli);
     $rows = array();
-    $res = mysqli_query($mysqli, "SELECT id, dns_base FROM tbl_xui_dns");
+    $where = $only_reseller === null ? '' : ' WHERE reseller_id = '.(int)$only_reseller;
+    $res = mysqli_query($mysqli, "SELECT id, dns_base FROM tbl_xui_dns".$where);
     while ($res && $r = mysqli_fetch_assoc($res)) $rows[$r['id']] = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/');
     if (!$rows) return array();
 
@@ -240,9 +340,11 @@ function dns_health_check_all($mysqli, $timeout = 5){
         $out[$id] = $online ? 'online' : 'offline';
         $health = $out[$id];
         $latency = $online ? $ms : 0;
-        $stmt = mysqli_prepare($mysqli, "UPDATE tbl_xui_dns SET health = ?, health_at = ?, latency_ms = ? WHERE id = ?");
+        // offline_since: marca o início da queda; volta a 0 quando o servidor responde
+        $stmt = mysqli_prepare($mysqli, "UPDATE tbl_xui_dns SET health = ?, health_at = ?, latency_ms = ?,
+                                         offline_since = IF(? = 'online', 0, IF(offline_since = 0, ?, offline_since)) WHERE id = ?");
         $iid = (int)$id;
-        mysqli_stmt_bind_param($stmt, 'siii', $health, $now, $latency, $iid);
+        mysqli_stmt_bind_param($stmt, 'siisii', $health, $now, $latency, $health, $now, $iid);
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         curl_multi_remove_handle($mh, $ch);
@@ -272,24 +374,35 @@ function playlist_monitor_run($mysqli){
     playlists_migrate($mysqli);
     $health = dns_health_check_all($mysqli);
     $stats = array('checked' => 0, 'online' => 0, 'switched' => 0, 'offline' => 0,
-                   'dns_online' => count(array_keys($health, 'online')), 'dns_offline' => count(array_keys($health, 'offline')));
-    $dns = dns_list_active($mysqli);
-    if (!$dns) return $stats;
-    $active_norms = array();
-    foreach ($dns as $d) $active_norms[$d['norm']] = $d;
+                   'dns_online' => count(array_keys($health, 'online')), 'dns_offline' => count(array_keys($health, 'offline')),
+                   'dns_deleted' => dns_auto_cleanup($mysqli));
 
+    // Playlists por usuário/senha + revendedor dono do aparelho (define quais DNS valem para ela)
     $rows = array();
-    $res = mysqli_query($mysqli, "SELECT id, user_name, user_password, dns_base FROM tbl_users WHERE status = '1' AND source = 'account'");
+    $res = mysqli_query($mysqli, "SELECT u.id, u.user_name, u.user_password, u.dns_base, u.device_id,
+                                         COALESCE((SELECT d.reseller_id FROM tbl_devices d WHERE d.device_id = u.device_id AND d.owner = 'reseller' ORDER BY d.id DESC LIMIT 1), 0) AS scope
+                                  FROM tbl_users u WHERE u.status = '1' AND u.source = 'account'");
     while ($res && $r = mysqli_fetch_assoc($res)) $rows[$r['id']] = $r;
     if (!$rows) return $stats;
+
+    // DNS ativos por escopo (admin = 0, revendedor = id)
+    $scopes = array();
+    foreach ($rows as $r) {
+        $s = (int)$r['scope'];
+        if (!isset($scopes[$s])) {
+            $scopes[$s] = array();
+            foreach (dns_list_active($mysqli, $s) as $d) $scopes[$s][$d['norm']] = $d;
+        }
+    }
 
     // 1) Uma consulta por playlist no servidor atual (em grupos paralelos)
     $tasks = array();
     $failed = array();
     foreach ($rows as $id => $r) {
         $norm = dns_normalize($r['dns_base']);
-        if (!isset($active_norms[$norm])) { $failed[$id] = $r; continue; } // DNS removido ou desligado
-        $tasks[$id] = array('base' => $active_norms[$norm]['base'], 'username' => $r['user_name'], 'password' => $r['user_password']);
+        $allowed = $scopes[(int)$r['scope']];
+        if (!isset($allowed[$norm])) { $failed[$id] = $r; continue; } // DNS removido, desligado ou de outro dono
+        $tasks[$id] = array('base' => $allowed[$norm]['base'], 'username' => $r['user_name'], 'password' => $r['user_password']);
     }
     $results = playlist_probe_tasks($tasks, 5, 20);
     foreach ($results as $id => $probe) {
@@ -304,7 +417,8 @@ function playlist_monitor_run($mysqli){
 
     // 2) Falhou: procura em todos os DNS cadastrados
     foreach ($failed as $id => $r) {
-        $find = playlist_find_dns($mysqli, $r['user_name'], $r['user_password'], dns_normalize($r['dns_base']), 5);
+        if (!$scopes[(int)$r['scope']]) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
+        $find = playlist_find_dns($mysqli, $r['user_name'], $r['user_password'], dns_normalize($r['dns_base']), 5, (int)$r['scope']);
         if ($find['ok']) {
             $switched = dns_normalize($find['dns']['base']) != dns_normalize($r['dns_base']);
             playlist_set_dns_state($mysqli, $id, $find['dns']['base'], true);
@@ -376,7 +490,7 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
     $username = trim(isset($post['username']) ? $post['username'] : '');
     $password = trim(isset($post['password']) ? $post['password'] : '');
     if ($username == '' || $password == '') return array('ok' => false, 'msg' => 'Informe usuário e senha.');
-    $find = playlist_find_dns($mysqli, $username, $password);
+    $find = playlist_find_dns($mysqli, $username, $password, '', PLAYLIST_PROBE_TIMEOUT, playlist_dns_scope($mysqli, $device_id));
     if (!$find['ok']) return array('ok' => false, 'msg' => $find['msg']);
 
     if (!playlist_save($mysqli, $device_id, $name, $username, $password, $find['dns']['base'], $created_by, 'account')) {

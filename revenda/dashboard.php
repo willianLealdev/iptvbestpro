@@ -13,7 +13,23 @@ $expiring = rv_count($mysqli, "SELECT COUNT(*) AS num $base AND package <> '' AN
 
 $pending_list = mysqli_query($mysqli, "SELECT * $base AND package = '' ORDER BY linked_at DESC LIMIT 8");
 
+require_once(__DIR__."/../includes/playlist_helper.php");
+$dns_offline = array();
+foreach (dns_reseller_list($mysqli, $rid) as $d) { if (dns_days_until_delete($d) !== null) $dns_offline[] = $d; }
+
 rv_header($mysqli, $reseller, 'Painel', 'dashboard'); ?>
+
+<?php if ($dns_offline) { ?>
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
+        <i class="ri-alarm-warning-line fs-5"></i>
+        <span>
+            <b><?php echo count($dns_offline); ?> servidor(es) DNS offline.</b>
+            <?php $first = $dns_offline[0]; $left = dns_days_until_delete($first); ?>
+            "<?php echo rv_e($first['dns_title']); ?>" será excluído automaticamente em <b><?php echo $left; ?> dia(s)</b> se não voltar a responder.
+        </span>
+        <a href="dns.php" class="btn btn-sm btn-warning ms-auto">Ver servidores</a>
+    </div>
+<?php } ?>
 
 <div class="row g-4 mb-4">
     <div class="col-lg-5">

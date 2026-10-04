@@ -225,7 +225,10 @@ if($get_helper['helper_name']=="app_details"){
 	$jsonObj = array();
 	$data_arr = array();
 	
-	$sql="SELECT * FROM tbl_xui_dns WHERE tbl_xui_dns.status='1' ORDER BY tbl_xui_dns.id DESC";
+	// Lista pública de servidores do app: só os DNS do admin (os DNS de revendedores são exclusivos deles)
+	$col_reseller = mysqli_query($mysqli, "SHOW COLUMNS FROM tbl_xui_dns LIKE 'reseller_id'");
+	$dns_public_where = ($col_reseller && mysqli_num_rows($col_reseller) > 0) ? " AND tbl_xui_dns.reseller_id = 0" : "";
+	$sql="SELECT * FROM tbl_xui_dns WHERE tbl_xui_dns.status='1'".$dns_public_where." ORDER BY tbl_xui_dns.id DESC";
 	$result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
     if(mysqli_num_rows($result) > 0){
         while ($data2 = mysqli_fetch_assoc($result)){
@@ -244,7 +247,7 @@ if($get_helper['helper_name']=="app_details"){
 	$data_arr = array();
 	
 	// DNS unificado: a opção "1-Stream" do app usa a mesma lista de servidores do Xtream Codes
-	$sql="SELECT * FROM tbl_xui_dns WHERE tbl_xui_dns.status='1' ORDER BY tbl_xui_dns.id DESC";
+	$sql="SELECT * FROM tbl_xui_dns WHERE tbl_xui_dns.status='1'".$dns_public_where." ORDER BY tbl_xui_dns.id DESC";
     $result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
     if(mysqli_num_rows($result) > 0){
         while ($data3 = mysqli_fetch_assoc($result)){

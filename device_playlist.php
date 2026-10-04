@@ -46,7 +46,7 @@
     }
 
     $playlists = playlist_list($mysqli, $device['device_id']);
-    $dns_list = dns_list_active($mysqli);
+    $dns_list = dns_list_active($mysqli, playlist_dns_scope($mysqli, $device['device_id']));
     $status = devices_activation_status($device);
     $owner_label = devices_owner_label($mysqli, $device);
 ?>
