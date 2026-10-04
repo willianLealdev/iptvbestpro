@@ -38,11 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 rv_head('Entrar'); ?>
 <div class="rv-auth">
     <div class="rv-card p-4 p-sm-5">
-        <div class="text-center mb-4">
-            <img src="../images/<?php echo rv_e(APP_LOGO); ?>" alt="" style="width:64px;height:64px;border-radius:14px;object-fit:cover;" onerror="this.style.display='none'">
-            <h1 class="rv-title mt-3">Área do Revendedor</h1>
-            <p class="rv-muted mb-0"><?php echo rv_e(APP_NAME); ?></p>
-        </div>
+        <?php brand_auth_header('../', 'Área do Revendedor'); ?>
         <?php $f = rv_take_flash(); if ($f) { ?><div class="alert alert-<?php echo $f['type'] == 'success' ? 'success' : 'danger'; ?>"><?php echo rv_e($f['msg']); ?></div><?php } ?>
         <?php if ($error) { ?><div class="alert alert-danger"><?php echo rv_e($error); ?></div><?php } ?>
         <form method="post" autocomplete="on">

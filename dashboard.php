@@ -340,7 +340,7 @@
                             theme_preview_styles();
                             $dash_poster = theme_movie_poster($mysqli);
                             echo '<div style="max-width:900px;border-radius:10px;overflow:hidden;">';
-                            theme_mini_preview($dash_saved['settings_arr'], $dash_active['base'], 'images/', 'images/'.APP_LOGO, APP_NAME,
+                            theme_mini_preview($dash_saved['settings_arr'], $dash_active['base'], 'images/', brand_logo_url(), APP_NAME,
                                                $dash_poster != '' ? 'images/'.$dash_poster : 'assets/images/themes/MovieUI.png');
                             echo '</div>';
                         } else if ($dash_active['base'] != '8') { ?>

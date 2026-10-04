@@ -317,7 +317,7 @@
                                         </td>
                                         <td>
                                             <span class="dv-app">
-                                                <img src="images/<?php echo htmlspecialchars(APP_LOGO); ?>" alt="" onerror="this.style.visibility='hidden'">
+                                                <img src="<?php echo htmlspecialchars(brand_logo_url()); ?>" alt="" onerror="this.style.visibility='hidden'">
                                                 <span><?php echo htmlspecialchars($row['app_label']); ?></span>
                                             </span>
                                         </td>

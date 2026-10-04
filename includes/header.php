@@ -27,14 +27,14 @@ $mysqli->set_charset("utf8mb4");
     <title><?php echo (isset($page_title)) ? $page_title.' | '.APP_NAME : APP_NAME; ?></title>
     
     <!-- Favicon --> 
-    <link href="images/<?php echo APP_LOGO;?>" rel="icon" sizes="32x32">
-    <link href="images/<?php echo APP_LOGO;?>" rel="icon" sizes="192x192">
+    <link href="<?php echo brand_logo_url(); ?>" rel="icon" sizes="32x32">
+    <link href="<?php echo brand_logo_url(); ?>" rel="icon" sizes="192x192">
 
     <!-- IOS Touch Icons -->
-    <link rel="apple-touch-icon" href="images/<?php echo APP_LOGO;?>">
-    <link rel="apple-touch-icon" sizes="152x152" href="images/<?php echo APP_LOGO;?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="images/<?php echo APP_LOGO;?>">
-    <link rel="apple-touch-icon" sizes="167x167" href="images/<?php echo APP_LOGO;?>">
+    <link rel="apple-touch-icon" href="<?php echo brand_logo_url(); ?>">
+    <link rel="apple-touch-icon" sizes="152x152" href="<?php echo brand_logo_url(); ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo brand_logo_url(); ?>">
+    <link rel="apple-touch-icon" sizes="167x167" href="<?php echo brand_logo_url(); ?>">
 
     <!-- IOS Touch Icons -->
     <link rel="apple-touch-icon" href="assets/images/logos/touch-icon-iphone.png">
@@ -84,11 +84,7 @@ $mysqli->set_charset("utf8mb4");
         </a>
         
         <a href="dashboard.php" id="nsofts_brand">
-            <?php if (APP_LOGO !='' AND file_exists('images/'.APP_LOGO)) { ?>
-                <img  src="images/<?php echo APP_LOGO;?>" alt="" style="width: 30px; border-radius: 3px; margin-right: 10px;">
-            <?php } else { ?>
-                <img  src="assets/images/300x300.jpg" alt="" style="width: 30px; border-radius: 3px; margin-right: 10px;">
-            <?php } ?>
+            <img src="<?php echo brand_logo_url(); ?>" alt="<?php echo htmlspecialchars(brand_name()); ?>" style="width: 34px; height: 34px; border-radius: 8px; object-fit: cover; margin-right: 10px;">
         </a>
         <a href="dashboard.php" id="nsofts_brand" style="margin-left: 0px;"><?php echo APP_NAME;?></a>
 

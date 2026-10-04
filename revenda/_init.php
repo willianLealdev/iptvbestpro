@@ -56,7 +56,7 @@ function rv_head($title){ ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo rv_e($title); ?> | <?php echo rv_e(APP_NAME); ?> Revenda</title>
-    <link href="../images/<?php echo rv_e(APP_LOGO); ?>" rel="icon">
+    <link href="<?php echo rv_e(brand_logo_url('../')); ?>" rel="icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -104,7 +104,7 @@ function rv_header($mysqli, $reseller, $title, $active){
     <nav class="navbar navbar-expand-lg rv-nav mb-4">
         <div class="container-xl">
             <a class="navbar-brand" href="dashboard.php">
-                <img src="../images/<?php echo rv_e(APP_LOGO); ?>" alt="" onerror="this.style.display='none'">
+                <img src="<?php echo rv_e(brand_logo_url('../')); ?>" alt="" onerror="this.style.display='none'">
                 <span><?php echo rv_e(APP_NAME); ?> <small class="rv-muted fw-normal">Revenda</small></span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#rvNav" aria-label="Menu"><i class="ri-menu-line"></i></button>

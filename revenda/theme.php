@@ -111,7 +111,7 @@ theme_form_styles(); ?>
 </form>
 
 <div class="rv-card p-4 mb-4">
-    <?php theme_gallery_render($saved_list, $active, '../assets/images/themes/', $self, rv_csrf_field(), $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base, array('img_base' => '../images/', 'fallback_logo' => '../images/'.APP_LOGO, 'app_name' => $default_name, 'movie_hero' => $movie_hero)); ?>
+    <?php theme_gallery_render($saved_list, $active, '../assets/images/themes/', $self, rv_csrf_field(), $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base, array('img_base' => '../images/', 'fallback_logo' => brand_logo_url('../'), 'app_name' => $default_name, 'movie_hero' => $movie_hero)); ?>
 </div>
 
 <div id="editor" class="d-flex align-items-center gap-2 mb-3">
@@ -143,7 +143,7 @@ theme_form_styles(); ?>
         theme_form_editor($current, array(
             'img_base' => '../images/',
             'app_name' => $default_name,
-            'fallback_logo' => '../images/'.APP_LOGO,
+            'fallback_logo' => brand_logo_url('../'),
             'side_html' => $side_html,
             'actions_html' => $actions_html,
             'theme_id' => $base,
@@ -158,5 +158,5 @@ theme_form_styles(); ?>
 
 <?php
 ob_start();
-if ($allowed) theme_form_script('../images/'.APP_LOGO);
+if ($allowed) theme_form_script(brand_logo_url('../'));
 rv_footer(ob_get_clean());

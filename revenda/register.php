@@ -57,10 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 rv_head('Cadastro'); ?>
 <div class="rv-auth">
     <div class="rv-card p-4 p-sm-5" style="max-width:480px;">
-        <div class="text-center mb-4">
-            <h1 class="rv-title">Seja um Revendedor</h1>
-            <p class="rv-muted mb-0">Crie sua conta e receba seu código exclusivo de ativação.</p>
-        </div>
+        <?php brand_auth_header('../', 'Seja um Revendedor'); ?>
+        <p class="rv-muted text-center mb-4">Crie sua conta e receba seu código exclusivo de ativação.</p>
         <?php if ($errors) { ?>
             <div class="alert alert-danger"><?php foreach ($errors as $e) { echo '<div>'.rv_e($e).'</div>'; } ?></div>
         <?php } ?>

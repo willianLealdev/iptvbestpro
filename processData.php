@@ -154,7 +154,7 @@
     		<table style="font-family: OpenSans,sans-serif; color: #666666;" border="0" width="600" cellspacing="0" cellpadding="0" align="center" bgcolor="#FFFFFF">
     		<tbody>
     		<tr>
-    		<td colspan="2" bgcolor="#FFFFFF" align="center"><img src="'.$file_path.'images/'.APP_LOGO.'" alt="header" /></td>
+    		<td colspan="2" bgcolor="#FFFFFF" align="center"><img src="'.$file_path.brand_logo_url().'" alt="header" /></td>
     		</tr>
     		<tr>
     		<td width="600" valign="top" bgcolor="#FFFFFF"><br>

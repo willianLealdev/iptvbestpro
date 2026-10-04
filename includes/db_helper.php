@@ -32,6 +32,7 @@ if ($mysqli->connect_errno) {
     
     define("APP_NAME",$settings_details['app_name']);
     define("APP_LOGO",$settings_details['app_logo']);
+    require_once(__DIR__."/brand_helper.php"); // brand_logo_url(): mesmo logo em todas as telas
     
     if(isset($_SESSION['id'])){
     	

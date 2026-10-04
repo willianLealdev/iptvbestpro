@@ -9,6 +9,31 @@ define('BRAND_LOGO', 'iptvbestpro_logo.png');
 define('BRAND_ICON', 'iptvbestpro_icon.png');
 define('BRAND_FULL', 'iptvbestpro_full.jpg');
 
+/**
+ * Logo oficial usado em TODAS as telas (login do admin, painel, revenda e futuro portal do cliente).
+ * Vem de Settings (APP_LOGO); se o arquivo não existir, usa o logo IPTV Best Pro que acompanha o sistema.
+ * $prefix: caminho até a raiz do painel ('' no painel, '../' em /revenda).
+ */
+function brand_logo_url($prefix = ''){
+    $root = __DIR__.'/../';
+    if (defined('APP_LOGO') && APP_LOGO != '' && APP_LOGO != 'errors' && is_file($root.'images/'.APP_LOGO)) return $prefix.'images/'.APP_LOGO;
+    return $prefix.'assets/images/brand/iptvbestpro_logo.png';
+}
+
+function brand_name(){
+    return (defined('APP_NAME') && APP_NAME != '' && APP_NAME != 'Errors extension') ? APP_NAME : BRAND_NAME;
+}
+
+// Bloco padrão de marca das telas de entrada (logo + nome), igual em todas
+function brand_auth_header($prefix = '', $subtitle = ''){ ?>
+    <div class="text-center mb-4">
+        <img src="<?php echo htmlspecialchars(brand_logo_url($prefix)); ?>" alt="<?php echo htmlspecialchars(brand_name()); ?>"
+             style="width:84px;height:84px;border-radius:18px;object-fit:cover;box-shadow:0 6px 18px rgba(15,23,42,.18);">
+        <div class="fs-4 fw-bold mt-3" style="color:#1f2a44;"><?php echo htmlspecialchars(brand_name()); ?></div>
+        <?php if ($subtitle != '') { ?><div class="text-muted"><?php echo htmlspecialchars($subtitle); ?></div><?php } ?>
+    </div>
+<?php }
+
 function brand_apply_defaults($mysqli){
     if (panel_config_get($mysqli, 'brand_applied_v1', '0') == '1') return;
 

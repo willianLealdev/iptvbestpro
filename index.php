@@ -1,4 +1,5 @@
 <?php
+    require_once("includes/brand_helper.php"); // logo padrão também na tela de requisitos do servidor
     $license_filename="includes/.lic";
     if(!file_exists($license_filename)){
         header("Location:install/index.php");
@@ -53,14 +54,14 @@
     <title>Login | <?php echo APP_NAME;?></title>
     
     <!-- Favicon --> 
-    <link href="images/<?php echo APP_LOGO;?>" rel="icon" sizes="32x32">
-    <link href="images/<?php echo APP_LOGO;?>" rel="icon" sizes="192x192">
+    <link href="<?php echo brand_logo_url(); ?>" rel="icon" sizes="32x32">
+    <link href="<?php echo brand_logo_url(); ?>" rel="icon" sizes="192x192">
 
     <!-- IOS Touch Icons -->
-    <link rel="apple-touch-icon" href="images/<?php echo APP_LOGO;?>">
-    <link rel="apple-touch-icon" sizes="152x152" href="images/<?php echo APP_LOGO;?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="images/<?php echo APP_LOGO;?>">
-    <link rel="apple-touch-icon" sizes="167x167" href="images/<?php echo APP_LOGO;?>">
+    <link rel="apple-touch-icon" href="<?php echo brand_logo_url(); ?>">
+    <link rel="apple-touch-icon" sizes="152x152" href="<?php echo brand_logo_url(); ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo brand_logo_url(); ?>">
+    <link rel="apple-touch-icon" sizes="167x167" href="<?php echo brand_logo_url(); ?>">
 
     <!-- Google font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -194,9 +195,7 @@
                                 
                             <?php } else { ?>
                                 <form action="login_db.php" method="post">
-                                    <div class="text-center mb-3">
-                                        <a href="index.php" class="fs-4 fw-semibold text-decoration-none"><?php echo APP_NAME;?></a>
-                                    </div>
+                                    <?php brand_auth_header('', 'Painel administrativo'); ?>
                                     <div class="mb-4">
                                         <h5>Welcome to <?php echo APP_NAME;?>!</h5>
                                         <p>Please sign-in to your account and start the adventure.</p>

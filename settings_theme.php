@@ -143,7 +143,7 @@
 
         <div class="card th-card mb-4">
             <div class="card-body p-4">
-                <?php theme_gallery_render($saved_list, $active, 'assets/images/themes/', $self, '', $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base, array('img_base' => 'images/', 'fallback_logo' => 'images/'.APP_LOGO, 'app_name' => APP_NAME, 'movie_hero' => $movie_hero)); ?>
+                <?php theme_gallery_render($saved_list, $active, 'assets/images/themes/', $self, '', $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base, array('img_base' => 'images/', 'fallback_logo' => brand_logo_url(), 'app_name' => APP_NAME, 'movie_hero' => $movie_hero)); ?>
             </div>
         </div>
 
@@ -165,7 +165,7 @@
             <?php theme_form_editor($current, array(
                 'img_base' => 'images/',
                 'app_name' => APP_NAME,
-                'fallback_logo' => 'images/'.APP_LOGO,
+                'fallback_logo' => brand_logo_url(),
                 'side_html' => $side_html,
                 'actions_html' => $actions_html,
                 'theme_id' => $base,
@@ -178,5 +178,5 @@
     </div>
 </main>
 
-<?php theme_form_script('images/'.APP_LOGO); ?>
+<?php theme_form_script(brand_logo_url()); ?>
 <?php include("includes/footer.php");?>
