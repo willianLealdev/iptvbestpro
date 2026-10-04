@@ -25,6 +25,7 @@ function theme_preview_styles(){ ?>
           container-type: inline-size; position: relative; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden;
           background: var(--bg); color: var(--t); box-shadow: 0 0 0 8px #111827, 0 18px 40px rgba(0,0,0,.25); font-family: inherit; }
     .tv * { box-sizing: border-box; }
+    .tv.hide-name #tv_name { display: none; }
     .tv__bgimg { position: absolute; inset: 0; background-size: cover; background-position: center; }
     .tv__bgimg::after { content: ''; position: absolute; inset: 0; background: var(--bg); opacity: var(--ov); }
     .tv__layer { position: absolute; inset: 0; padding: 3.2cqw 3.4cqw; display: flex; flex-direction: column; gap: 2.4cqw; }

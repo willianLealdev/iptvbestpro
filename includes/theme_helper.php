@@ -1,20 +1,23 @@
 <?php
 /**
- * Tema personalizável "BestPro" (App UI = 8) e marca por revendedor.
- * - Admin: configura em Settings → Personalizar Tema (tbl_panel_config).
- * - Revendedor: configura em /revenda → Minha Marca (tbl_reseller_theme), se o admin permitir.
- * O app recebe tudo em app_details -> theme_config (e is_theme do dono do aparelho).
+ * Temas do app: 8 modelos (App UI) + "Meus temas" (personalizações salvas com nome).
+ * - Admin: Settings → Temas do App. Revendedor: /revenda → Minha Marca (se o admin permitir).
+ * - Tema ativo = modelo base + tema salvo (0 = modelo original).
+ * O app recebe em app_details: is_theme (modelo base) e theme_config (personalização).
  */
 
 require_once(__DIR__."/reseller_helper.php"); // panel_config_get / panel_config_set
 
 define('THEME_BESTPRO_ID', '8');
 define('THEME_UPLOAD_MAX_BYTES', 5 * 1024 * 1024);
+define('THEME_MAX_SAVED', 30);
 
 function theme_defaults($theme_id = THEME_BESTPRO_ID){
     return array(
-        // Nos modelos prontos, começa mantendo as cores originais (troca só logo/fundo/banner)
+        // Nos modelos prontos, começa mantendo as cores originais (troca só logo/fundo/banner/nome)
         'theme_keep_colors'=> ((string)$theme_id === THEME_BESTPRO_ID) ? '0' : '1',
+        'theme_brand_text' => '',        // nome exibido ao lado do logo (vazio = nome padrão)
+        'theme_show_name'  => '1',       // 0 = mostra só o logo
         'theme_primary'    => '#3B6CF6', // botões, item selecionado, foco do controle remoto
         'theme_accent'     => '#22C55E', // destaques, selos "AO VIVO", progresso
         'theme_background' => '#0B1220', // fundo das telas
@@ -28,7 +31,7 @@ function theme_defaults($theme_id = THEME_BESTPRO_ID){
     );
 }
 
-// Temas prontos do app (App UI)
+// Modelos prontos do app (App UI)
 function theme_catalog(){
     return array(
         '1' => array('name' => 'OneUI',         'image' => 'OneUI'),
@@ -38,7 +41,7 @@ function theme_catalog(){
         '5' => array('name' => 'VUI',           'image' => 'VUI'),
         '6' => array('name' => 'ChristmasUI',   'image' => 'ChristmasUI'),
         '7' => array('name' => 'HalloweenUI',   'image' => 'HalloweenUI'),
-        '8' => array('name' => 'BestPro (personalizável)', 'image' => ''),
+        '8' => array('name' => 'BestPro',       'image' => ''),
     );
 }
 
@@ -53,7 +56,14 @@ function theme_presets(){
     );
 }
 
-/* ---------- Marca do revendedor ---------- */
+function theme_merge_defaults($saved, $theme_id){
+    if (!is_array($saved)) $saved = array();
+    $out = array();
+    foreach (theme_defaults($theme_id) as $key => $default) $out[$key] = isset($saved[$key]) ? (string)$saved[$key] : $default;
+    return $out;
+}
+
+/* ---------- Marca do revendedor (liga/desliga, nome) ---------- */
 
 function theme_reseller_migrate($mysqli){
     static $done = false;
@@ -68,6 +78,8 @@ function theme_reseller_migrate($mysqli){
         `updated_at` INT(11) NOT NULL DEFAULT 0,
         PRIMARY KEY (`reseller_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_reseller_theme` LIKE 'saved_id'");
+    if ($col && mysqli_num_rows($col) == 0) mysqli_query($mysqli, "ALTER TABLE `tbl_reseller_theme` ADD `saved_id` INT(11) NOT NULL DEFAULT 0");
 }
 
 // O admin permite que revendedores usem a própria marca?
@@ -79,102 +91,212 @@ function theme_reseller_row($mysqli, $reseller_id){
     theme_reseller_migrate($mysqli);
     $rid = (int)$reseller_id;
     $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM tbl_reseller_theme WHERE reseller_id = $rid"));
-    if (!$row) $row = array('reseller_id' => $rid, 'enabled' => 0, 'theme_id' => THEME_BESTPRO_ID, 'brand_name' => '', 'settings' => '', 'updated_at' => 0);
+    if (!$row) $row = array('reseller_id' => $rid, 'enabled' => 0, 'theme_id' => '1', 'saved_id' => 0, 'brand_name' => '', 'settings' => '', 'updated_at' => 0);
     return $row;
 }
 
-function theme_reseller_save_row($mysqli, $reseller_id, $enabled, $theme_id, $brand_name, $settings){
-    theme_reseller_migrate($mysqli);
+function theme_reseller_set_basic($mysqli, $reseller_id, $enabled, $brand_name){
+    $row = theme_reseller_row($mysqli, $reseller_id);
     $rid = (int)$reseller_id;
     $enabled = $enabled ? 1 : 0;
-    $catalog = theme_catalog();
-    $theme_id = isset($catalog[$theme_id]) ? (string)$theme_id : THEME_BESTPRO_ID;
     $brand_name = mb_substr(trim(strip_tags((string)$brand_name)), 0, 60);
-    $json = json_encode($settings);
+    $theme_id = (string)$row['theme_id'];
+    $saved_id = (int)$row['saved_id'];
     $now = time();
-    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_reseller_theme (reseller_id, enabled, theme_id, brand_name, settings, updated_at) VALUES (?,?,?,?,?,?)
-                                     ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), theme_id = VALUES(theme_id), brand_name = VALUES(brand_name), settings = VALUES(settings), updated_at = VALUES(updated_at)");
-    mysqli_stmt_bind_param($stmt, 'iisssi', $rid, $enabled, $theme_id, $brand_name, $json, $now);
+    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_reseller_theme (reseller_id, enabled, theme_id, saved_id, brand_name, updated_at) VALUES (?,?,?,?,?,?)
+                                     ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), brand_name = VALUES(brand_name), updated_at = VALUES(updated_at)");
+    mysqli_stmt_bind_param($stmt, 'iisisi', $rid, $enabled, $theme_id, $saved_id, $brand_name, $now);
     $ok = mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
     return $ok;
 }
 
-/* ---------- Personalização por modelo (temas 1 a 7) ---------- */
+/* ---------- Meus temas (personalizações salvas com nome) ---------- */
 
-function theme_custom_migrate($mysqli){
+function theme_saved_migrate($mysqli){
     static $done = false;
     if ($done) return;
     $done = true;
-    mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `tbl_theme_custom` (
-        `scope` INT(11) NOT NULL,              -- 0 = admin | id do revendedor
-        `theme_id` VARCHAR(5) NOT NULL,
-        `enabled` INT(1) NOT NULL DEFAULT 0,   -- personalização ligada neste modelo
+    theme_reseller_migrate($mysqli);
+    mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `tbl_theme_saved` (
+        `id` INT(11) NOT NULL AUTO_INCREMENT,
+        `scope` INT(11) NOT NULL DEFAULT 0,      -- 0 = admin | id do revendedor
+        `name` VARCHAR(60) NOT NULL,
+        `base_theme` VARCHAR(5) NOT NULL,       -- modelo usado como base (1..8)
         `settings` TEXT NULL,
+        `created_at` INT(11) NOT NULL DEFAULT 0,
         `updated_at` INT(11) NOT NULL DEFAULT 0,
-        PRIMARY KEY (`scope`, `theme_id`)
+        PRIMARY KEY (`id`),
+        KEY `idx_scope` (`scope`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Uma única vez: transforma personalizações antigas em temas salvos
+    if (panel_config_get($mysqli, 'theme_saved_migrated', '0') == '1') return;
+    $catalog = theme_catalog();
+    $now = time();
+
+    // BestPro do admin (configurações antigas em tbl_panel_config)
+    $legacy = array(); $has = false;
+    foreach (theme_defaults(THEME_BESTPRO_ID) as $key => $default) {
+        $v = panel_config_get($mysqli, $key, null);
+        if ($v !== null) { $legacy[$key] = $v; $has = true; }
+    }
+    if ($has) {
+        $id = theme_saved_save($mysqli, 0, 0, 'BestPro personalizado', THEME_BESTPRO_ID, theme_merge_defaults($legacy, THEME_BESTPRO_ID));
+        if ($id && panel_config_get($mysqli, 'active_saved_theme', '0') == '0') {
+            $active = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT is_theme FROM tbl_settings WHERE id = 1"));
+            if ($active && (string)$active['is_theme'] === THEME_BESTPRO_ID) panel_config_set($mysqli, 'active_saved_theme', $id);
+        }
+    }
+
+    // Personalizações por modelo (tbl_theme_custom, se existir)
+    $t = mysqli_query($mysqli, "SHOW TABLES LIKE 'tbl_theme_custom'");
+    if ($t && mysqli_num_rows($t) > 0) {
+        $res = mysqli_query($mysqli, "SELECT * FROM tbl_theme_custom WHERE enabled = 1");
+        while ($res && $r = mysqli_fetch_assoc($res)) {
+            if (!isset($catalog[$r['theme_id']])) continue;
+            theme_saved_save($mysqli, (int)$r['scope'], 0, $catalog[$r['theme_id']]['name'].' personalizado', $r['theme_id'],
+                             theme_merge_defaults(json_decode($r['settings'], true), $r['theme_id']));
+        }
+    }
+
+    // BestPro dos revendedores (tbl_reseller_theme.settings)
+    $res = mysqli_query($mysqli, "SELECT reseller_id, theme_id, settings FROM tbl_reseller_theme WHERE settings IS NOT NULL AND settings <> ''");
+    while ($res && $r = mysqli_fetch_assoc($res)) {
+        $id = theme_saved_save($mysqli, (int)$r['reseller_id'], 0, 'Minha marca', THEME_BESTPRO_ID, theme_merge_defaults(json_decode($r['settings'], true), THEME_BESTPRO_ID));
+        if ($id && (string)$r['theme_id'] === THEME_BESTPRO_ID) {
+            mysqli_query($mysqli, "UPDATE tbl_reseller_theme SET saved_id = ".(int)$id." WHERE reseller_id = ".(int)$r['reseller_id']);
+        }
+    }
+    panel_config_set($mysqli, 'theme_saved_migrated', '1');
 }
 
-function theme_custom_row($mysqli, $scope, $theme_id){
-    theme_custom_migrate($mysqli);
-    $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_theme_custom WHERE scope = ? AND theme_id = ?");
+function theme_saved_list($mysqli, $scope){
+    theme_saved_migrate($mysqli);
+    $rows = array();
     $scope = (int)$scope;
-    $theme_id = (string)$theme_id;
-    mysqli_stmt_bind_param($stmt, 'is', $scope, $theme_id);
+    $res = mysqli_query($mysqli, "SELECT * FROM tbl_theme_saved WHERE scope = $scope ORDER BY updated_at DESC, id DESC");
+    while ($res && $r = mysqli_fetch_assoc($res)) {
+        $r['settings_arr'] = theme_merge_defaults(json_decode((string)$r['settings'], true), $r['base_theme']);
+        $rows[] = $r;
+    }
+    return $rows;
+}
+
+function theme_saved_get($mysqli, $scope, $id){
+    theme_saved_migrate($mysqli);
+    $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_theme_saved WHERE id = ? AND scope = ?");
+    $id = (int)$id; $scope = (int)$scope;
+    mysqli_stmt_bind_param($stmt, 'ii', $id, $scope);
     mysqli_stmt_execute($stmt);
     $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
     mysqli_stmt_close($stmt);
-    return $row ? $row : array('scope' => $scope, 'theme_id' => $theme_id, 'enabled' => 0, 'settings' => '', 'updated_at' => 0);
+    if (!$row) return null;
+    $row['settings_arr'] = theme_merge_defaults(json_decode((string)$row['settings'], true), $row['base_theme']);
+    return $row;
 }
 
-function theme_custom_save($mysqli, $scope, $theme_id, $enabled, $settings){
-    theme_custom_migrate($mysqli);
-    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_theme_custom (scope, theme_id, enabled, settings, updated_at) VALUES (?,?,?,?,?)
-                                     ON DUPLICATE KEY UPDATE enabled = VALUES(enabled), settings = VALUES(settings), updated_at = VALUES(updated_at)");
-    $scope = (int)$scope;
-    $theme_id = (string)$theme_id;
-    $enabled = $enabled ? 1 : 0;
+// Cria ($id = 0) ou atualiza um tema salvo. Retorna o id, ou false.
+function theme_saved_save($mysqli, $scope, $id, $name, $base_theme, $settings){
+    $catalog = theme_catalog();
+    $base_theme = isset($catalog[(string)$base_theme]) ? (string)$base_theme : '1';
+    $name = mb_substr(trim(strip_tags((string)$name)), 0, 60);
+    if ($name == '') return false;
     $json = json_encode($settings);
     $now = time();
-    mysqli_stmt_bind_param($stmt, 'isisi', $scope, $theme_id, $enabled, $json, $now);
-    $ok = mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
-    return $ok;
-}
-
-// A personalização está ligada neste modelo? (BestPro é sempre personalizado)
-function theme_is_customized($mysqli, $scope, $theme_id){
-    if ((string)$theme_id === THEME_BESTPRO_ID) return true;
-    $row = theme_custom_row($mysqli, $scope, $theme_id);
-    return (int)$row['enabled'] == 1;
-}
-
-/* ---------- Leitura / gravação (escopo 0 = admin, id = revendedor) ---------- */
-
-function theme_merge_defaults($saved, $theme_id){
-    if (!is_array($saved)) $saved = array();
-    $out = array();
-    foreach (theme_defaults($theme_id) as $key => $default) $out[$key] = isset($saved[$key]) ? (string)$saved[$key] : $default;
-    return $out;
-}
-
-function theme_get($mysqli, $scope = 0, $theme_id = THEME_BESTPRO_ID){
-    $theme_id = (string)$theme_id;
-    // Modelos prontos: personalização própria de cada modelo
-    if ($theme_id !== THEME_BESTPRO_ID) {
-        $row = theme_custom_row($mysqli, $scope, $theme_id);
-        return theme_merge_defaults($row['settings'] != '' ? json_decode($row['settings'], true) : array(), $theme_id);
+    $scope = (int)$scope; $id = (int)$id;
+    if ($id > 0) {
+        $stmt = mysqli_prepare($mysqli, "UPDATE tbl_theme_saved SET name = ?, base_theme = ?, settings = ?, updated_at = ? WHERE id = ? AND scope = ?");
+        mysqli_stmt_bind_param($stmt, 'sssiii', $name, $base_theme, $json, $now, $id, $scope);
+        $ok = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $ok ? $id : false;
     }
-    // BestPro
+    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_theme_saved (scope, name, base_theme, settings, created_at, updated_at) VALUES (?,?,?,?,?,?)");
+    mysqli_stmt_bind_param($stmt, 'isssii', $scope, $name, $base_theme, $json, $now, $now);
+    $ok = mysqli_stmt_execute($stmt);
+    $new_id = mysqli_insert_id($mysqli);
+    mysqli_stmt_close($stmt);
+    return $ok ? $new_id : false;
+}
+
+// Apaga arquivos de imagem que não são mais usados por nenhum tema salvo
+function theme_cleanup_files($mysqli, $files){
+    foreach ($files as $file) {
+        if ($file == '') continue;
+        $like = '%'.mysqli_real_escape_string($mysqli, $file).'%';
+        $used = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_theme_saved WHERE settings LIKE '$like'"));
+        if ((int)$used['num'] == 0) theme_delete_file($file);
+    }
+}
+
+function theme_saved_count($mysqli, $scope){
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_theme_saved WHERE scope = ".(int)$scope));
+    return $r ? (int)$r['num'] : 0;
+}
+
+// Exclui o tema salvo e as imagens dele. Se estava em uso, volta ao modelo original.
+function theme_saved_delete($mysqli, $scope, $id){
+    $row = theme_saved_get($mysqli, $scope, $id);
+    if (!$row) return false;
+    mysqli_query($mysqli, "DELETE FROM tbl_theme_saved WHERE id = ".(int)$id." AND scope = ".(int)$scope);
+    // Só apaga a imagem se nenhum outro tema salvo (ex.: criado com "Salvar como novo") ainda usa o mesmo arquivo
+    foreach (array('theme_logo', 'theme_bg_image', 'theme_banner') as $key) {
+        $file = $row['settings_arr'][$key];
+        if ($file == '') continue;
+        $like = '%'.mysqli_real_escape_string($mysqli, $file).'%';
+        $used = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_theme_saved WHERE settings LIKE '$like'"));
+        if ((int)$used['num'] == 0) theme_delete_file($file);
+    }
+    $active = theme_active($mysqli, $scope);
+    if ((int)$active['saved_id'] == (int)$id) theme_set_active($mysqli, $scope, $row['base_theme'], 0);
+    return true;
+}
+
+/* ---------- Tema ativo (modelo + tema salvo) ---------- */
+
+function theme_active($mysqli, $scope){
+    theme_saved_migrate($mysqli);
+    $catalog = theme_catalog();
     if ((int)$scope > 0) {
         $row = theme_reseller_row($mysqli, $scope);
-        return theme_merge_defaults($row['settings'] != '' ? json_decode($row['settings'], true) : array(), $theme_id);
+        $base = isset($catalog[(string)$row['theme_id']]) ? (string)$row['theme_id'] : '1';
+        $saved = (int)$row['saved_id'];
+    } else {
+        $s = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT is_theme FROM tbl_settings WHERE id = 1"));
+        $base = ($s && isset($catalog[(string)$s['is_theme']])) ? (string)$s['is_theme'] : '1';
+        $saved = (int)panel_config_get($mysqli, 'active_saved_theme', '0');
     }
-    $out = array();
-    foreach (theme_defaults($theme_id) as $key => $default) $out[$key] = panel_config_get($mysqli, $key, $default);
-    return $out;
+    // Tema salvo apagado ou de outro modelo: considera o original
+    if ($saved > 0) {
+        $t = theme_saved_get($mysqli, $scope, $saved);
+        if (!$t || (string)$t['base_theme'] !== $base) $saved = 0;
+    }
+    return array('base' => $base, 'saved_id' => $saved);
 }
+
+function theme_set_active($mysqli, $scope, $base, $saved_id){
+    $catalog = theme_catalog();
+    $base = isset($catalog[(string)$base]) ? (string)$base : '1';
+    $saved_id = (int)$saved_id;
+    if ((int)$scope > 0) {
+        $row = theme_reseller_row($mysqli, $scope);
+        $rid = (int)$scope;
+        $now = time();
+        $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_reseller_theme (reseller_id, enabled, theme_id, saved_id, brand_name, updated_at) VALUES (?,?,?,?,?,?)
+                                         ON DUPLICATE KEY UPDATE theme_id = VALUES(theme_id), saved_id = VALUES(saved_id), updated_at = VALUES(updated_at)");
+        $enabled = (int)$row['enabled'];
+        $brand = (string)$row['brand_name'];
+        mysqli_stmt_bind_param($stmt, 'iisisi', $rid, $enabled, $base, $saved_id, $brand, $now);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return;
+    }
+    mysqli_query($mysqli, "UPDATE tbl_settings SET is_theme = '".mysqli_real_escape_string($mysqli, $base)."' WHERE id = 1");
+    panel_config_set($mysqli, 'active_saved_theme', $saved_id);
+}
+
+/* ---------- Imagens e formulário ---------- */
 
 function theme_valid_color($value){
     $value = strtoupper(trim((string)$value));
@@ -207,11 +329,20 @@ function theme_delete_file($name){
     }
 }
 
+// Prefixo dos arquivos de imagem (ex.: theme_ / theme_r12_)
+function theme_file_prefix($scope, $theme_id = THEME_BESTPRO_ID){
+    $p = 'theme_';
+    if ((int)$scope > 0) $p .= 'r'.(int)$scope.'_';
+    if ((string)$theme_id !== THEME_BESTPRO_ID) $p .= 't'.(int)$theme_id.'_';
+    return $p;
+}
+
 /**
- * Processa o formulário de personalização (cores, sliders, imagens).
+ * Processa o formulário de personalização (nome exibido, cores, sliders, imagens).
  * Retorna array('settings' => array, 'errors' => array). Não grava: quem chama decide onde salvar.
+ * $copy_images = true ("Salvar como novo"): imagens antigas não são apagadas, pois o tema original continua usando.
  */
-function theme_process_form($current, $post, $file_prefix){
+function theme_process_form($current, $post, $file_prefix, $copy_images = false){
     $errors = array();
     $out = $current;
     foreach (array('theme_primary', 'theme_accent', 'theme_background', 'theme_surface', 'theme_text') as $key) {
@@ -220,69 +351,66 @@ function theme_process_form($current, $post, $file_prefix){
         $out[$key] = $c;
     }
     $out['theme_keep_colors'] = !empty($post['theme_keep_colors']) ? '1' : '0';
+    $out['theme_show_name'] = !empty($post['theme_show_name']) ? '1' : '0';
+    $out['theme_brand_text'] = mb_substr(trim(strip_tags(isset($post['theme_brand_text']) ? $post['theme_brand_text'] : '')), 0, 40);
     $out['theme_bg_overlay'] = (string)max(0, min(90, (int)(isset($post['theme_bg_overlay']) ? $post['theme_bg_overlay'] : 60)));
     $out['theme_corner'] = (string)max(0, min(32, (int)(isset($post['theme_corner']) ? $post['theme_corner'] : 14)));
 
     foreach (array('theme_logo' => 'logo', 'theme_bg_image' => 'bg', 'theme_banner' => 'banner') as $key => $kind) {
         if (!empty($post['remove_'.$key])) {
-            theme_delete_file($current[$key]);
+            if (!$copy_images) theme_delete_file($current[$key]);
             $out[$key] = '';
             continue;
         }
         $up = theme_upload($key, $file_prefix.$kind);
         if (!$up['ok']) { $errors[] = $up['error']; continue; }
         if ($up['file'] !== null) {
-            theme_delete_file($current[$key]);
+            if (!$copy_images) theme_delete_file($current[$key]);
             $out[$key] = $up['file'];
         }
     }
     return array('settings' => $out, 'errors' => array_values(array_unique($errors)));
 }
 
-function theme_save_admin($mysqli, $settings){
-    foreach (theme_defaults() as $key => $default) panel_config_set($mysqli, $key, isset($settings[$key]) ? $settings[$key] : $default);
-}
-
 /* ---------- API ---------- */
-
-// Prefixo dos arquivos de imagem por escopo/modelo (ex.: theme_ / theme_t3_ / theme_r12_ / theme_r12_t3_)
-function theme_file_prefix($scope, $theme_id){
-    $p = 'theme_';
-    if ((int)$scope > 0) $p .= 'r'.(int)$scope.'_';
-    if ((string)$theme_id !== THEME_BESTPRO_ID) $p .= 't'.(int)$theme_id.'_';
-    return $p;
-}
 
 // Monta o theme_config enviado ao app (URLs completas das imagens)
 // customized = 0: o app usa o modelo original. keep_original_colors = 1: troca só logo/fundo/banner/nome.
-function theme_payload_from($t, $base_url, $brand_name, $owner, $theme_id = THEME_BESTPRO_ID, $customized = true){
+function theme_payload_from($t, $base_url, $brand_name, $owner, $theme_id, $customized){
     $img = function ($file) use ($base_url) { return $file != '' ? rtrim($base_url, '/').'/images/'.$file : ''; };
+    $brand = ($customized && $t['theme_brand_text'] != '') ? $t['theme_brand_text'] : $brand_name;
     return array(
-        'theme_id'           => (string)$theme_id,
-        'customized'         => $customized ? '1' : '0',
+        'theme_id'             => (string)$theme_id,
+        'customized'           => $customized ? '1' : '0',
         'keep_original_colors' => ($customized && $t['theme_keep_colors'] == '1') ? '1' : '0',
-        'brand_owner'        => $owner,            // 'admin' | 'reseller'
-        'brand_name'         => $brand_name,
-        'primary_color'      => $t['theme_primary'],
-        'accent_color'       => $t['theme_accent'],
-        'background_color'   => $t['theme_background'],
-        'surface_color'      => $t['theme_surface'],
-        'text_color'         => $t['theme_text'],
-        'background_image'   => $img($t['theme_bg_image']),
-        'background_overlay' => (string)max(0, min(90, (int)$t['theme_bg_overlay'])),
-        'logo'               => $img($t['theme_logo']),
-        'banner'             => $img($t['theme_banner']),
-        'corner_radius'      => (string)max(0, min(32, (int)$t['theme_corner'])),
+        'brand_owner'          => $owner,            // 'admin' | 'reseller'
+        'brand_name'           => $brand,
+        'show_brand_name'      => ($customized && $t['theme_show_name'] == '0') ? '0' : '1',
+        'primary_color'        => $t['theme_primary'],
+        'accent_color'         => $t['theme_accent'],
+        'background_color'     => $t['theme_background'],
+        'surface_color'        => $t['theme_surface'],
+        'text_color'           => $t['theme_text'],
+        'background_image'     => $customized ? $img($t['theme_bg_image']) : '',
+        'background_overlay'   => (string)max(0, min(90, (int)$t['theme_bg_overlay'])),
+        'logo'                 => $customized ? $img($t['theme_logo']) : '',
+        'banner'               => $customized ? $img($t['theme_banner']) : '',
+        'corner_radius'        => (string)max(0, min(32, (int)$t['theme_corner'])),
     );
 }
 
-// Visual do admin para o tema ativo do app (Settings → App UI)
-function theme_api_payload($mysqli, $base_url, $active_theme = THEME_BESTPRO_ID){
-    $active_theme = (string)$active_theme;
-    $catalog = theme_catalog();
-    if (!isset($catalog[$active_theme])) $active_theme = '1';
-    return theme_payload_from(theme_get($mysqli, 0, $active_theme), $base_url, defined('APP_NAME') ? APP_NAME : '', 'admin',
-                              $active_theme, theme_is_customized($mysqli, 0, $active_theme));
+// Payload do tema ativo de um escopo (0 = admin, id = revendedor)
+function theme_payload_for_scope($mysqli, $scope, $base_url, $brand_name, $owner){
+    $a = theme_active($mysqli, $scope);
+    if ($a['saved_id'] > 0) {
+        $t = theme_saved_get($mysqli, $scope, $a['saved_id']);
+        return theme_payload_from($t['settings_arr'], $base_url, $brand_name, $owner, $a['base'], true);
+    }
+    return theme_payload_from(theme_defaults($a['base']), $base_url, $brand_name, $owner, $a['base'], false);
+}
+
+function theme_api_payload($mysqli, $base_url, $active_theme = null){
+    return theme_payload_for_scope($mysqli, 0, $base_url, defined('APP_NAME') ? APP_NAME : '', 'admin');
 }
 
 /**
@@ -299,13 +427,13 @@ function theme_for_device($mysqli, $device_id, $application_id, $base_url){
     mysqli_stmt_close($stmt);
     if (!$dev || (int)$dev['reseller_id'] <= 0) return null;
 
-    $row = theme_reseller_row($mysqli, $dev['reseller_id']);
+    $rid = (int)$dev['reseller_id'];
+    $row = theme_reseller_row($mysqli, $rid);
     if ((int)$row['enabled'] != 1) return null;
     $brand = $row['brand_name'] != '' ? $row['brand_name'] : (defined('APP_NAME') ? APP_NAME : '');
-    $rid = (int)$dev['reseller_id'];
+    $a = theme_active($mysqli, $rid);
     return array(
-        'is_theme'     => $row['theme_id'],
-        'theme_config' => theme_payload_from(theme_get($mysqli, $rid, $row['theme_id']), $base_url, $brand, 'reseller',
-                                             $row['theme_id'], theme_is_customized($mysqli, $rid, $row['theme_id'])),
+        'is_theme'     => $a['base'],
+        'theme_config' => theme_payload_for_scope($mysqli, $rid, $base_url, $brand, 'reseller'),
     );
 }

@@ -11,8 +11,9 @@
     }
 
     resellers_migrate($mysqli);
-    theme_custom_migrate($mysqli);
+    theme_saved_migrate($mysqli);
     $catalog = theme_catalog();
+    $scope = 0;
 
     function th_flash($ok, $msg){
         $_SESSION['th_msg'] = $msg;
@@ -20,45 +21,77 @@
         $_SESSION['class'] = $ok ? 'success' : 'error';
     }
 
-    $active_theme = (string)$settings_details['is_theme'];
-    if(!isset($catalog[$active_theme])){ $active_theme = '1'; }
-    $edit_id = (isset($_GET['theme']) && isset($catalog[(string)$_GET['theme']])) ? (string)$_GET['theme'] : $active_theme;
-    $is_model = $edit_id !== THEME_BESTPRO_ID;
+    $active = theme_active($mysqli, $scope);
 
-    // Ativar um modelo no app
-    if(isset($_POST['use_theme']) && isset($catalog[(string)$_POST['use_theme']])){
-        $use = (string)$_POST['use_theme'];
-        mysqli_query($mysqli, "UPDATE tbl_settings SET is_theme = '".mysqli_real_escape_string($mysqli, $use)."' WHERE id = 1");
-        th_flash(true, 'Tema "'.$catalog[$use]['name'].'" ativado no app.');
-        header("Location:settings_theme.php?theme=".$use);
-        exit;
+    // O que está sendo editado: um tema salvo (?saved=) ou um novo tema a partir de um modelo (?base=)
+    $editing_saved = null;
+    if(isset($_GET['saved'])){ $editing_saved = theme_saved_get($mysqli, $scope, (int)$_GET['saved']); }
+    if($editing_saved){
+        $base = (string)$editing_saved['base_theme'];
+        $current = $editing_saved['settings_arr'];
+    } else {
+        if(isset($_GET['base']) && isset($catalog[(string)$_GET['base']])){ $base = (string)$_GET['base']; }
+        else if($active['saved_id'] > 0){
+            $editing_saved = theme_saved_get($mysqli, $scope, $active['saved_id']);
+            $base = $active['base'];
+        } else { $base = $active['base']; }
+        $current = $editing_saved ? $editing_saved['settings_arr'] : theme_defaults($base);
     }
+    $self = 'settings_theme.php';
+    $back = $editing_saved ? $self.'?saved='.$editing_saved['id'] : $self.'?base='.$base;
 
-    $current = theme_get($mysqli, 0, $edit_id);
-
-    if(isset($_POST['save_theme'])){
-        $r = theme_process_form($current, $_POST, theme_file_prefix(0, $edit_id));
-        if($is_model){
-            theme_custom_save($mysqli, 0, $edit_id, !empty($_POST['customize_enabled']), $r['settings']);
-        } else {
-            theme_save_admin($mysqli, $r['settings']);
+    if($_SERVER['REQUEST_METHOD'] == 'POST'){
+        if(isset($_POST['use_base']) && isset($catalog[(string)$_POST['use_base']])){
+            theme_set_active($mysqli, $scope, $_POST['use_base'], 0);
+            th_flash(true, 'Modelo "'.$catalog[(string)$_POST['use_base']]['name'].'" (original) em uso no app.');
+            header("Location:".$self."?base=".$_POST['use_base']);
+            exit;
         }
-        if(!empty($_POST['activate_theme'])){
-            mysqli_query($mysqli, "UPDATE tbl_settings SET is_theme = '".mysqli_real_escape_string($mysqli, $edit_id)."' WHERE id = 1");
+        if(isset($_POST['use_saved'])){
+            $s = theme_saved_get($mysqli, $scope, (int)$_POST['use_saved']);
+            if($s){ theme_set_active($mysqli, $scope, $s['base_theme'], $s['id']); }
+            th_flash((bool)$s, $s ? 'Tema "'.$s['name'].'" em uso no app.' : 'Tema não encontrado.');
+            header("Location:".$self.($s ? "?saved=".$s['id'] : ''));
+            exit;
         }
-        panel_config_set($mysqli, 'reseller_branding', !empty($_POST['reseller_branding']) ? '1' : '0');
-        th_flash(!$r['errors'], $r['errors'] ? implode(' ', $r['errors']) : 'Personalização do modelo "'.$catalog[$edit_id]['name'].'" salva. Os aparelhos recebem na próxima abertura do app.');
-        header("Location:settings_theme.php?theme=".$edit_id);
-        exit;
-    }
-
-    if(isset($_POST['reset_theme'])){
-        foreach(array('theme_logo', 'theme_bg_image', 'theme_banner') as $key){ theme_delete_file($current[$key]); }
-        if($is_model){ theme_custom_save($mysqli, 0, $edit_id, false, theme_defaults($edit_id)); }
-        else { theme_save_admin($mysqli, theme_defaults($edit_id)); }
-        th_flash(true, 'Modelo "'.$catalog[$edit_id]['name'].'" voltou ao original.');
-        header("Location:settings_theme.php?theme=".$edit_id);
-        exit;
+        if(isset($_POST['delete_saved'])){
+            $ok = theme_saved_delete($mysqli, $scope, (int)$_POST['delete_saved']);
+            th_flash($ok, $ok ? 'Tema excluído.' : 'Tema não encontrado.');
+            header("Location:".$self);
+            exit;
+        }
+        if(isset($_POST['save_branding'])){
+            panel_config_set($mysqli, 'reseller_branding', !empty($_POST['reseller_branding']) ? '1' : '0');
+            th_flash(true, !empty($_POST['reseller_branding']) ? 'Revendedores podem usar a própria marca.' : 'Marca própria dos revendedores desativada.');
+            header("Location:".$back);
+            exit;
+        }
+        if(isset($_POST['save_theme']) || isset($_POST['save_as_new'])){
+            $name = isset($_POST['saved_name']) ? trim($_POST['saved_name']) : '';
+            $as_new = isset($_POST['save_as_new']) || !$editing_saved;
+            if($name == ''){
+                th_flash(false, 'Dê um nome ao tema para salvar.');
+                header("Location:".$back);
+                exit;
+            }
+            if($as_new && theme_saved_count($mysqli, $scope) >= THEME_MAX_SAVED){
+                th_flash(false, 'Limite de '.THEME_MAX_SAVED.' temas salvos. Exclua algum para criar outro.');
+                header("Location:".$back);
+                exit;
+            }
+            $old_files = array($current['theme_logo'], $current['theme_bg_image'], $current['theme_banner']);
+            $r = theme_process_form($current, $_POST, theme_file_prefix($scope), true);
+            $id = theme_saved_save($mysqli, $scope, $as_new ? 0 : $editing_saved['id'], $name, $base, $r['settings']);
+            if($id && !$as_new){ theme_cleanup_files($mysqli, $old_files); }
+            if($id && !empty($_POST['activate_theme'])){ theme_set_active($mysqli, $scope, $base, $id); }
+            if(!$id){
+                th_flash(false, 'Não foi possível salvar o tema.');
+            } else {
+                th_flash(!$r['errors'], ($r['errors'] ? implode(' ', $r['errors']).' ' : '').'Tema "'.$name.'" salvo em Meus temas.'.(!empty($_POST['activate_theme']) ? ' Ele já está em uso no app.' : ''));
+            }
+            header("Location:".$self.($id ? "?saved=".$id : ''));
+            exit;
+        }
     }
 
     if(isset($_SESSION['th_msg'])){
@@ -66,53 +99,30 @@
         unset($_SESSION['th_msg']);
     }
 
-    $t = theme_get($mysqli, 0, $edit_id);
-    $customized = theme_is_customized($mysqli, 0, $edit_id);
-    $is_active = ($active_theme === $edit_id);
+    $saved_list = theme_saved_list($mysqli, $scope);
+    $in_use = $editing_saved && (int)$active['saved_id'] === (int)$editing_saved['id'];
     $branding_on = theme_reseller_allowed($mysqli);
-    theme_reseller_migrate($mysqli);
     $branded = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_reseller_theme WHERE enabled = 1"));
-
-    $state = array();
-    foreach($catalog as $id => $th){
-        $state[$id] = array('active' => ($active_theme === (string)$id), 'customized' => theme_is_customized($mysqli, 0, $id));
-    }
 
     ob_start(); ?>
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Pré-visualização</h5>
-            <span class="badge <?php echo $is_active ? 'bg-success' : 'bg-secondary'; ?>"><?php echo $is_active ? 'Em uso no app' : 'Não está em uso'; ?></span>
+            <h5 class="mb-0">Pré-visualização · <?php echo htmlspecialchars($catalog[$base]['name']); ?></h5>
+            <span class="badge <?php echo $in_use ? 'bg-success' : 'bg-secondary'; ?>"><?php echo $in_use ? 'Em uso no app' : 'Não está em uso'; ?></span>
         </div>
-        <?php if($is_model){ ?>
-            <div class="d-flex align-items-center gap-3 mb-3 p-2 rounded" style="background:#f7f9fe;">
-                <img src="assets/images/themes/<?php echo $catalog[$edit_id]['image']; ?>.png" alt="" style="width:120px;border-radius:8px;">
-                <small class="text-muted">Modelo base: <b><?php echo htmlspecialchars($catalog[$edit_id]['name']); ?></b>. A pré-visualização abaixo mostra as cores e imagens que serão aplicadas por cima dele.</small>
-            </div>
-        <?php } ?>
     <?php $side_html = ob_get_clean();
 
     ob_start(); ?>
         <hr class="my-4">
-        <?php if($is_model){ ?>
-            <div class="form-check form-switch mb-2">
-                <input class="form-check-input" type="checkbox" name="customize_enabled" id="customize_enabled" value="1" <?php if($customized){ echo 'checked'; } ?>>
-                <label class="form-check-label fw-semibold" for="customize_enabled">Aplicar esta personalização no modelo <?php echo htmlspecialchars($catalog[$edit_id]['name']); ?></label>
-            </div>
-        <?php } ?>
-        <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" name="activate_theme" id="activate_theme" value="1" <?php if($is_active){ echo 'checked disabled'; } ?>>
-            <label class="form-check-label" for="activate_theme">Usar este modelo no app</label>
-        </div>
         <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" name="reseller_branding" id="reseller_branding" value="1" <?php if($branding_on){ echo 'checked'; } ?>>
-            <label class="form-check-label" for="reseller_branding">
-                Permitir que revendedores usem a própria marca (Minha Marca)
-                <small class="text-muted d-block"><?php echo (int)$branded['num']; ?> revendedor(es) com marca própria ativa.</small>
-            </label>
+            <input class="form-check-input" type="checkbox" name="activate_theme" id="activate_theme" value="1" <?php if($in_use){ echo 'checked'; } ?>>
+            <label class="form-check-label" for="activate_theme">Usar este tema no app depois de salvar</label>
         </div>
         <div class="d-flex flex-wrap gap-2">
-            <button type="submit" name="save_theme" class="btn btn-primary" style="min-width:140px;"><i class="ri-save-3-line"></i> Salvar</button>
-            <button type="submit" name="reset_theme" class="btn btn-outline-secondary" formnovalidate onclick="return confirm('Voltar este modelo ao original (remove cores e imagens personalizadas)?');"><i class="ri-arrow-go-back-line"></i> Voltar ao original</button>
+            <button type="submit" name="save_theme" class="btn btn-primary" style="min-width:140px;"><i class="ri-save-3-line"></i> <?php echo $editing_saved ? 'Salvar alterações' : 'Salvar tema'; ?></button>
+            <?php if($editing_saved){ ?>
+                <button type="submit" name="save_as_new" class="btn btn-outline-primary"><i class="ri-file-copy-line"></i> Salvar como novo</button>
+            <?php } ?>
+            <a href="<?php echo $self; ?>?base=<?php echo $base; ?>#editor" class="btn btn-outline-secondary"><i class="ri-arrow-go-back-line"></i> Começar do zero</a>
         </div>
     <?php $actions_html = ob_get_clean();
 ?>
@@ -130,27 +140,36 @@
 
         <div class="card th-card mb-4">
             <div class="card-body p-4">
-                <h5 class="mb-1">Modelos</h5>
-                <p class="text-muted small mb-3">Escolha um modelo para usar no app e clique em <b>Personalizar</b> para trocar logo, cores, fundo e banner. Cada modelo guarda a sua própria personalização.</p>
-                <?php theme_gallery_render($state, 'assets/images/themes/', 'settings_theme.php?theme=', '', $edit_id); ?>
+                <?php theme_gallery_render($saved_list, $active, 'assets/images/themes/', $self, '', $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base); ?>
             </div>
         </div>
 
-        <div id="editor" class="d-flex align-items-center gap-2 mb-3">
-            <h4 class="mb-0">Personalizar: <?php echo htmlspecialchars($catalog[$edit_id]['name']); ?></h4>
-            <?php if($is_model){ ?><span class="badge <?php echo $customized ? 'bg-primary' : 'bg-secondary'; ?>"><?php echo $customized ? 'Personalização ligada' : 'Original'; ?></span><?php } ?>
+        <form method="post" class="card th-card mb-4">
+            <div class="card-body p-3 d-flex flex-wrap align-items-center gap-3">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" name="reseller_branding" id="reseller_branding" value="1" <?php if($branding_on){ echo 'checked'; } ?>>
+                    <label class="form-check-label" for="reseller_branding">Permitir que revendedores usem a própria marca (Minha Marca) <small class="text-muted">· <?php echo (int)$branded['num']; ?> com marca ativa</small></label>
+                </div>
+                <button type="submit" name="save_branding" class="btn btn-sm btn-outline-primary ms-auto">Salvar</button>
+            </div>
+        </form>
+
+        <div id="editor" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <h4 class="mb-0"><?php echo $editing_saved ? 'Editando: '.htmlspecialchars($editing_saved['name']) : 'Novo tema a partir de '.htmlspecialchars($catalog[$base]['name']); ?></h4>
         </div>
 
-        <form method="post" enctype="multipart/form-data" action="settings_theme.php?theme=<?php echo htmlspecialchars($edit_id); ?>">
-            <?php theme_form_editor($t, array(
+        <form method="post" enctype="multipart/form-data" action="<?php echo htmlspecialchars($back); ?>">
+            <?php theme_form_editor($current, array(
                 'img_base' => 'images/',
                 'app_name' => APP_NAME,
                 'fallback_logo' => 'images/'.APP_LOGO,
                 'side_html' => $side_html,
                 'actions_html' => $actions_html,
-                'allow_keep_colors' => $is_model,
-                'theme_id' => $edit_id,
+                'allow_keep_colors' => $base !== THEME_BESTPRO_ID,
+                'theme_id' => $base,
                 'model_img_base' => 'assets/images/themes/',
+                'model_name' => $catalog[$base]['name'],
+                'saved_name' => $editing_saved ? $editing_saved['name'] : '',
             )); ?>
         </form>
     </div>

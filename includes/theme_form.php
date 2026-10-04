@@ -15,60 +15,92 @@ require_once(__DIR__.'/theme_preview.php');
  */
 
 /**
- * Galeria de modelos: cada cartão tem "Usar este" e "Personalizar".
- * $state[id] = array('active' => bool, 'customized' => bool). $edit_url / $use_name: link de edição e nome do botão de ativar.
+ * Galeria: "Modelos" (originais) e "Meus temas" (personalizações salvas com nome).
+ * $active = array('base' => id, 'saved_id' => id). $self_url: página atual (sem query).
  */
-function theme_gallery_render($state, $img_prefix, $edit_url_base, $hidden_html, $editing_id){ ?>
+function theme_gallery_render($saved, $active, $img_prefix, $self_url, $hidden_html, $editing){ ?>
 <style>
     .tg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
     .tg-card { border: 2px solid #eef0f4; border-radius: 12px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
     .tg-card.editing { border-color: #3b6cf6; box-shadow: 0 0 0 3px rgba(59,108,246,.15); }
+    .tg-card.in-use { border-color: #16a34a; }
     .tg-thumb { position: relative; aspect-ratio: 16 / 9; background: #f3f4f6; }
     .tg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .tg-thumb .tg-custom { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #fff; font-weight: 700; background: linear-gradient(135deg, #3B6CF6, #22C55E); }
     .tg-badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 4px; flex-wrap: wrap; }
     .tg-badges span { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
     .tg-on { background: #16a34a; color: #fff; }
-    .tg-cus { background: #3b6cf6; color: #fff; }
-    .tg-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .tg-swatches { position: absolute; right: 8px; bottom: 8px; display: flex; }
+    .tg-swatches i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; margin-left: -5px; display: inline-block; }
+    .tg-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
     .tg-name { font-weight: 600; font-size: 14px; }
-    .tg-actions { display: flex; gap: 6px; margin-top: auto; }
-    .tg-actions .btn { flex: 1; font-size: 13px; padding: 5px 6px; }
+    .tg-sub { font-size: 12px; color: #6b7a99; }
+    .tg-actions { display: flex; gap: 6px; margin-top: auto; flex-wrap: wrap; }
+    .tg-actions form { display: flex; flex: 1; }
+    .tg-actions .btn { flex: 1; font-size: 13px; padding: 5px 6px; white-space: nowrap; }
+    .tg-title { font-size: 16px; font-weight: 700; margin: 0 0 4px; }
 </style>
-<div class="tg-grid">
-    <?php foreach (theme_catalog() as $id => $th) { $s = isset($state[$id]) ? $state[$id] : array('active' => false, 'customized' => false); ?>
-        <div class="tg-card <?php echo (string)$editing_id === (string)$id ? 'editing' : ''; ?>">
-            <div class="tg-thumb">
-                <?php if ($th['image'] != '') { ?>
-                    <img src="<?php echo htmlspecialchars($img_prefix.$th['image']); ?>.png" alt="" loading="lazy">
-                <?php } else { ?>
-                    <div class="tg-custom"><i class="ri-palette-line fs-3"></i>BestPro</div>
-                <?php } ?>
-                <div class="tg-badges">
-                    <?php if ($s['active']) { ?><span class="tg-on">Em uso</span><?php } ?>
-                    <?php if ($s['customized'] && $th['image'] != '') { ?><span class="tg-cus">Personalizado</span><?php } ?>
+
+<div class="tg-title">Meus temas</div>
+<p class="text-muted small mb-3">Personalizações salvas com nome. Clique em <b>Usar</b> para aplicar no app.</p>
+<?php if ($saved) { ?>
+    <div class="tg-grid mb-4">
+        <?php foreach ($saved as $s) {
+            $cat = theme_catalog();
+            $base = isset($cat[$s['base_theme']]) ? $cat[$s['base_theme']] : $cat['1'];
+            $in_use = (int)$active['saved_id'] === (int)$s['id'];
+            $st = $s['settings_arr']; ?>
+            <div class="tg-card <?php echo $in_use ? 'in-use' : ''; ?> <?php echo (string)$editing === 's'.$s['id'] ? 'editing' : ''; ?>">
+                <div class="tg-thumb">
+                    <?php if ($base['image'] != '') { ?><img src="<?php echo htmlspecialchars($img_prefix.$base['image']); ?>.png" alt="" loading="lazy">
+                    <?php } else { ?><div class="tg-custom" style="background:linear-gradient(135deg, <?php echo htmlspecialchars($st['theme_primary']); ?>, <?php echo htmlspecialchars($st['theme_accent']); ?>)"><i class="ri-palette-line fs-3"></i>BestPro</div><?php } ?>
+                    <div class="tg-badges"><?php if ($in_use) { ?><span class="tg-on">Em uso</span><?php } ?></div>
+                    <?php if ($st['theme_keep_colors'] != '1') { ?>
+                        <div class="tg-swatches"><?php foreach (array('theme_primary', 'theme_accent', 'theme_surface') as $k) { ?><i style="background:<?php echo htmlspecialchars($st[$k]); ?>"></i><?php } ?></div>
+                    <?php } ?>
                 </div>
+                <div class="tg-body">
+                    <div class="tg-name"><?php echo htmlspecialchars($s['name']); ?></div>
+                    <div class="tg-sub">Modelo: <?php echo htmlspecialchars($base['name']); ?> · <?php echo date('d/m/Y', $s['updated_at']); ?></div>
+                    <div class="tg-actions">
+                        <?php if (!$in_use) { ?>
+                            <form method="post"><?php echo $hidden_html; ?><input type="hidden" name="use_saved" value="<?php echo (int)$s['id']; ?>"><button type="submit" class="btn btn-success">Usar</button></form>
+                        <?php } ?>
+                        <a href="<?php echo htmlspecialchars($self_url.'?saved='.$s['id']); ?>#editor" class="btn btn-primary"><i class="ri-pencil-line"></i> Editar</a>
+                        <form method="post" onsubmit="return confirm('Excluir o tema salvo? Esta ação não pode ser desfeita.');" style="flex:0 0 auto;"><?php echo $hidden_html; ?><input type="hidden" name="delete_saved" value="<?php echo (int)$s['id']; ?>"><button type="submit" class="btn btn-outline-danger" title="Excluir"><i class="ri-delete-bin-line"></i></button></form>
+                    </div>
+                </div>
+            </div>
+        <?php } ?>
+    </div>
+<?php } else { ?>
+    <div class="p-3 mb-4 rounded text-muted small" style="background:#f7f9fe;">Você ainda não salvou nenhum tema. Escolha um modelo abaixo e clique em <b>Personalizar</b>.</div>
+<?php } ?>
+
+<div class="tg-title">Modelos</div>
+<p class="text-muted small mb-3">Use um modelo como ele é, ou clique em <b>Personalizar</b> para criar um tema seu a partir dele.</p>
+<div class="tg-grid">
+    <?php foreach (theme_catalog() as $id => $th) {
+        $in_use = (string)$active['base'] === (string)$id && (int)$active['saved_id'] === 0; ?>
+        <div class="tg-card <?php echo $in_use ? 'in-use' : ''; ?> <?php echo (string)$editing === 'b'.$id ? 'editing' : ''; ?>">
+            <div class="tg-thumb">
+                <?php if ($th['image'] != '') { ?><img src="<?php echo htmlspecialchars($img_prefix.$th['image']); ?>.png" alt="" loading="lazy">
+                <?php } else { ?><div class="tg-custom"><i class="ri-palette-line fs-3"></i>BestPro</div><?php } ?>
+                <div class="tg-badges"><?php if ($in_use) { ?><span class="tg-on">Em uso (original)</span><?php } ?></div>
             </div>
             <div class="tg-body">
                 <div class="tg-name"><?php echo htmlspecialchars($th['name']); ?></div>
                 <div class="tg-actions">
-                    <?php if (!$s['active']) { ?>
-                        <form method="post" style="flex:1;display:flex;">
-                            <?php echo $hidden_html; ?>
-                            <input type="hidden" name="use_theme" value="<?php echo $id; ?>">
-                            <button type="submit" class="btn btn-outline-success w-100">Usar este</button>
-                        </form>
-                    <?php } else { ?>
-                        <button type="button" class="btn btn-success" disabled>Em uso</button>
+                    <?php if (!$in_use) { ?>
+                        <form method="post"><?php echo $hidden_html; ?><input type="hidden" name="use_base" value="<?php echo $id; ?>"><button type="submit" class="btn btn-outline-success">Usar original</button></form>
                     <?php } ?>
-                    <a href="<?php echo htmlspecialchars($edit_url_base.$id); ?>#editor" class="btn btn-primary"><i class="ri-palette-line"></i> Personalizar</a>
+                    <a href="<?php echo htmlspecialchars($self_url.'?base='.$id); ?>#editor" class="btn btn-primary"><i class="ri-palette-line"></i> Personalizar</a>
                 </div>
             </div>
         </div>
     <?php } ?>
 </div>
 <?php }
-
 function theme_form_styles(){ theme_preview_styles(); ?>
 <style>
     .th-card { border: 0; border-radius: 14px; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); background: #fff; }
@@ -91,9 +123,32 @@ function theme_form_styles(){ theme_preview_styles(); ?>
 function theme_form_editor($t, $opts){
     $img_base = $opts['img_base'];
     $logo_url = $t['theme_logo'] != '' ? $img_base.$t['theme_logo'] : $opts['fallback_logo'];
+    $tid = isset($opts['theme_id']) ? (string)$opts['theme_id'] : THEME_BESTPRO_ID;
+    $default_name = $opts['app_name'];
+    $shown_name = $t['theme_brand_text'] != '' ? $t['theme_brand_text'] : $default_name;
     ?>
 <div class="row g-4">
     <div class="col-xl-5">
+        <div class="card th-card mb-4">
+            <div class="card-body p-4">
+                <h5 class="mb-3">Identificação</h5>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nome do tema <span class="text-danger">*</span></label>
+                    <input type="text" name="saved_name" class="form-control" maxlength="60" required value="<?php echo htmlspecialchars(isset($opts['saved_name']) ? $opts['saved_name'] : ''); ?>" placeholder="Ex.: <?php echo htmlspecialchars($opts['model_name']); ?> Dourado">
+                    <small class="text-muted">Nome para encontrar este tema na lista "Meus temas". Não aparece no app.</small>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Nome exibido no app</label>
+                    <input type="text" name="theme_brand_text" id="theme_brand_text" class="form-control" maxlength="40" value="<?php echo htmlspecialchars($t['theme_brand_text']); ?>" placeholder="<?php echo htmlspecialchars($default_name); ?>">
+                    <small class="text-muted">Aparece ao lado do logo no topo do app. Vazio = "<?php echo htmlspecialchars($default_name); ?>".</small>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="theme_show_name" id="theme_show_name" value="1" <?php if ($t['theme_show_name'] == '1') { echo 'checked'; } ?>>
+                    <label class="form-check-label" for="theme_show_name">Mostrar o nome ao lado do logo <small class="text-muted">(desligue para mostrar só o logo)</small></label>
+                </div>
+            </div>
+        </div>
+
         <div class="card th-card mb-4">
             <div class="card-body p-4">
                 <h5 class="mb-3">Paletas prontas</h5>
@@ -146,15 +201,20 @@ function theme_form_editor($t, $opts){
             <div class="card-body p-4">
                 <h5 class="mb-3">Imagens</h5>
                 <?php
+                    $is_movie = $tid === '4';
                     $images = array(
-                        'theme_logo'     => array('Logo da tela inicial', 'PNG com fundo transparente. Vazio = logo padrão.'),
-                        'theme_bg_image' => array('Imagem de fundo', 'Recomendado 1920×1080.'),
-                        'theme_banner'   => array('Banner de destaque', 'Recomendado 1280×480.'),
+                        'theme_logo'     => array('Logo da tela inicial',
+                            '<b>Tamanho ideal: 512 × 512 px</b> (quadrado), PNG com <b>fundo transparente</b>. Mínimo 256 × 256 px. Deixe uma pequena margem em volta do desenho. Vazio = logo padrão do app.'),
+                        'theme_bg_image' => array('Imagem de fundo',
+                            '<b>Tamanho ideal: 1920 × 1080 px</b> (Full HD, formato 16:9 da TV), JPG ou WEBP de até 1 MB. Prefira imagens escuras ou com pouco detalhe: os cartões e textos ficam por cima. Use o controle "Escurecer" abaixo para dar contraste.'),
+                        'theme_banner'   => $is_movie
+                            ? array('Pôster de destaque (tela cheia)', '<b>Tamanho ideal: 1920 × 1080 px</b> (16:9). No MovieUI o banner ocupa a <b>tela inteira</b> atrás do menu: deixe o título/rosto na parte de cima e o rodapé mais escuro, onde ficam os botões.')
+                            : array('Banner de destaque', '<b>Tamanho ideal: 1280 × 480 px</b> (formato 8:3), JPG ou WEBP. Mantenha textos e rostos no centro: as bordas podem ser cortadas em telas menores.'.($tid !== THEME_BESTPRO_ID ? ' <i>Neste modelo o banner é usado como destaque quando a tela tiver espaço para ele.</i>' : '')),
                     );
                     foreach($images as $key => $info){ ?>
                     <div class="th-img">
                         <div class="fw-semibold"><?php echo $info[0]; ?></div>
-                        <small class="text-muted d-block mb-2"><?php echo $info[1]; ?> PNG, JPG ou WEBP até 5 MB.</small>
+                        <small class="text-muted d-block mb-2"><?php echo $info[1]; ?> Aceita PNG, JPG ou WEBP até 5 MB.</small>
                         <?php if($t[$key] != ''){ ?>
                             <img src="<?php echo htmlspecialchars($img_base.$t[$key]); ?>" alt="">
                             <div class="form-check mb-2">
@@ -176,13 +236,12 @@ function theme_form_editor($t, $opts){
             <div class="card-body p-4">
                 <?php echo isset($opts['side_html']) ? $opts['side_html'] : ''; ?>
                 <?php
-                    $tid = isset($opts['theme_id']) ? (string)$opts['theme_id'] : THEME_BESTPRO_ID;
                     $orig = theme_model_originals();
                     $catalog = theme_catalog();
                     $model_img = (isset($catalog[$tid]) && $catalog[$tid]['image'] != '' && isset($opts['model_img_base'])) ? $opts['model_img_base'].$catalog[$tid]['image'].'.png' : '';
                 ?>
-                <div class="tv" id="tv" data-theme="<?php echo htmlspecialchars($tid); ?>" data-original='<?php echo json_encode(isset($orig[$tid]) ? $orig[$tid] : $orig[THEME_BESTPRO_ID]); ?>'>
-                    <?php theme_preview_markup($tid, $logo_url, $opts['app_name'],
+                <div class="tv <?php echo $t['theme_show_name'] == '0' ? 'hide-name' : ''; ?>" id="tv" data-theme="<?php echo htmlspecialchars($tid); ?>" data-default-name="<?php echo htmlspecialchars($default_name); ?>" data-original='<?php echo json_encode(isset($orig[$tid]) ? $orig[$tid] : $orig[THEME_BESTPRO_ID]); ?>'>
+                    <?php theme_preview_markup($tid, $logo_url, $shown_name,
                         $t['theme_bg_image'] != '' ? $img_base.$t['theme_bg_image'] : '',
                         $t['theme_banner'] != '' ? $img_base.$t['theme_banner'] : '',
                         $model_img); ?>
@@ -251,9 +310,14 @@ function theme_form_script($fallback_logo){ ?>
     function upOverlay() { tv.style.setProperty('--ov', overlay.value / 100); document.getElementById('overlay_val').textContent = overlay.value + '%'; }
     overlay.addEventListener('input', upOverlay); upOverlay();
 
-    // Nome da marca (portal do revendedor)
-    var brand = document.getElementById('brand_name');
-    if (brand) brand.addEventListener('input', function () { var n = document.getElementById('tv_name'); if (n) n.textContent = brand.value || brand.getAttribute('placeholder'); });
+    // Nome exibido no app e "mostrar nome"
+    var brandText = document.getElementById('theme_brand_text');
+    if (brandText) brandText.addEventListener('input', function () {
+        var n = document.getElementById('tv_name');
+        if (n) n.textContent = brandText.value || tv.getAttribute('data-default-name');
+    });
+    var showName = document.getElementById('theme_show_name');
+    if (showName) showName.addEventListener('change', function () { tv.classList.toggle('hide-name', !showName.checked); });
 
     // MovieUI: o pôster de destaque usa o banner, senão a imagem de fundo, senão a tela original
     var current = { bg: '', banner: '' };

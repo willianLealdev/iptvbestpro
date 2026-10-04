@@ -321,21 +321,27 @@
                             $themes = array('2' => 'Glossy', '3' => 'BlackPanther', '4' => 'MovieUI', '5' => 'VUI', '6' => 'ChristmasUI', '7' => 'HalloweenUI');
                             $theme_img = isset($themes[$settings_data['is_theme']]) ? $themes[$settings_data['is_theme']] : 'OneUI';
                         ?>
-                        <?php if ($settings_data['is_theme'] == '8') {
+                        <?php
                             require_once("includes/theme_helper.php");
-                            $bt = theme_get($mysqli); ?>
-                            <div class="d-flex flex-wrap align-items-center gap-3">
-                                <div>
-                                    <div class="fw-bold fs-5">BestPro (personalizável)</div>
+                            $dash_active = theme_active($mysqli, 0);
+                            $dash_saved = $dash_active['saved_id'] > 0 ? theme_saved_get($mysqli, 0, $dash_active['saved_id']) : null;
+                            $dash_catalog = theme_catalog();
+                        ?>
+                        <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                            <div>
+                                <div class="fw-bold fs-5"><?php echo htmlspecialchars($dash_saved ? $dash_saved['name'] : $dash_catalog[$dash_active['base']]['name'].' (original)'); ?></div>
+                                <div class="text-muted small">Modelo: <?php echo htmlspecialchars($dash_catalog[$dash_active['base']]['name']); ?></div>
+                                <?php if ($dash_saved && $dash_saved['settings_arr']['theme_keep_colors'] != '1') { ?>
                                     <div class="d-flex gap-2 mt-2">
                                         <?php foreach (array('theme_primary', 'theme_accent', 'theme_background', 'theme_surface', 'theme_text') as $k) { ?>
-                                            <span title="<?php echo htmlspecialchars($bt[$k]); ?>" style="width:28px;height:28px;border-radius:50%;background:<?php echo htmlspecialchars($bt[$k]); ?>;box-shadow:0 0 0 1px rgba(0,0,0,.12);display:inline-block;"></span>
+                                            <span title="<?php echo htmlspecialchars($dash_saved['settings_arr'][$k]); ?>" style="width:28px;height:28px;border-radius:50%;background:<?php echo htmlspecialchars($dash_saved['settings_arr'][$k]); ?>;box-shadow:0 0 0 1px rgba(0,0,0,.12);display:inline-block;"></span>
                                         <?php } ?>
                                     </div>
-                                </div>
-                                <a href="settings_theme.php" class="btn btn-outline-primary ms-auto"><i class="ri-palette-line"></i> Personalizar tema</a>
+                                <?php } ?>
                             </div>
-                        <?php } else { ?>
+                            <a href="settings_theme.php" class="btn btn-outline-primary ms-auto"><i class="ri-palette-line"></i> Temas do App</a>
+                        </div>
+                        <?php if ($dash_active['base'] != '8') { ?>
                             <img src="assets/images/themes/<?php echo $theme_img; ?>.png" alt="" style="width: 100%; max-width: 900px; height: auto; border-radius: 10px;">
                         <?php } ?>
                     </div>
