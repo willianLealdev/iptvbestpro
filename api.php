@@ -152,6 +152,11 @@ if($get_helper['helper_name']=="app_details"){
         $data_arr['custom_ads'] = $data['custom_ads'];
         $data_arr['custom_ads_clicks'] = $data['custom_ads_clicks'];
         
+        // Anúncios desativados permanentemente (banner, tela cheia e Custom Ads)
+        $data_arr['banner_ad'] = 'false';
+        $data_arr['interstital_ad'] = 'false';
+        $data_arr['custom_ads'] = 'false';
+
         // App Themes
         $data_arr['is_theme'] = $data['is_theme'];
         $data_arr['is_epg'] = $data['is_epg'];
@@ -220,7 +225,13 @@ if($get_helper['helper_name']=="app_details"){
         } else {
             $data_arr['reward_ad_id'] = '';
         }
-        
+
+        // Anúncios desativados permanentemente: o app nunca exibe propaganda (cliente paga pela ativação)
+        foreach (array('ad_status', 'banner_movie', 'banner_series', 'banner_epg', 'interstital_ad',
+                       'reward_ad_on_movie', 'reward_ad_on_episodes', 'reward_ad_on_live', 'reward_ad_on_single', 'reward_ad_on_local') as $ad_key) {
+            $data_arr[$ad_key] = 'false';
+        }
+
         array_push($jsonObj,$data_arr);
     }
     $row['ads_details'] = $jsonObj;

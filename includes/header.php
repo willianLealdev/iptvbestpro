@@ -302,9 +302,7 @@ $mysqli->set_charset("utf8mb4");
                                 <li>
                                     <a href="settings_api.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_api.php") { ?>active<?php } ?>">Api Settings</a>
                                 </li>
-                                <li>
-                                    <a href="settings_ads.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_ads.php") { ?>active<?php } ?>">Advertisement</a>
-                                </li>
+                                <?php // Advertisement oculto: anúncios desativados permanentemente na API ?>
                             </ul>
                         </li>
                         
