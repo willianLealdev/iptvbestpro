@@ -49,6 +49,7 @@ function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = ''){ ?>
     <form method="post" class="pl-pane active" data-pl-pane="url" autocomplete="off">
         <?php echo $hidden_html; ?>
         <input type="hidden" name="mode" value="url">
+        <input type="hidden" name="playlist_submit" value="1">
         <div class="pl-field">
             <label>Playlist name</label>
             <input type="text" name="playlist_name" maxlength="120" required>
@@ -58,12 +59,13 @@ function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = ''){ ?>
             <input type="url" name="playlist_url" required placeholder="http://servidor:porta/get.php?username=...&password=...">
         </div>
         <div class="pl-hint">O servidor já vem na URL, então ela é salva direto, sem verificação.</div>
-        <button type="submit" name="playlist_submit" class="pl-submit">Upload Now</button>
+        <button type="submit" class="pl-submit">Upload Now</button>
     </form>
 
     <form method="post" class="pl-pane" data-pl-pane="account" autocomplete="off">
         <?php echo $hidden_html; ?>
         <input type="hidden" name="mode" value="account">
+        <input type="hidden" name="playlist_submit" value="1">
         <div class="pl-field">
             <label>Playlist name</label>
             <input type="text" name="playlist_name" maxlength="120" required>
@@ -78,7 +80,7 @@ function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = ''){ ?>
             <button type="button" data-pl-eye title="Mostrar senha"><i class="ri-eye-line"></i></button>
         </div>
         <div class="pl-hint">O sistema procura sozinho qual servidor DNS aceita este usuário. Se o servidor cair ou você migrar o usuário, o app passa a usar o outro automaticamente.</div>
-        <button type="submit" name="playlist_submit" class="pl-submit" <?php if (!$dns_list) { echo 'disabled'; } ?>>Upload Now</button>
+        <button type="submit" class="pl-submit" <?php if (!$dns_list) { echo 'disabled'; } ?>>Upload Now</button>
 
         <?php if ($dns_list) { ?>
             <div class="pl-dns">Servidores ativos: <?php $t = array(); foreach ($dns_list as $d) { $t[] = htmlspecialchars($d['title']); } echo implode(' · ', $t); ?></div>
