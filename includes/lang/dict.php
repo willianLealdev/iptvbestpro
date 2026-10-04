@@ -1349,4 +1349,12 @@ return array(
   'Créditos insuficientes (precisa de {} créditos).' => array('pt' => 'Créditos insuficientes (precisa de {0} créditos).', 'en' => 'Not enough credits (needs {0} credits).', 'es' => 'Créditos insuficientes (necesita {0} créditos).'),
   '{} mês' => array('pt' => '{0} mês', 'en' => '{0} month', 'es' => '{0} mes'),
   'há {}' => array('pt' => 'há {0}', 'en' => '{0} ago', 'es' => 'hace {0}'),
+  'Editar nome do cliente' => array('pt' => 'Editar nome do cliente', 'en' => 'Edit customer name', 'es' => 'Editar nombre del cliente'),
+  'Nome do cliente atualizado.' => array('pt' => 'Nome do cliente atualizado.', 'en' => 'Customer name updated.', 'es' => 'Nombre del cliente actualizado.'),
+  'Não foi possível salvar o nome.' => array('pt' => 'Não foi possível salvar o nome.', 'en' => 'Could not save the name.', 'es' => 'No se pudo guardar el nombre.'),
+  'Ativação manual' => array('pt' => 'Ativação manual', 'en' => 'Manual activation', 'es' => 'Activación manual'),
+  'Use só em casos específicos.' => array('pt' => 'Use só em casos específicos.', 'en' => 'Use only in specific cases.', 'es' => 'Úsalo solo en casos específicos.'),
+  'O normal é ativar pelo código de ativação no app. Use a ativação manual apenas quando o código apresentar algum erro.' => array('pt' => 'O normal é ativar pelo código de ativação no app. Use a ativação manual apenas quando o código apresentar algum erro.', 'en' => 'The normal way is to activate with the activation code in the app. Use manual activation only when the code shows an error.', 'es' => 'Lo normal es activar con el código de activación en la app. Usa la activación manual solo cuando el código presente algún error.'),
+  'Digite só letras e números: os dois-pontos entram sozinhos.' => array('pt' => 'Digite só letras e números: os dois-pontos entram sozinhos.', 'en' => 'Type only letters and numbers: the colons are added automatically.', 'es' => 'Escribe solo letras y números: los dos puntos se agregan solos.'),
+  'MAC:' => array('pt' => 'MAC:', 'en' => 'MAC:', 'es' => 'MAC:'),
 );

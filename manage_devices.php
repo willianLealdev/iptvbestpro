@@ -40,9 +40,21 @@
         exit;
     }
 
-    // Adicionar e ativar um dispositivo pelo MAC / Device ID
+    // Editar o nome do cliente (lápis na lista)
+    if(isset($_POST['rename_submit'])){
+        if($customer_name == ''){
+            dev_flash(false, 'Informe o nome do cliente.');
+        } else {
+            $ok = devices_set_customer($mysqli, $_POST['device_pk'], $customer_name);
+            dev_flash($ok, $ok ? 'Nome do cliente atualizado.' : 'Não foi possível salvar o nome.');
+        }
+        header("Location:".$back_url);
+        exit;
+    }
+
+    // Ativação manual pelo MAC / Device ID (só para quando o código de ativação der erro)
     if(isset($_POST['add_submit'])){
-        $device_id = mb_substr(trim(strip_tags($_POST['device_id'])), 0, 191);
+        $device_id = mb_substr(devices_format_mac(strip_tags($_POST['device_id'])), 0, 191);
         $application_id = mb_substr(trim(strip_tags($_POST['application_id'])), 0, 191);
         if($customer_name == ''){
             dev_flash(false, 'Informe o nome do cliente.');
@@ -275,7 +287,7 @@
                         <?php } ?>
                     </form>
                     <a href="javascript:void(0)" class="btn dv-btn-add d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
-                        <i class="ri-add-line"></i><span class="ps-1">Ativar Dispositivo</span>
+                        <i class="ri-add-line"></i><span class="ps-1">Ativação manual</span>
                     </a>
                 </div>
 
@@ -303,7 +315,10 @@
                                     $pkg = devices_package_info($row['package']); $owner_label = devices_owner_label($mysqli, $row); ?>
                                     <tr>
                                         <td><?php echo $start + $i; ?></td>
-                                        <td class="fw-semibold text-start"><?php echo $row['customer_name'] != '' ? htmlspecialchars($row['customer_name']) : '<span class="dv-muted fw-normal">—</span>'; ?></td>
+                                        <td class="fw-semibold text-start text-nowrap">
+                                            <span translate="no"><?php echo $row['customer_name'] != '' ? htmlspecialchars($row['customer_name']) : '<span class="dv-muted fw-normal">—</span>'; ?></span>
+                                            <a href="javascript:void(0)" class="dv-pencil btn_rename ms-1" data-pk="<?php echo (int)$row['id']; ?>" data-name="<?php echo htmlspecialchars($row['customer_name']); ?>" data-mac="<?php echo htmlspecialchars($row['device_id']); ?>" title="Editar nome do cliente"><i class="ri-pencil-line"></i></a>
+                                        </td>
                                         <td>
                                             <span><?php echo htmlspecialchars($row['device_id']); ?></span>
                                             <i class="ri-file-copy-line dv-copy" data-copy="<?php echo htmlspecialchars($row['device_id']); ?>" title="Copiar"></i>
@@ -446,17 +461,22 @@
     <div class="modal-dialog modal-dialog-centered">
         <form method="post" class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Ativar Dispositivo</h5>
+                <h5 class="modal-title">Ativação manual</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
+                <div class="alert alert-warning small d-flex gap-2 align-items-start">
+                    <i class="ri-error-warning-line fs-5 lh-1"></i>
+                    <div><b>Use só em casos específicos.</b> O normal é ativar pelo código de ativação no app. Use a ativação manual apenas quando o código apresentar algum erro.</div>
+                </div>
                 <div class="mb-3">
                     <label class="form-label">Cliente</label>
                     <input type="text" name="customer_name" class="form-control" maxlength="120" required placeholder="Nome do cliente">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">MAC / Device ID</label>
-                    <input type="text" name="device_id" class="form-control" maxlength="191" required placeholder="Ex.: D9:30:89:BB:51:D6">
+                    <input type="text" name="device_id" id="add_device_id" class="form-control" maxlength="191" required placeholder="Ex.: D9:30:89:BB:51:D6" autocomplete="off" spellcheck="false" style="font-family:'Courier New',monospace;font-weight:700;letter-spacing:1px;">
+                    <small class="text-muted">Digite só letras e números: os dois-pontos entram sozinhos.</small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">App</label>
@@ -477,8 +497,55 @@
     </div>
 </div>
 
+<!-- Modal: editar nome do cliente -->
+<div class="modal fade" id="renameModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar nome do cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="device_pk" id="rename_pk">
+                <div class="small text-muted mb-2">MAC: <b id="rename_mac" translate="no"></b></div>
+                <label class="form-label">Cliente</label>
+                <input type="text" name="customer_name" id="rename_name" class="form-control form-control-lg" maxlength="120" required placeholder="Nome do cliente">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" name="rename_submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .dv-pencil { color: #3b6cf6; opacity: .55; font-size: 15px; text-decoration: none; }
+    tr:hover .dv-pencil, .dv-pencil:focus { opacity: 1; }
+</style>
+
 <script>
+// MAC: coloca os ":" sozinho (D9:30:89:BB:51:D6). Device IDs maiores ficam sem separador.
+(function () {
+    var inp = document.getElementById('add_device_id');
+    if (!inp) return;
+    inp.addEventListener('input', function () {
+        var hex = inp.value.replace(/[\s:\-\.]/g, '');
+        if (!/^[0-9a-fA-F]*$/.test(hex)) return; // não é MAC: deixa como está
+        hex = hex.toUpperCase();
+        inp.value = hex.length <= 12 ? (hex.match(/.{1,2}/g) || []).join(':') : hex;
+    });
+})();
 document.addEventListener('click', function (e) {
+    var ren = e.target.closest('.btn_rename');
+    if (ren) {
+        document.getElementById('rename_pk').value = ren.getAttribute('data-pk');
+        document.getElementById('rename_mac').textContent = ren.getAttribute('data-mac');
+        document.getElementById('rename_name').value = ren.getAttribute('data-name') || '';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('renameModal')).show();
+        setTimeout(function () { document.getElementById('rename_name').focus(); }, 300);
+        return;
+    }
     var copy = e.target.closest('.dv-copy');
     if (copy) {
         var text = copy.getAttribute('data-copy');

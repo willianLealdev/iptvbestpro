@@ -563,6 +563,15 @@ function devices_activate($mysqli, $device_pk, $package_key, $charge_reseller_id
 }
 
 // Grava o nome do cliente do aparelho ($reseller_id > 0 restringe aos aparelhos desse revendedor)
+// MAC digitado sem separador (ex.: d93089bb51d6 ou D9-30-89-BB-51-D6) vira D9:30:89:BB:51:D6.
+// Outros formatos de Device ID ficam como foram digitados.
+function devices_format_mac($value){
+    $v = trim((string)$value);
+    $hex = preg_replace('/[\s:\-\.]/', '', $v);
+    if (preg_match('/^[0-9A-Fa-f]{12}$/', $hex)) return strtoupper(implode(':', str_split($hex, 2)));
+    return $v;
+}
+
 function devices_set_customer($mysqli, $device_pk, $name, $reseller_id = 0){
     $name = mb_substr(trim(strip_tags((string)$name)), 0, 120);
     $pk = (int)$device_pk;

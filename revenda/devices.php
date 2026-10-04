@@ -7,6 +7,22 @@ $now = time();
 
 $back = 'devices.php'.(!empty($_GET) ? '?'.http_build_query(array_diff_key($_GET, array('activate' => 1))) : '');
 
+// Editar o nome do cliente (lápis na lista)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rename_submit'])) {
+    $customer_name = isset($_POST['customer_name']) ? trim($_POST['customer_name']) : '';
+    if (!rv_csrf_ok()) {
+        rv_flash('error', 'Sessão expirada. Tente novamente.');
+    } else if ($customer_name == '') {
+        rv_flash('error', 'Informe o nome do cliente.');
+    } else {
+        $pk = (int)$_POST['device_pk'];
+        $own = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id FROM tbl_devices WHERE id = $pk AND owner = 'reseller' AND reseller_id = $rid"));
+        $ok = $own && devices_set_customer($mysqli, $pk, $customer_name, $rid);
+        rv_flash($ok ? 'success' : 'error', $ok ? 'Nome do cliente atualizado.' : 'Dispositivo não encontrado na sua lista.');
+    }
+    rv_redirect($back);
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['activate_submit'])) {
     if (!rv_csrf_ok()) {
         rv_flash('error', 'Sessão expirada. Tente novamente.');
@@ -94,7 +110,10 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
                 $pkg = devices_package_info($d['package']); ?>
                 <tr>
                     <td><?php echo $start + $i; ?></td>
-                    <td class="fw-semibold text-start"><?php echo $d['customer_name'] != '' ? rv_e($d['customer_name']) : '<span class="rv-muted fw-normal">—</span>'; ?></td>
+                    <td class="fw-semibold text-start text-nowrap">
+                        <span translate="no"><?php echo $d['customer_name'] != '' ? rv_e($d['customer_name']) : '<span class="rv-muted fw-normal">—</span>'; ?></span>
+                        <a href="javascript:void(0)" class="rv-pencil btn_rename ms-1" data-pk="<?php echo (int)$d['id']; ?>" data-name="<?php echo rv_e($d['customer_name']); ?>" data-mac="<?php echo rv_e($d['device_id']); ?>" title="Editar nome do cliente"><i class="ri-pencil-line"></i></a>
+                    </td>
                     <td>
                         <?php echo rv_e($d['device_id']); ?>
                         <span class="rv-copy ms-1" data-copy="<?php echo rv_e($d['device_id']); ?>"><i class="ri-file-copy-line"></i></span>
@@ -181,8 +200,43 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
     </div>
 </div>
 
+<div class="modal fade" id="renameModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" class="modal-content">
+            <?php echo rv_csrf_field(); ?>
+            <div class="modal-header">
+                <h5 class="modal-title">Editar nome do cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="device_pk" id="rename_pk">
+                <div class="small rv-muted mb-2">MAC: <b id="rename_mac" translate="no"></b></div>
+                <label class="form-label">Cliente</label>
+                <input type="text" name="customer_name" id="rename_name" class="form-control form-control-lg" maxlength="120" required placeholder="Nome do cliente">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" name="rename_submit" class="btn rv-btn-green">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+<style>
+    .rv-pencil { color: #3b6cf6; opacity: .55; font-size: 15px; text-decoration: none; }
+    tr:hover .rv-pencil, .rv-pencil:focus { opacity: 1; }
+</style>
+
 <?php ob_start(); ?>
 <script>
+document.addEventListener('click', function (e) {
+    var ren = e.target.closest('.btn_rename');
+    if (!ren) return;
+    document.getElementById('rename_pk').value = ren.getAttribute('data-pk');
+    document.getElementById('rename_mac').textContent = ren.getAttribute('data-mac');
+    document.getElementById('rename_name').value = ren.getAttribute('data-name') || '';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('renameModal')).show();
+    setTimeout(function () { document.getElementById('rename_name').focus(); }, 300);
+});
 (function () {
     var balance = <?php echo (int)$reseller['credits']; ?>;
     var sel = document.getElementById('activate_package');
