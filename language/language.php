@@ -65,6 +65,11 @@
 	
 	$client_lang['approve_admin']="Your registration is completed. Wait until admin approve it";
 
+	// E-mail (teste de envio e Resend)
+	$client_lang['mail_sent_success']="E-mail de teste enviado com sucesso.";
+	$client_lang['mail_sent_error']="Não foi possível enviar o e-mail de teste. Confira as configurações.";
+	$client_lang['resend_invalid']="Informe a API Key da Resend e um e-mail remetente válido.";
+
 	// Revendedores
 	$client_lang['reseller_added']="Revendedor criado com sucesso.";
 	$client_lang['reseller_updated']="Revendedor atualizado com sucesso.";

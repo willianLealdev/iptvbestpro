@@ -17,9 +17,19 @@
     $result=mysqli_query($mysqli,$qry);
     $settings_data=mysqli_fetch_assoc($result);
     
+    require_once("includes/mail_resend.php");
+    resend_migrate($mysqli);
+
     $qry_smtp = "SELECT * FROM tbl_smtp_settings where id='1'";
     $result_smtp = mysqli_query($mysqli, $qry_smtp);
     $row = mysqli_fetch_assoc($result_smtp);
+
+    // Detalhe do erro do último teste de envio (Resend)
+    $mail_error_detail = '';
+    if(isset($_SESSION['mail_error_detail'])){
+        $mail_error_detail = $_SESSION['mail_error_detail'];
+        unset($_SESSION['mail_error_detail']);
+    }
     
     if(isset($_POST['submit_general'])){
         
@@ -59,6 +69,28 @@
         exit;
     }
     
+    if (isset($_POST['submit']) && isset($_POST['smtpIndex']) && $_POST['smtpIndex'] == 'resend') {
+        // Resend: API Key em branco mantém a chave atual
+        $api_key = trim(isset($_POST['resend_api_key']) ? $_POST['resend_api_key'] : '');
+        if ($api_key == '') { $api_key = (string)$row['resend_api_key']; }
+        $from = trim(isset($_POST['resend_from']) ? $_POST['resend_from'] : '');
+        if ($api_key == '' || !filter_var($from, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['class'] = "error";
+            $_SESSION['msg'] = "resend_invalid";
+            header("Location:settings.php");
+            exit;
+        }
+        $stmt = mysqli_prepare($mysqli, "UPDATE tbl_smtp_settings SET smtp_type = 'resend', resend_api_key = ?, resend_from = ?, resend_from_name = ? WHERE id = '1'");
+        $from_name = mb_substr(trim(strip_tags(isset($_POST['resend_from_name']) ? $_POST['resend_from_name'] : '')), 0, 120);
+        mysqli_stmt_bind_param($stmt, 'sss', $api_key, $from, $from_name);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        $_SESSION['class'] = "success";
+        $_SESSION['msg'] = "11";
+        header("Location:settings.php");
+        exit;
+    }
+
     if (isset($_POST['submit'])) {
         $key = ($_POST['smtpIndex'] == 'gmail') ? '0' : '1';
         $password = '';
@@ -185,17 +217,27 @@
                                             <label class="col-sm-2 col-form-label">SMTP Type</label>
                                             <div class="col-md-3">
                                                 <div class="form-check">
-                                                    <input type="radio" name="smtp_type" id="gmail" class="form-check-input" value="gmail" <?php if ($row['smtp_type'] == 'gmail') { echo ' checked="" id="disabledFieldsetCheck"';} ?>>
+                                                    <input type="radio" name="smtp_type" id="gmail" class="form-check-input" value="gmail" <?php if ($row['smtp_type'] == 'gmail') { echo 'checked'; } ?>>
                                                     <label class="form-check-label" for="gmail"> Gmail SMTP</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-3">
                                                 <div class="form-check">
-                                                    <input type="radio" name="smtp_type" id="server" class="form-check-input" value="server" <?php if ($row['smtp_type'] == 'server') { echo ' checked="" disabled="disabled"';} ?>>
+                                                    <input type="radio" name="smtp_type" id="server" class="form-check-input" value="server" <?php if ($row['smtp_type'] == 'server') { echo 'checked'; } ?>>
                                                     <label class="form-check-label" for="server">Server SMTP</label>
                                                 </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input type="radio" name="smtp_type" id="resend" class="form-check-input" value="resend" <?php if ($row['smtp_type'] == 'resend') { echo 'checked'; } ?>>
+                                                    <label class="form-check-label" for="resend">Resend API</label>
                                                 </div>
+                                            </div>
                                         </div>
+
+                                        <?php if ($mail_error_detail != '') { ?>
+                                            <div class="alert alert-danger"><b>Falha no envio de teste:</b> <?php echo htmlspecialchars($mail_error_detail); ?></div>
+                                        <?php } ?>
                                         <input type="hidden" name="smtpIndex" value="<?= $row['smtp_type'] ?>">
                                         
                                         <div class="gmailContent" <?php if ($row['smtp_type'] == 'gmail') { echo 'style="display:block"'; } else { echo 'style="display:none"'; } ?>>
@@ -274,7 +316,34 @@
                                             </div>
                                         </div>
                                         
-                                        <input type="hidden" id="server_data" data-stuff='<?php echo htmlentities(json_encode($row)); ?>'>
+                                        <div class="resendContent" <?php if ($row['smtp_type'] == 'resend') { echo 'style="display:block"'; } else { echo 'style="display:none"'; } ?>>
+                                            <div class="alert alert-light border small">
+                                                Os e-mails do sistema são enviados pela API da <a href="https://resend.com" target="_blank" rel="noopener">Resend</a>.
+                                                O e-mail remetente precisa ser de um <b>domínio verificado</b> na sua conta Resend (Domains).
+                                                Crie a chave em <b>API Keys</b> com permissão <b>Sending access</b>.
+                                            </div>
+                                            <div class="mb-3 row">
+                                                <label class="col-sm-2 col-form-label">API Key</label>
+                                                <div class="col-sm-10">
+                                                    <input type="password" name="resend_api_key" class="form-control" value="" autocomplete="new-password"
+                                                           placeholder="<?php echo $row['resend_api_key'] != '' ? 'Chave salva: '.htmlspecialchars(resend_mask_key($row['resend_api_key'])).' (deixe em branco para manter)' : 're_xxxxxxxxxxxxxxxxxxxx'; ?>"
+                                                           <?php if ($row['smtp_type'] == 'resend' && $row['resend_api_key'] == '') { echo 'required'; } ?>>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3 row">
+                                                <label class="col-sm-2 col-form-label">E-mail remetente</label>
+                                                <div class="col-sm-10">
+                                                    <input type="email" name="resend_from" class="form-control" value="<?php echo htmlspecialchars((string)$row['resend_from']); ?>" placeholder="naoresponda@seudominio.com" <?php if ($row['smtp_type'] == 'resend') { echo 'required'; } ?>>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3 row">
+                                                <label class="col-sm-2 col-form-label">Nome do remetente</label>
+                                                <div class="col-sm-10">
+                                                    <input type="text" name="resend_from_name" class="form-control" maxlength="120" value="<?php echo htmlspecialchars((string)$row['resend_from_name']); ?>" placeholder="<?php echo htmlspecialchars(APP_NAME); ?>">
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <button type="submit" name="submit" class="btn btn-primary" style="min-width: 120px;">Save</button>
                                     </form>
                                 </div>
@@ -309,80 +378,20 @@
 <?php include("includes/footer.php");?>
 
 <script type="text/javascript">
-$("input[name='smtp_type']").on("click", function(e) {
-
-    var checkbox = $(this);
-    
-    $("input[name='smtp_password[]']").attr("required", false);
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    var _val = $(this).val();
-    if (_val == 'gmail') {
-      swal({
-        title: "Are you sure?",
-        type: "warning",
-        confirmButtonClass: 'btn btn-primary m-2',
-        cancelButtonClass: 'btn btn-danger m-2',
-        buttonsStyling: false,
-        showCancelButton: true,
-        confirmButtonText: "Yes",
-        cancelButtonText: "No",
-        closeOnConfirm: false,
-        closeOnCancel: false,
-        showLoaderOnConfirm: false
-      }).then(function(result) {
-        if (result.value) {
-            
-          checkbox.attr("disabled", true);
-          checkbox.prop("checked", true);
-          $("#server").attr("disabled", false);
-          $("#server").prop("checked", false);
-          $(".serverContent").hide();
-          $(".gmailContent").show();
-          $(".serverContent").find("input").attr("required", false);
-          $(".gmailContent").find("input").attr("required", true);
-          $("input[name='smtpIndex']").val('gmail');
-          swal.close();
-        } else {
-          swal.close();
-        }
-      });
-    } else {
-        
-      swal({
-        title: "Are you sure?",
-        type: "warning",
-        confirmButtonClass: 'btn btn-primary m-2',
-        cancelButtonClass: 'btn btn-danger m-2',
-        buttonsStyling: false,
-        showCancelButton: true,
-        confirmButtonText: "Yes",
-        cancelButtonText: "No",
-        closeOnConfirm: false,
-        closeOnCancel: false,
-        showLoaderOnConfirm: false
-        
-      }).then(function(result) {
-        if (result.value) {
-          checkbox.attr("disabled", true);
-          checkbox.prop("checked", true);
-          $("#gmail").attr("disabled", false);
-          $("#gmail").prop("checked", false);
-          $(".gmailContent").hide();
-          $(".serverContent").show();
-          $("input[name='smtpIndex']").val('server');
-          $(".serverContent").find("input").attr("required", true);
-          $(".gmailContent").find("input").attr("required", false);
-          swal.close();
-        } else {
-          swal.close();
-        }
-      });
-    }
-});
-
+// Troca o bloco visível conforme o tipo escolhido (Gmail SMTP / Server SMTP / Resend API)
+function smtpShow(type) {
+    var blocks = { gmail: $(".gmailContent"), server: $(".serverContent"), resend: $(".resendContent") };
+    $.each(blocks, function (key, el) {
+        var active = key === type;
+        el.toggle(active);
+        el.find("input").not("[type='password'], [name='resend_from_name']").attr("required", active);
+    });
+    // API Key só é obrigatória se ainda não houver uma salva
+    $("input[name='resend_api_key']").attr("required", type === 'resend' && <?php echo $row['resend_api_key'] == '' ? 'true' : 'false'; ?>);
+    $("input[name='smtpIndex']").val(type);
+}
+$("input[name='smtp_type']").on("change", function () { smtpShow($(this).val()); });
+smtpShow($("input[name='smtp_type']:checked").val() || 'gmail');
 $("#check_smtp_form").on("submit", function(e) {
     e.preventDefault();
     

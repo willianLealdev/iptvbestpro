@@ -7,11 +7,26 @@ use PHPMailer\PHPMailer\Exception;
 //Load Composer's autoloader
 require 'vendor/autoload.php';
 
+require_once(__DIR__.'/includes/mail_resend.php');
+resend_migrate($mysqli);
+
 $sql_smtp="SELECT * FROM tbl_smtp_settings where id='1'";
 $smtp_res=mysqli_query($mysqli,$sql_smtp);
 $smtp_row=mysqli_fetch_assoc($smtp_res);
 
-if($smtp_row['smtp_type']=='server'){
+// Provedor de envio: 'resend' usa a API da Resend; os demais usam SMTP (PHPMailer)
+define("MAIL_PROVIDER", $smtp_row['smtp_type'] == 'resend' ? 'resend' : 'smtp');
+
+if($smtp_row['smtp_type']=='resend'){
+    define("SMTP_HOST", '');
+    define("SMTP_EMAIL", $smtp_row['resend_from']);
+    define("SMTP_PASSWORD", '');
+    define("SMTP_SECURE", '');
+    define("PORT_NO", '');
+    define("RESEND_API_KEY", (string)$smtp_row['resend_api_key']);
+    define("RESEND_FROM_NAME", $smtp_row['resend_from_name'] != '' ? $smtp_row['resend_from_name'] : APP_NAME);
+}
+else if($smtp_row['smtp_type']=='server'){
     define("SMTP_HOST",$smtp_row['smtp_host']);
     define("SMTP_EMAIL",$smtp_row['smtp_email']);
     define("SMTP_PASSWORD",$smtp_row['smtp_password']);
@@ -35,6 +50,18 @@ else{
 
 function send_email($recipient_email,$recipient_name,$subject,$message, $is_test=false)
 {
+    if(MAIL_PROVIDER == 'resend'){
+        $r = resend_send(RESEND_API_KEY, SMTP_EMAIL, RESEND_FROM_NAME, $recipient_email, $recipient_name, $subject, $message);
+        if($is_test){
+            $_SESSION['msg'] = $r['ok'] ? "mail_sent_success" : "mail_sent_error";
+            if(!$r['ok']){
+                $_SESSION['class'] = "error";
+                $_SESSION['mail_error_detail'] = $r['error'];
+            }
+        }
+        return $r['ok'];
+    }
+
     $mail = new PHPMailer(false);                              // Passing `true` enables exceptions
 
     //Server settings
