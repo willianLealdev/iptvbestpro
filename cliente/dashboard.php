@@ -1,0 +1,115 @@
+<?php
+require_once(__DIR__."/_init.php");
+$customer = cl_require_login($mysqli);
+$cid = (int)$customer['id'];
+$currency = $customer['currency'] == 'USD' ? 'USD' : 'BRL';
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (!cl_csrf_ok()) {
+        cl_flash('error', 'Sessão expirada. Tente novamente.');
+    } else if (isset($_POST['subscribe'])) {
+        $r = subscription_create($mysqli, $customer, (int)$_POST['plan_id']);
+        cl_flash($r['ok'] ? 'success' : 'error', $r['msg']);
+    } else if (isset($_POST['cancel_sub'])) {
+        $ok = subscription_cancel($mysqli, (int)$_POST['sub_id'], $cid);
+        cl_flash($ok ? 'success' : 'error', $ok ? 'Pedido cancelado.' : 'Não foi possível cancelar este pedido.');
+    }
+    cl_redirect('dashboard.php');
+}
+
+$plans = sub_plans_list($mysqli);
+$subs = array();
+$res = mysqli_query($mysqli, "SELECT s.*, d.device_id AS device_mac, d.device_model FROM tbl_subscriptions s
+                              LEFT JOIN tbl_devices d ON d.id = s.device_pk
+                              WHERE s.customer_id = $cid AND s.status <> 'cancelled' ORDER BY s.id DESC");
+while ($res && $r = mysqli_fetch_assoc($res)) $subs[] = $r;
+$has_pending = false;
+foreach ($subs as $s) { if ($s['status'] == 'pending') $has_pending = true; }
+$instructions = trim(panel_config_get($mysqli, 'payment_instructions', ''));
+$contact = trim(panel_config_get($mysqli, 'payment_contact', ''));
+
+cl_header($customer, 'Minhas assinaturas', 'dashboard'); ?>
+
+<div class="cl-card p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h1 class="cl-title">Minhas assinaturas</h1>
+        <a href="#planos" class="btn cl-btn-green"><i class="ri-add-line"></i> Nova assinatura</a>
+    </div>
+    <p class="cl-muted">Cada assinatura ativa <b>1 aparelho</b>. Depois do pagamento você recebe um <b>código de ativação</b>: abra o app no aparelho, digite o código e pronto. O código só pode ser usado <b>uma vez</b>.</p>
+
+    <?php if ($subs) { ?>
+        <div class="row g-3">
+            <?php foreach ($subs as $s) { $st = subscription_state($s); ?>
+                <div class="col-lg-6">
+                    <div class="p-3 rounded h-100" style="border:1px solid #eef0f4;">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="fw-bold"><?php echo cl_e($s['plan_name']); ?> <span class="cl-muted fw-normal">· pedido #<?php echo (int)$s['id']; ?></span></div>
+                                <div class="small cl-muted"><?php echo money_format_currency($s['amount'], $s['currency']); ?> · <?php echo date('d/m/Y', $s['created_at']); ?></div>
+                            </div>
+                            <?php echo subscription_state_badge($st); ?>
+                        </div>
+
+                        <?php if ($st == 'pending') { ?>
+                            <div class="alert alert-warning small mt-3 mb-2">
+                                <b>Aguardando pagamento.</b><br>
+                                <?php echo $instructions != '' ? nl2br(cl_e($instructions)) : 'Fale com o suporte para efetuar o pagamento.'; ?>
+                                <?php if ($contact != '') { ?><br>Envie o comprovante com o número do pedido para: <b><?php echo cl_e($contact); ?></b><?php } ?>
+                            </div>
+                            <form method="post" onsubmit="return confirm('Cancelar este pedido?');">
+                                <?php echo cl_csrf_field(); ?>
+                                <input type="hidden" name="sub_id" value="<?php echo (int)$s['id']; ?>">
+                                <button type="submit" name="cancel_sub" class="btn btn-sm btn-outline-danger">Cancelar pedido</button>
+                            </form>
+                        <?php } else if ($st == 'code') { ?>
+                            <div class="mt-3 p-3 rounded text-center" style="background:#f7f9fe;">
+                                <div class="cl-muted small">Seu código de ativação</div>
+                                <div class="cl-code"><?php echo cl_e(trim(chunk_split($s['code'], 4, ' '))); ?></div>
+                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-copy="<?php echo cl_e($s['code']); ?>"><i class="ri-file-copy-line"></i> Copiar código</button>
+                                <div class="small cl-muted mt-2">Digite este código no app do aparelho que você quer ativar. Vale para <b>1 aparelho</b>, uma única vez.</div>
+                            </div>
+                        <?php } else { ?>
+                            <div class="mt-3 small">
+                                <div><span class="cl-muted">Aparelho:</span> <b><?php echo cl_e($s['device_model'] != '' ? $s['device_model'] : $s['device_mac']); ?></b></div>
+                                <div><span class="cl-muted">Ativado em:</span> <?php echo date('d/m/Y', $s['activated_at']); ?></div>
+                                <div><span class="cl-muted">Vence em:</span> <b class="<?php echo $st == 'expired' ? 'text-danger' : ''; ?>"><?php echo date('d/m/Y', $s['expires_at']); ?></b></div>
+                            </div>
+                            <?php if ($s['device_pk']) { ?>
+                                <a href="playlist.php?sub=<?php echo (int)$s['id']; ?>" class="btn btn-sm btn-primary mt-3"><i class="ri-play-list-line"></i> Playlists deste aparelho</a>
+                            <?php } ?>
+                        <?php } ?>
+                    </div>
+                </div>
+            <?php } ?>
+        </div>
+    <?php } else { ?>
+        <div class="cl-empty"><i class="ri-vip-crown-line"></i>Você ainda não tem assinaturas. Escolha um plano abaixo.</div>
+    <?php } ?>
+</div>
+
+<div class="cl-card p-4" id="planos">
+    <h2 class="cl-title fs-4 mb-1">Planos</h2>
+    <p class="cl-muted mb-4">Preços em <?php echo $currency == 'USD' ? 'dólar (US$)' : 'real (R$)'; ?>. Cada plano ativa 1 aparelho.</p>
+    <?php if ($plans) { ?>
+        <div class="row g-3">
+            <?php foreach ($plans as $p) { $price = plan_price($p, $currency); ?>
+                <div class="col-md-6 col-lg-4">
+                    <div class="cl-plan">
+                        <div class="fw-bold fs-5"><?php echo cl_e($p['name']); ?></div>
+                        <div class="cl-muted small mb-2"><?php echo (int)$p['months']; ?> <?php echo (int)$p['months'] == 1 ? 'mês' : 'meses'; ?><?php echo $p['description'] != '' ? ' · '.cl_e($p['description']) : ''; ?></div>
+                        <div class="cl-price mb-3"><?php echo $price > 0 ? money_format_currency($price, $currency) : '<span class="fs-6 cl-muted">Preço em breve</span>'; ?></div>
+                        <form method="post" class="mt-auto">
+                            <?php echo cl_csrf_field(); ?>
+                            <input type="hidden" name="plan_id" value="<?php echo (int)$p['id']; ?>">
+                            <button type="submit" name="subscribe" class="btn cl-btn-green w-100" <?php if ($price <= 0) { echo 'disabled'; } ?>><i class="ri-shopping-cart-2-line"></i> Assinar</button>
+                        </form>
+                    </div>
+                </div>
+            <?php } ?>
+        </div>
+    <?php } else { ?>
+        <div class="cl-empty"><i class="ri-price-tag-3-line"></i>Nenhum plano disponível no momento.</div>
+    <?php } ?>
+</div>
+
+<?php cl_footer(); ?>

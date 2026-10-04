@@ -174,7 +174,7 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
  */
 function playlist_current_dns($mysqli, $row){
     // Playlist cadastrada por URL: o servidor é o da própria URL, sem troca automática
-    if (isset($row['source']) && $row['source'] == 'url') return $row['dns_base'];
+    if (isset($row['source']) && $row['source'] != 'account') return $row['dns_base'];
     // O monitor (a cada 5 min) mantém dns_base atualizado. Só testa aqui se a verificação estiver atrasada.
     $stale_after = 600;
     $now = time();
@@ -438,7 +438,7 @@ function playlist_save($mysqli, $device_id, $name, $username, $password, $dns_ba
     $now_s = (string)$now;
     $name = mb_substr(trim(strip_tags((string)$name)), 0, 120);
     $created_by = mb_substr((string)$created_by, 0, 191);
-    $source = $source == 'url' ? 'url' : 'account';
+    $source = in_array($source, array('url', 'manual')) ? $source : 'account';
     mysqli_stmt_bind_param($stmt, 'ssssssssis', $type, $username, $password, $dns_base, $device_id, $now_s, $name, $created_by, $now, $source);
     $ok = mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
@@ -472,7 +472,7 @@ function playlist_delete($mysqli, $playlist_id, $device_id){
  */
 function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
     playlists_migrate($mysqli);
-    $mode = (isset($post['mode']) && $post['mode'] == 'url') ? 'url' : 'account';
+    $mode = (isset($post['mode']) && in_array($post['mode'], array('url', 'account_dns'))) ? $post['mode'] : 'account';
     $name = isset($post['playlist_name']) ? trim($post['playlist_name']) : '';
     if ($name == '') return array('ok' => false, 'msg' => 'Informe o nome da lista.');
 
@@ -484,6 +484,22 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
             return array('ok' => false, 'msg' => 'Erro ao salvar a playlist.');
         }
         return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada.');
+    }
+
+    // Account com DNS informado pelo cliente final: servidor fixo, sem busca automática
+    if ($mode == 'account_dns' && strpos((string)$created_by, 'cliente:') !== 0) $mode = 'account'; // só o cliente final informa o DNS
+    if ($mode == 'account_dns') {
+        $dns = dns_normalize(isset($post['dns']) ? $post['dns'] : '');
+        $username = trim(isset($post['username']) ? $post['username'] : '');
+        $password = trim(isset($post['password']) ? $post['password'] : '');
+        if ($dns == '') return array('ok' => false, 'msg' => 'Informe o DNS do servidor (ex.: http://servidor.com:8080).');
+        if ($username == '' || $password == '') return array('ok' => false, 'msg' => 'Informe usuário e senha.');
+        $probe = playlist_probe_parallel(array(array('base' => $dns)), $username, $password, 6);
+        if ($probe[0]['result'] == 'auth_fail') return array('ok' => false, 'msg' => 'O servidor respondeu, mas recusou este usuário e senha. Confira os dados.');
+        if (!playlist_save($mysqli, $device_id, $name, $username, $password, $dns, $created_by, 'manual')) {
+            return array('ok' => false, 'msg' => 'Erro ao salvar a playlist.');
+        }
+        return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada.'.($probe[0]['result'] == 'unreachable' ? ' Atenção: o servidor não respondeu agora; confira o DNS se a lista não abrir.' : ''));
     }
 
     // Account: procura sozinho qual DNS cadastrado aceita este usuário

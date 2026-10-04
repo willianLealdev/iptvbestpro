@@ -122,6 +122,7 @@
     if($status_filter == 'inactive'){ $where[] = "d.package = ''"; }
     if($owner_filter == 'admin'){ $where[] = "d.owner = 'admin'"; }
     else if($owner_filter == 'none'){ $where[] = "d.owner = ''"; }
+    else if($owner_filter == 'customer'){ $where[] = "d.owner = 'customer'"; }
     else if(ctype_digit($owner_filter)){ $where[] = "d.owner = 'reseller' AND d.reseller_id = ".(int)$owner_filter; }
     $where_sql = count($where) ? 'WHERE '.implode(' AND ', $where) : '';
 
@@ -263,6 +264,7 @@
                         <select name="owner" class="form-select dv-filter" onchange="this.form.submit()">
                             <option value="">Todos os revendedores</option>
                             <option value="admin" <?php if($owner_filter == 'admin'){ echo 'selected'; } ?>>Meus (admin)</option>
+                            <option value="customer" <?php if($owner_filter == 'customer'){ echo 'selected'; } ?>>Clientes (assinatura)</option>
                             <option value="none" <?php if($owner_filter == 'none'){ echo 'selected'; } ?>>Sem vínculo</option>
                             <?php foreach($all_resellers as $r){ ?>
                                 <option value="<?php echo $r['id']; ?>" <?php if($owner_filter === (string)$r['id']){ echo 'selected'; } ?>><?php echo htmlspecialchars($r['name']); ?></option>

@@ -43,7 +43,8 @@ function playlist_form_styles(){ ?>
 /**
  * $hidden_html: campos extras (ex.: CSRF). $dns_list: servidores ativos (só para informação).
  */
-function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = ''){ ?>
+// $account_dns = true (portal do cliente): na aba Account o próprio cliente digita o DNS do servidor
+function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = '', $account_dns = false){ ?>
 <div class="pl-box">
     <div class="pl-tabs" role="tablist">
         <button type="button" class="pl-tab active" data-pl-tab="url">URL</button>
@@ -68,12 +69,18 @@ function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = ''){ ?>
 
     <form method="post" class="pl-pane" data-pl-pane="account" autocomplete="off">
         <?php echo $hidden_html; ?>
-        <input type="hidden" name="mode" value="account">
+        <input type="hidden" name="mode" value="<?php echo $account_dns ? 'account_dns' : 'account'; ?>">
         <input type="hidden" name="playlist_submit" value="1">
         <div class="pl-field">
             <label>Playlist name</label>
             <input type="text" name="playlist_name" maxlength="120" required>
         </div>
+        <?php if ($account_dns) { ?>
+            <div class="pl-field">
+                <label>DNS (Host)</label>
+                <input type="text" name="dns" maxlength="255" required placeholder="http://servidor.com:8080">
+            </div>
+        <?php } ?>
         <div class="pl-field">
             <label>Username</label>
             <input type="text" name="username" maxlength="191" required autocomplete="off">
@@ -83,10 +90,16 @@ function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = ''){ ?>
             <input type="password" name="password" maxlength="191" required autocomplete="new-password">
             <button type="button" data-pl-eye title="Mostrar senha"><i class="ri-eye-line"></i></button>
         </div>
+        <?php if ($account_dns) { ?>
+            <div class="pl-hint">Informe o DNS (endereço do servidor), o usuário e a senha que você recebeu do seu provedor de IPTV.</div>
+            <button type="submit" class="pl-submit">Upload Now</button>
+        <?php } else { ?>
         <div class="pl-hint">O sistema procura sozinho qual servidor DNS aceita este usuário. Se o servidor cair ou você migrar o usuário, o app passa a usar o outro automaticamente.</div>
         <button type="submit" class="pl-submit" <?php if (!$dns_list) { echo 'disabled'; } ?>>Upload Now</button>
+        <?php } ?>
 
-        <?php if ($dns_list) { ?>
+        <?php if ($account_dns) { ?>
+        <?php } else if ($dns_list) { ?>
             <div class="pl-dns"><?php echo count($dns_list); ?> servidor(es) DNS ativo(s) para a busca automática.</div>
         <?php } else { ?>
             <div class="pl-dns pl-dns--warn">
@@ -137,7 +150,7 @@ function playlist_list_render($playlists, $hidden_html){ ?>
                     <div class="pl-item__icon"><i class="ri-play-list-2-line"></i></div>
                     <div class="pl-item__body">
                         <div class="pl-item__name"><?php echo htmlspecialchars(isset($p['playlist_name']) && $p['playlist_name'] != '' ? $p['playlist_name'] : $p['user_name']); ?></div>
-                        <?php if (!isset($p['source']) || $p['source'] != 'url') {
+                        <?php if (!isset($p['source']) || $p['source'] == 'account') {
                             $online = !isset($p['dns_status']) || $p['dns_status'] != 'offline'; ?>
                             <div class="pl-item__meta">
                                 <span class="pl-status <?php echo $online ? 'pl-status--on' : 'pl-status--off'; ?>"

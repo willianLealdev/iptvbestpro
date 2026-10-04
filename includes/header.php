@@ -173,6 +173,26 @@ $mysqli->set_charset("utf8mb4");
                         </li>
                     </ul>
                 </li>
+
+                <?php
+                    $cu_menu_open = in_array($currentFile, array("manage_customers.php", "manage_subscriptions.php", "manage_sub_plans.php"));
+                    $cu_pending = 0;
+                    $cu_tbl = mysqli_query($mysqli, "SHOW TABLES LIKE 'tbl_subscriptions'");
+                    if($cu_tbl && mysqli_num_rows($cu_tbl) > 0){
+                        $cu_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions WHERE status = 'pending'"));
+                        $cu_pending = (int)$cu_row['num'];
+                    } ?>
+                <li class="nsofts-sidebar-nav__item nsofts-has-menu">
+                    <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($cu_menu_open) { ?>open active<?php } ?>">
+                        <i class="ri-team-line nsofts-sidebar-nav__icon"></i>
+                        <span class="nsofts-sidebar-nav__text">Clientes<?php if($cu_pending > 0){ ?> <span class="badge bg-warning text-dark ms-1"><?php echo $cu_pending; ?></span><?php } ?></span>
+                    </a>
+                    <ul class="nsofts-submenu <?php if ($cu_menu_open) { ?>show<?php } ?>">
+                        <li><a href="manage_customers.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_customers.php") { ?>active<?php } ?>">Clientes</a></li>
+                        <li><a href="manage_subscriptions.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_subscriptions.php") { ?>active<?php } ?>">Assinaturas<?php if($cu_pending > 0){ ?> (<?php echo $cu_pending; ?>)<?php } ?></a></li>
+                        <li><a href="manage_sub_plans.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_sub_plans.php") { ?>active<?php } ?>">Planos</a></li>
+                    </ul>
+                </li>
                 <?php } ?>
 
                 <li class="nsofts-sidebar-nav__item">

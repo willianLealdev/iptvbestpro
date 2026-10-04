@@ -366,6 +366,7 @@ function devices_package_info($key){
     $packages = devices_packages();
     if (isset($packages[$key])) return $packages[$key];
     $legacy = array(
+        'sub'      => array('label' => 'Assinatura', 'class' => 'pk-year'),
         'year'     => array('label' => '1 Ano', 'class' => 'pk-year'),
         'trial'    => array('label' => 'Teste', 'class' => 'pk-trial'),
         'lifetime' => array('label' => 'Vitalício', 'class' => 'pk-lifetime'),
@@ -390,6 +391,10 @@ function devices_app_status($row){
 
 function devices_owner_label($mysqli, $row){
     if ($row['owner'] == 'admin') return 'Admin';
+    if ($row['owner'] == 'customer' && !empty($row['customer_id'])) {
+        $c = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT email FROM tbl_customers WHERE id = ".(int)$row['customer_id']));
+        return $c ? 'Cliente: '.$c['email'] : 'Cliente removido';
+    }
     if ($row['owner'] == 'reseller' && (int)$row['reseller_id'] > 0) {
         static $cache = array();
         $id = (int)$row['reseller_id'];
@@ -404,7 +409,7 @@ function devices_owner_label($mysqli, $row){
 
 // Nome público do dono (mostrado no app do cliente; não expõe e-mail)
 function devices_owner_name($mysqli, $row){
-    if ($row['owner'] == 'admin') return defined('APP_NAME') ? APP_NAME : 'Admin';
+    if ($row['owner'] == 'admin' || $row['owner'] == 'customer') return defined('APP_NAME') ? APP_NAME : 'Admin';
     if ($row['owner'] == 'reseller' && (int)$row['reseller_id'] > 0) {
         $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT name FROM tbl_resellers WHERE id = ".(int)$row['reseller_id']));
         return $r ? $r['name'] : '';
@@ -527,6 +532,11 @@ function devices_find($mysqli, $device_id, $application_id){
  */
 function devices_link($mysqli, $data){
     resellers_migrate($mysqli);
+    // Código numérico (8 dígitos) = assinatura de cliente final
+    require_once(__DIR__.'/customer_helper.php');
+    if (subscription_code_is_numeric(isset($data['code']) ? $data['code'] : '')) {
+        return subscription_activate_device($mysqli, $data);
+    }
     $ip = devices_client_ip();
     if (devices_link_rate_limited($mysqli, $ip)) {
         return array('ok' => false, 'msg' => 'Muitas tentativas. Tente novamente em 1 hora.', 'device' => null);
