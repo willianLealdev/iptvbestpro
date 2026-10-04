@@ -84,7 +84,7 @@
         
         $data = array(
           'onesignal_app_id' => trim($_POST['onesignal_app_id']),
-          'onesignal_rest_key' => trim($_POST['onesignal_rest_key']),
+          'onesignal_rest_key' => admin_secret_keep($_POST['onesignal_rest_key'], $settings_data['onesignal_rest_key']),
         );
         
         $settings_edit = Update('tbl_settings', $data, "WHERE id = '1'");
@@ -391,7 +391,7 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">OneSignal Rest Key</label>
                                         <div class="col-sm-10">
-                                            <input type="text" name="onesignal_rest_key" id="onesignal_rest_key" value="<?php echo $settings_data['onesignal_rest_key']; ?>"   class="form-control">
+                                            <input type="password" name="onesignal_rest_key" id="onesignal_rest_key" value="" autocomplete="new-password" placeholder="<?php echo $settings_data['onesignal_rest_key'] != '' ? 'Salva: '.htmlspecialchars(admin_secret_mask($settings_data['onesignal_rest_key'])).' (deixe em branco para manter)' : ''; ?>" class="form-control">
                                         </div>
                                     </div>
                                     <button type="submit" name="notification_submit" class="btn btn-primary" style="min-width: 120px;">Save</button>

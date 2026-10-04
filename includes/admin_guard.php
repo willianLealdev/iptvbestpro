@@ -8,6 +8,19 @@
  *  4. Sessão: expira após 8 horas sem uso.
  */
 
+// Segredos nunca vão para o HTML: mostra só o começo e o fim (ex.: "sk_l••••••••3f9a")
+function admin_secret_mask($v){
+    $v = (string)$v;
+    if ($v === '') return '';
+    if (strlen($v) <= 8) return str_repeat('•', 8);
+    return substr($v, 0, 4).str_repeat('•', 8).substr($v, -4);
+}
+// Campo de segredo enviado vazio = manter o valor salvo
+function admin_secret_keep($posted, $current){
+    $posted = trim((string)$posted);
+    return $posted === '' ? (string)$current : $posted;
+}
+
 function admin_guard_same_origin(){
     $host = isset($_SERVER['HTTP_HOST']) ? strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'])) : '';
     $src = !empty($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : (!empty($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '');

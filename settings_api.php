@@ -18,7 +18,7 @@
     if(isset($_POST['submit_general'])){
         
         $data = array(
-            'account_delete_intruction'  =>  $_POST['account_delete_intruction']
+            'account_delete_intruction'  =>  admin_secret_keep($_POST['account_delete_intruction'], $settings_data['account_delete_intruction'])
         );
         $settings_edit=Update('tbl_settings', $data, "WHERE id = '1'");
         
@@ -65,7 +65,7 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">TMDb Access Token <a style="color: #f44336c7;" href="https://docs.nemosofts.com/streambox-app/admin-panel/themoviedb" target="_blank">link</a></label>
                                         <div class="col-sm-10">
-                                            <input type="text" class="form-control" name="account_delete_intruction" id="account_delete_intruction" value="<?php echo $settings_data['account_delete_intruction']?>" >
+                                            <input type="password" class="form-control" name="account_delete_intruction" id="account_delete_intruction" value="" autocomplete="new-password" placeholder="<?php echo $settings_data['account_delete_intruction'] != '' ? 'Salvo: '.htmlspecialchars(admin_secret_mask($settings_data['account_delete_intruction'])).' (deixe em branco para manter)' : ''; ?>" >
                                         </div>
                                     </div>
                                     <button type="submit" name="submit_general" class="btn btn-primary" style="min-width: 120px;">Save</button>

@@ -20,6 +20,7 @@
         
         $key = generateStrongPassword();
         
+        $_POST['envato_purchase_code'] = admin_secret_keep($_POST['envato_purchase_code'], $settings_row['envato_purchase_code']);
         $envato = verify_envato_purchase_code(trim($_POST['envato_purchase_code']), '47641297');
         
         if($envato['status'] != true){
@@ -102,7 +103,7 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Envato Purchase Code</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="envato_purchase_code"class="form-control" placeholder="Enter your item purchase code" value="<?php echo $settings_row['envato_purchase_code'];?>" autocomplete="off" required>
+                                    <input type="text" name="envato_purchase_code"class="form-control" placeholder="<?php echo $settings_row['envato_purchase_code'] != '' ? 'Salvo: '.htmlspecialchars(admin_secret_mask($settings_row['envato_purchase_code'])).' (deixe em branco para manter)' : 'Enter your item purchase code'; ?>" value="" autocomplete="off" <?php echo $settings_row['envato_purchase_code'] == '' ? 'required' : ''; ?>>
                                     <small id="sh-text1" class="form-text text-muted"><a style="color: #f44336c7;" href="https://help.market.envato.com/hc/en-us/articles/202822600-Where-Is-My-Purchase-Code" target="_blank">Where Is My Purchase Code?</a></small>
                                 </div>
                             </div>
@@ -110,7 +111,7 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">ApiKey</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="envato_api_key" class="form-control" placeholder="<?php echo $settings_row['envato_api_key'];?>"  disabled readonly>
+                                    <input type="text" name="envato_api_key" class="form-control" placeholder="<?php echo htmlspecialchars(admin_secret_mask($settings_row['envato_api_key'])); ?>"  disabled readonly>
                                     <small id="sh-text1" class="form-text text-muted col-md-6" style="padding: 0px;">Click the Save button This key will be generated automatically.</small>
                                 </div>
                             </div>

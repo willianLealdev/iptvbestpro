@@ -38,6 +38,11 @@ if ($mysqli->connect_errno) {
     if (!function_exists('__')) { function __($t){ $a = func_get_args(); array_shift($a); $r = array(); foreach ($a as $i => $v) $r['{'.$i.'}'] = $v; return strtr($t, $r); } }
     if (!function_exists('i18n_switcher')) { function i18n_switcher($theme = 'light', $prefix = ''){ return ''; } }
     if (!function_exists('i18n_switcher_fixed')) { function i18n_switcher_fixed($theme = 'light'){ return ''; } }
+    // Buscadores: só o site público pode aparecer no Google; painel, revenda, cliente, pagamento e API nunca
+    if (PHP_SAPI !== 'cli' && !headers_sent()) {
+        $__script = str_replace(chr(92), '/', isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '');
+        if (!in_array($__script, array('/index.php', '/terms.php', '/privacy_policy.php'), true)) header('X-Robots-Tag: noindex, nofollow, noarchive');
+    }
     
     if(isset($_SESSION['id'])){
     	

@@ -40,7 +40,7 @@
         $data = array(
             'user_type'=>'xui',											 
             'user_name'  => cleanInput($_POST['user_name']),
-            'user_password'  =>  cleanInput($_POST['user_password']),
+            'user_password'  =>  cleanInput(admin_secret_keep($_POST['user_password'], isset($user_row['user_password']) ? $user_row['user_password'] : '')),
             'dns_base'  =>  $base_url,
             'device_id'  =>  cleanInput($_POST['device_id']),
         );
@@ -96,7 +96,7 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Password</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="user_password" value="<?php if(isset($_GET['user_id'])){echo $user_row['user_password'];}?>" class="form-control" required>
+                                    <input type="password" name="user_password" value="" autocomplete="new-password" placeholder="<?php echo isset($_GET['user_id']) ? 'Senha salva (deixe em branco para manter)' : ''; ?>" class="form-control" <?php echo isset($_GET['user_id']) ? '' : 'required'; ?>>
                                 </div>
                             </div>
                             
