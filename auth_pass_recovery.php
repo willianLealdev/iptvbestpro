@@ -177,7 +177,7 @@
                                 <div class="mb-3">
                                     <button  type="submit" name="submit" class="btn btn-primary btn-lg w-100">Send mail</button>
                                 </div>
-                                <p class="text-center">Go to login page? <a href="index.php" class="text-decoration-none">Login</a></p>
+                                <p class="text-center">Go to login page? <a href="gerencia.php" class="text-decoration-none">Login</a></p>
                                 
                             </form>
                         </div>

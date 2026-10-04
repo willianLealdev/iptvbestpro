@@ -8,7 +8,7 @@
     if(!isset($_SESSION['admin_type'])){
         if($_SESSION['admin_type'] == 0){
             session_destroy();
-            header( "Location:index.php");
+            header( "Location:gerencia.php");
             exit;
         }
     }

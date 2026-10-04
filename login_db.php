@@ -8,14 +8,14 @@ if($username=="") {
     
 	$_SESSION['class']="error";
 	$_SESSION['msg']="1"; 
-	header( "Location:index.php");
+	header( "Location:gerencia.php");
 	exit;
 	
 } else if($password=="") {
     
 	$_SESSION['class']="error";
 	$_SESSION['msg']="2"; 
-	header( "Location:index.php");
+	header( "Location:gerencia.php");
 	exit;	
 
 } else {
@@ -30,7 +30,7 @@ if($username=="") {
             
             $_SESSION['class']="error";
             $_SESSION['msg']="approve_admin"; 
-            header( "Location:index.php");
+            header( "Location:gerencia.php");
             exit; 
 			
 		} else {
@@ -51,7 +51,7 @@ if($username=="") {
                 
                 $_SESSION['class']="error";
                 $_SESSION['msg']="4"; 
-                header( "Location:index.php");
+                header( "Location:gerencia.php");
                 exit;
                 
             }
@@ -61,7 +61,7 @@ if($username=="") {
         
 		$_SESSION['class']="error";
 		$_SESSION['msg']="4"; 
-		header( "Location:index.php");
+		header( "Location:gerencia.php");
 		exit; 
 	}
 }
