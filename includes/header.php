@@ -295,11 +295,11 @@ $mysqli->set_charset("utf8mb4");
                         </li>
                         
                         <li class="nsofts-sidebar-nav__item nsofts-has-menu">
-                            <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($currentFile == "settings_theme.php" or $currentFile == "settings_api.php" or $currentFile == "settings_ads.php" or $currentFile == "settings_app.php" or $currentFile == "settings_app_ui.php" or $currentFile == "settings.php" or $currentFile == "settings_web.php" or $currentFile == "create_sidebar.php" or $currentFile == "manage_movie_ui.php") { ?>open active<?php } ?>">
+                            <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($currentFile == "settings_theme.php" or $currentFile == "settings_payments.php" or $currentFile == "manage_movie_ui.php" or $currentFile == "settings_api.php" or $currentFile == "settings_ads.php" or $currentFile == "settings_app.php" or $currentFile == "settings_app_ui.php" or $currentFile == "settings.php" or $currentFile == "settings_web.php" or $currentFile == "create_sidebar.php" or $currentFile == "manage_movie_ui.php") { ?>open active<?php } ?>">
                                 <i class="ri-settings-line nsofts-sidebar-nav__icon"></i>
                                 <span class="nsofts-sidebar-nav__text">Settings</span>
                             </a>
-                            <ul class="nsofts-submenu <?php if ($currentFile == "settings_theme.php" or $currentFile == "settings_api.php" or $currentFile == "settings_ads.php" or $currentFile == "settings_app.php" or $currentFile == "settings.php" or $currentFile == "settings_app_ui.php" or $currentFile == "settings_web.php" or $currentFile == "create_sidebar.php" or $currentFile == "manage_movie_ui.php") { ?>show<?php } ?>">
+                            <ul class="nsofts-submenu <?php if ($currentFile == "settings_theme.php" or $currentFile == "settings_payments.php" or $currentFile == "manage_movie_ui.php" or $currentFile == "settings_api.php" or $currentFile == "settings_ads.php" or $currentFile == "settings_app.php" or $currentFile == "settings.php" or $currentFile == "settings_app_ui.php" or $currentFile == "settings_web.php" or $currentFile == "create_sidebar.php" or $currentFile == "manage_movie_ui.php") { ?>show<?php } ?>">
                                 <li>
                                     <a href="settings.php" class="nsofts-submenu__link <?php if ($currentFile == "settings.php") { ?>active<?php } ?>">Admin Settings</a>
                                 </li>
@@ -315,6 +315,11 @@ $mysqli->set_charset("utf8mb4");
                                 <li>
                                     <a href="manage_movie_ui.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_movie_ui.php") { ?>active<?php } ?>">Pôsteres (MovieUI)</a>
                                 </li>
+                                <?php if(isset($_SESSION['admin_type']) && $_SESSION['admin_type'] == 3){ ?>
+                                <li>
+                                    <a href="settings_payments.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_payments.php") { ?>active<?php } ?>">Gateways de Pagamento</a>
+                                </li>
+                                <?php } ?>
                                 <li>
                                     <a href="settings_web.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_web.php") { ?>active<?php } ?>">Web Settings</a>
                                 </li>

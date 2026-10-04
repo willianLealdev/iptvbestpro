@@ -25,6 +25,9 @@ $res = mysqli_query($mysqli, "SELECT s.*, d.device_id AS device_mac, d.device_mo
 while ($res && $r = mysqli_fetch_assoc($res)) $subs[] = $r;
 $has_pending = false;
 foreach ($subs as $s) { if ($s['status'] == 'pending') $has_pending = true; }
+require_once(__DIR__."/../includes/payment_helper.php");
+$pix_on = pay_mp_enabled($mysqli);
+$card_on = pay_stripe_enabled($mysqli);
 $instructions = trim(panel_config_get($mysqli, 'payment_instructions', ''));
 $contact = trim(panel_config_get($mysqli, 'payment_contact', ''));
 
@@ -50,12 +53,35 @@ cl_header($customer, 'Minhas assinaturas', 'dashboard'); ?>
                             <?php echo subscription_state_badge($st); ?>
                         </div>
 
-                        <?php if ($st == 'pending') { ?>
-                            <div class="alert alert-warning small mt-3 mb-2">
-                                <b>Aguardando pagamento.</b><br>
-                                <?php echo $instructions != '' ? nl2br(cl_e($instructions)) : 'Fale com o suporte para efetuar o pagamento.'; ?>
-                                <?php if ($contact != '') { ?><br>Envie o comprovante com o número do pedido para: <b><?php echo cl_e($contact); ?></b><?php } ?>
-                            </div>
+                        <?php if ($st == 'pending') {
+                            $can_pix = $pix_on && $s['currency'] == 'BRL'; ?>
+                            <?php if ($can_pix || $card_on) { ?>
+                                <div class="d-flex flex-wrap gap-2 mt-3 mb-2">
+                                    <?php if ($can_pix) { ?>
+                                        <form method="post" action="../pagamento/checkout.php" style="flex:1;">
+                                            <?php echo cl_csrf_field(); ?>
+                                            <input type="hidden" name="as" value="customer"><input type="hidden" name="type" value="sub">
+                                            <input type="hidden" name="id" value="<?php echo (int)$s['id']; ?>"><input type="hidden" name="method" value="pix">
+                                            <button type="submit" class="btn cl-btn-green w-100"><i class="ri-qr-code-line"></i> Pagar com Pix</button>
+                                        </form>
+                                    <?php } ?>
+                                    <?php if ($card_on) { ?>
+                                        <form method="post" action="../pagamento/checkout.php" style="flex:1;">
+                                            <?php echo cl_csrf_field(); ?>
+                                            <input type="hidden" name="as" value="customer"><input type="hidden" name="type" value="sub">
+                                            <input type="hidden" name="id" value="<?php echo (int)$s['id']; ?>"><input type="hidden" name="method" value="card">
+                                            <button type="submit" class="btn btn-primary w-100"><i class="ri-bank-card-line"></i> Pagar com cartão</button>
+                                        </form>
+                                    <?php } ?>
+                                </div>
+                                <div class="small cl-muted mb-2">Assim que o pagamento for aprovado, o código de ativação aparece aqui automaticamente.</div>
+                            <?php } else { ?>
+                                <div class="alert alert-warning small mt-3 mb-2">
+                                    <b>Aguardando pagamento.</b><br>
+                                    <?php echo $instructions != '' ? nl2br(cl_e($instructions)) : 'Fale com o suporte para efetuar o pagamento.'; ?>
+                                    <?php if ($contact != '') { ?><br>Envie o comprovante com o número do pedido para: <b><?php echo cl_e($contact); ?></b><?php } ?>
+                                </div>
+                            <?php } ?>
                             <form method="post" onsubmit="return confirm('Cancelar este pedido?');">
                                 <?php echo cl_csrf_field(); ?>
                                 <input type="hidden" name="sub_id" value="<?php echo (int)$s['id']; ?>">

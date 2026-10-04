@@ -5,6 +5,9 @@ $rid = (int)$reseller['id'];
 
 $price = credit_price($mysqli);
 $min = max(1, (int)panel_config_get($mysqli, 'credit_min', '1'));
+require_once(__DIR__."/../includes/payment_helper.php");
+$pix_on = pay_mp_enabled($mysqli);
+$card_on = pay_stripe_enabled($mysqli);
 $instructions = trim(panel_config_get($mysqli, 'payment_instructions', ''));
 $contact = trim(panel_config_get($mysqli, 'payment_contact', ''));
 
@@ -87,6 +90,24 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
                                 <td><?php echo credit_order_status_badge($o['status']); ?></td>
                                 <td>
                                     <?php if ($o['status'] == 'pending') { ?>
+                                        <div class="d-flex flex-wrap gap-1 justify-content-center mb-1">
+                                            <?php if ($pix_on) { ?>
+                                                <form method="post" action="../pagamento/checkout.php">
+                                                    <?php echo rv_csrf_field(); ?>
+                                                    <input type="hidden" name="as" value="reseller"><input type="hidden" name="type" value="credit">
+                                                    <input type="hidden" name="id" value="<?php echo (int)$o['id']; ?>"><input type="hidden" name="method" value="pix">
+                                                    <button type="submit" class="btn btn-sm rv-btn-green"><i class="ri-qr-code-line"></i> Pix</button>
+                                                </form>
+                                            <?php } ?>
+                                            <?php if ($card_on) { ?>
+                                                <form method="post" action="../pagamento/checkout.php">
+                                                    <?php echo rv_csrf_field(); ?>
+                                                    <input type="hidden" name="as" value="reseller"><input type="hidden" name="type" value="credit">
+                                                    <input type="hidden" name="id" value="<?php echo (int)$o['id']; ?>"><input type="hidden" name="method" value="card">
+                                                    <button type="submit" class="btn btn-sm btn-primary"><i class="ri-bank-card-line"></i> Cartão</button>
+                                                </form>
+                                            <?php } ?>
+                                        </div>
                                         <form method="post" onsubmit="return confirm('Cancelar o pedido #<?php echo (int)$o['id']; ?>?');">
                                             <?php echo rv_csrf_field(); ?>
                                             <input type="hidden" name="order_id" value="<?php echo (int)$o['id']; ?>">
