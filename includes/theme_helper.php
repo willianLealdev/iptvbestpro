@@ -7,28 +7,15 @@
  */
 
 require_once(__DIR__."/reseller_helper.php"); // panel_config_get / panel_config_set
+require_once(__DIR__."/theme_models.php");    // campos de cada modelo
 
 define('THEME_BESTPRO_ID', '8');
 define('THEME_UPLOAD_MAX_BYTES', 5 * 1024 * 1024);
 define('THEME_MAX_SAVED', 30);
 
+// Valores originais do modelo (ficha em theme_models.php)
 function theme_defaults($theme_id = THEME_BESTPRO_ID){
-    return array(
-        // Nos modelos prontos, começa mantendo as cores originais (troca só logo/fundo/banner/nome)
-        'theme_keep_colors'=> ((string)$theme_id === THEME_BESTPRO_ID) ? '0' : '1',
-        'theme_brand_text' => '',        // nome exibido ao lado do logo (vazio = nome padrão)
-        'theme_show_name'  => '1',       // 0 = mostra só o logo
-        'theme_primary'    => '#3B6CF6', // botões, item selecionado, foco do controle remoto
-        'theme_accent'     => '#22C55E', // destaques, selos "AO VIVO", progresso
-        'theme_background' => '#0B1220', // fundo das telas
-        'theme_surface'    => '#131C2E', // cartões, menus e barras
-        'theme_text'       => '#FFFFFF', // texto principal
-        'theme_bg_image'   => '',        // imagem de fundo (arquivo em images/)
-        'theme_bg_overlay' => '60',      // escurecimento da imagem de fundo (0-90 %)
-        'theme_logo'       => '',        // logo da tela inicial (vazio = logo do app)
-        'theme_banner'     => '',        // banner/destaque da tela inicial
-        'theme_corner'     => '14',      // arredondamento dos cartões (px)
-    );
+    return theme_model_defaults($theme_id);
 }
 
 // Modelos prontos do app (App UI)
@@ -338,64 +325,72 @@ function theme_file_prefix($scope, $theme_id = THEME_BESTPRO_ID){
 }
 
 /**
- * Processa o formulário de personalização (nome exibido, cores, sliders, imagens).
+ * Processa o formulário do modelo $base (campos da ficha + nome exibido + logo).
  * Retorna array('settings' => array, 'errors' => array). Não grava: quem chama decide onde salvar.
- * $copy_images = true ("Salvar como novo"): imagens antigas não são apagadas, pois o tema original continua usando.
+ * $copy_images = true: imagens antigas não são apagadas aqui (podem estar em uso por outro tema salvo).
  */
-function theme_process_form($current, $post, $file_prefix, $copy_images = false){
+function theme_process_form($current, $post, $file_prefix, $copy_images, $base){
     $errors = array();
-    $out = $current;
-    foreach (array('theme_primary', 'theme_accent', 'theme_background', 'theme_surface', 'theme_text') as $key) {
-        $c = theme_valid_color(isset($post[$key]) ? $post[$key] : '');
-        if ($c === null) { $errors[] = 'Cor inválida.'; continue; }
-        $out[$key] = $c;
-    }
-    $out['theme_keep_colors'] = !empty($post['theme_keep_colors']) ? '1' : '0';
+    $out = array_merge(theme_defaults($base), $current);
     $out['theme_show_name'] = !empty($post['theme_show_name']) ? '1' : '0';
     $out['theme_brand_text'] = mb_substr(trim(strip_tags(isset($post['theme_brand_text']) ? $post['theme_brand_text'] : '')), 0, 40);
-    $out['theme_bg_overlay'] = (string)max(0, min(90, (int)(isset($post['theme_bg_overlay']) ? $post['theme_bg_overlay'] : 60)));
-    $out['theme_corner'] = (string)max(0, min(32, (int)(isset($post['theme_corner']) ? $post['theme_corner'] : 14)));
 
-    foreach (array('theme_logo' => 'logo', 'theme_bg_image' => 'bg', 'theme_banner' => 'banner') as $key => $kind) {
-        if (!empty($post['remove_'.$key])) {
-            if (!$copy_images) theme_delete_file($current[$key]);
-            $out[$key] = '';
-            continue;
-        }
-        $up = theme_upload($key, $file_prefix.$kind);
-        if (!$up['ok']) { $errors[] = $up['error']; continue; }
-        if ($up['file'] !== null) {
-            if (!$copy_images) theme_delete_file($current[$key]);
-            $out[$key] = $up['file'];
+    $fields = theme_model_schema($base);
+    $fields['theme_logo'] = array('type' => 'image');
+    foreach ($fields as $key => $f) {
+        if ($f['type'] == 'color') {
+            $c = theme_valid_color(isset($post[$key]) ? $post[$key] : '');
+            if ($c === null) { $errors[] = 'Cor inválida.'; continue; }
+            $out[$key] = $c;
+        } else if ($f['type'] == 'toggle') {
+            $out[$key] = !empty($post[$key]) ? '1' : '0';
+        } else if ($f['type'] == 'range') {
+            $out[$key] = (string)max((int)$f['min'], min((int)$f['max'], (int)(isset($post[$key]) ? $post[$key] : $f['default'])));
+        } else if ($f['type'] == 'image') {
+            if (!empty($post['remove_'.$key])) {
+                if (!$copy_images) theme_delete_file($current[$key]);
+                $out[$key] = '';
+                continue;
+            }
+            $kind = preg_replace('/[^a-z]/', '', str_replace('theme_', '', $key));
+            $up = theme_upload($key, $file_prefix.$kind);
+            if (!$up['ok']) { $errors[] = $up['error']; continue; }
+            if ($up['file'] !== null) {
+                if (!$copy_images && isset($current[$key])) theme_delete_file($current[$key]);
+                $out[$key] = $up['file'];
+            }
         }
     }
-    return array('settings' => $out, 'errors' => array_values(array_unique($errors)));
+    // Mantém só as chaves da ficha do modelo
+    $clean = array();
+    foreach (theme_defaults($base) as $key => $default) $clean[$key] = isset($out[$key]) ? $out[$key] : $default;
+    return array('settings' => $clean, 'errors' => array_values(array_unique($errors)));
 }
 
 /* ---------- API ---------- */
 
-// Monta o theme_config enviado ao app (URLs completas das imagens)
-// customized = 0: o app usa o modelo original. keep_original_colors = 1: troca só logo/fundo/banner/nome.
+// Monta o theme_config enviado ao app (URLs completas das imagens).
+// customized = 0: o app usa o modelo original. model_settings: campos da ficha do modelo (cores, liga/desliga, níveis).
 function theme_payload_from($t, $base_url, $brand_name, $owner, $theme_id, $customized){
     $img = function ($file) use ($base_url) { return $file != '' ? rtrim($base_url, '/').'/images/'.$file : ''; };
+    $t = array_merge(theme_defaults($theme_id), (array)$t);
     $brand = ($customized && $t['theme_brand_text'] != '') ? $t['theme_brand_text'] : $brand_name;
+    $model = array();
+    foreach (theme_model_schema($theme_id) as $key => $f) {
+        if ($f['type'] == 'image' || $f['type'] == 'info') continue;
+        $model[$key] = (string)$t[$key];
+    }
     return array(
-        'theme_id'             => (string)$theme_id,
-        'customized'           => $customized ? '1' : '0',
-        'keep_original_colors' => ($customized && $t['theme_keep_colors'] == '1') ? '1' : '0',
-        'brand_owner'          => $owner,            // 'admin' | 'reseller'
-        'brand_name'           => $brand,
-        'show_brand_name'      => ($customized && $t['theme_show_name'] == '0') ? '0' : '1',
-        'primary_color'        => $t['theme_primary'],
-        'accent_color'         => $t['theme_accent'],
-        'background_color'     => $t['theme_background'],
-        'surface_color'        => $t['theme_surface'],
-        'text_color'           => $t['theme_text'],
-        'background_image'     => $customized ? $img($t['theme_bg_image']) : '',
-        'background_overlay'   => (string)max(0, min(90, (int)$t['theme_bg_overlay'])),
-        'logo'                 => $customized ? $img($t['theme_logo']) : '',
-        'banner'               => $customized ? $img($t['theme_banner']) : '',
-        'corner_radius'        => (string)max(0, min(32, (int)$t['theme_corner'])),
+        'theme_id'           => (string)$theme_id,
+        'customized'         => $customized ? '1' : '0',
+        'brand_owner'        => $owner,            // 'admin' | 'reseller'
+        'brand_name'         => $brand,
+        'show_brand_name'    => ($customized && $t['theme_show_name'] == '0') ? '0' : '1',
+        'logo'               => $customized ? $img($t['theme_logo']) : '',
+        'background_image'   => ($customized && isset($t['theme_bg_image'])) ? $img($t['theme_bg_image']) : '',
+        'background_overlay' => isset($t['theme_bg_overlay']) ? (string)$t['theme_bg_overlay'] : '60',
+        'banner'             => ($customized && isset($t['theme_banner'])) ? $img($t['theme_banner']) : '',
+        'model_settings'     => $customized ? $model : new stdClass(),
     );
 }
 

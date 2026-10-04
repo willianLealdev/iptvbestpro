@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $allowed) {
         if ($name == '') { rv_flash('error', 'Dê um nome ao tema para salvar.'); rv_redirect($back); }
         if ($as_new && theme_saved_count($mysqli, $scope) >= THEME_MAX_SAVED) { rv_flash('error', 'Limite de '.THEME_MAX_SAVED.' temas salvos.'); rv_redirect($back); }
         $old_files = array($current['theme_logo'], $current['theme_bg_image'], $current['theme_banner']);
-        $r = theme_process_form($current, $_POST, theme_file_prefix($scope), true);
+        $r = theme_process_form($current, $_POST, theme_file_prefix($scope), true, $base);
         $id = theme_saved_save($mysqli, $scope, $as_new ? 0 : $editing_saved['id'], $name, $base, $r['settings']);
         if ($id && !$as_new) theme_cleanup_files($mysqli, $old_files);
         if ($id && !empty($_POST['activate_theme'])) theme_set_active($mysqli, $scope, $base, $id);
@@ -74,6 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $allowed) {
 }
 
 $saved_list = theme_saved_list($mysqli, $scope);
+$movie_poster = theme_movie_poster($mysqli);
+$movie_hero = $movie_poster != '' ? '../images/'.$movie_poster : '../assets/images/themes/'.'MovieUI.png';
+
 $in_use = $editing_saved && (int)$active['saved_id'] === (int)$editing_saved['id'];
 
 rv_header($mysqli, $reseller, 'Minha Marca', 'theme');
@@ -108,7 +111,7 @@ theme_form_styles(); ?>
 </form>
 
 <div class="rv-card p-4 mb-4">
-    <?php theme_gallery_render($saved_list, $active, '../assets/images/themes/', $self, rv_csrf_field(), $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base, array('img_base' => '../images/', 'fallback_logo' => '../images/'.APP_LOGO, 'app_name' => $default_name)); ?>
+    <?php theme_gallery_render($saved_list, $active, '../assets/images/themes/', $self, rv_csrf_field(), $editing_saved ? 's'.$editing_saved['id'] : 'b'.$base, array('img_base' => '../images/', 'fallback_logo' => '../images/'.APP_LOGO, 'app_name' => $default_name, 'movie_hero' => $movie_hero)); ?>
 </div>
 
 <div id="editor" class="d-flex align-items-center gap-2 mb-3">
@@ -143,10 +146,10 @@ theme_form_styles(); ?>
             'fallback_logo' => '../images/'.APP_LOGO,
             'side_html' => $side_html,
             'actions_html' => $actions_html,
-            'allow_keep_colors' => $base !== THEME_BESTPRO_ID,
             'theme_id' => $base,
-            'model_img_base' => '../assets/images/themes/',
-            'model_name' => $catalog[$base]['name'],
+            'movie_hero' => $movie_hero,
+                'posters_url' => '',
+                'model_name' => $catalog[$base]['name'],
             'saved_name' => $editing_saved ? $editing_saved['name'] : '',
         ));
     ?>

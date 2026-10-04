@@ -331,17 +331,19 @@
                             <div>
                                 <div class="fw-bold fs-5"><?php echo htmlspecialchars($dash_saved ? $dash_saved['name'] : $dash_catalog[$dash_active['base']]['name'].' (original)'); ?></div>
                                 <div class="text-muted small">Modelo: <?php echo htmlspecialchars($dash_catalog[$dash_active['base']]['name']); ?></div>
-                                <?php if ($dash_saved && $dash_saved['settings_arr']['theme_keep_colors'] != '1') { ?>
-                                    <div class="d-flex gap-2 mt-2">
-                                        <?php foreach (array('theme_primary', 'theme_accent', 'theme_background', 'theme_surface', 'theme_text') as $k) { ?>
-                                            <span title="<?php echo htmlspecialchars($dash_saved['settings_arr'][$k]); ?>" style="width:28px;height:28px;border-radius:50%;background:<?php echo htmlspecialchars($dash_saved['settings_arr'][$k]); ?>;box-shadow:0 0 0 1px rgba(0,0,0,.12);display:inline-block;"></span>
-                                        <?php } ?>
-                                    </div>
-                                <?php } ?>
                             </div>
                             <a href="settings_theme.php" class="btn btn-outline-primary ms-auto"><i class="ri-palette-line"></i> Temas do App</a>
                         </div>
-                        <?php if ($dash_active['base'] != '8') { ?>
+                        <?php if ($dash_saved) {
+                            // Tema personalizado em uso: mostra como ele aparece no app
+                            require_once("includes/theme_preview.php");
+                            theme_preview_styles();
+                            $dash_poster = theme_movie_poster($mysqli);
+                            echo '<div style="max-width:900px;border-radius:10px;overflow:hidden;">';
+                            theme_mini_preview($dash_saved['settings_arr'], $dash_active['base'], 'images/', 'images/'.APP_LOGO, APP_NAME,
+                                               $dash_poster != '' ? 'images/'.$dash_poster : 'assets/images/themes/MovieUI.png');
+                            echo '</div>';
+                        } else if ($dash_active['base'] != '8') { ?>
                             <img src="assets/images/themes/<?php echo $theme_img; ?>.png" alt="" style="width: 100%; max-width: 900px; height: auto; border-radius: 10px;">
                         <?php } ?>
                     </div>
