@@ -140,6 +140,9 @@ function resellers_migrate($mysqli){
     }
 
     dns_unify($mysqli);
+
+    require_once(__DIR__.'/brand_helper.php');
+    brand_apply_defaults($mysqli);
 }
 
 /**
