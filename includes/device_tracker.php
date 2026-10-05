@@ -88,6 +88,8 @@ function devices_normalize_platform($platform){
         'firestick' => 'firestick', 'firetv' => 'firestick', 'fire_tv' => 'firestick', 'amazon' => 'firestick',
         'chromebook' => 'chromebook',
         'auto' => 'android_auto', 'android_auto' => 'android_auto',
+        'lg_tv' => 'lg_tv', 'webos' => 'lg_tv', 'lg' => 'lg_tv',
+        'samsung_tv' => 'samsung_tv', 'tizen' => 'samsung_tv', 'samsung' => 'samsung_tv',
     );
     return isset($map[$p]) ? $map[$p] : 'android';
 }
@@ -100,6 +102,8 @@ function devices_platform_labels(){
         'firestick'    => array('label' => 'Fire TV Stick',   'icon' => 'ri-fire-line',       'color' => '#f97316'),
         'chromebook'   => array('label' => 'Chromebook',      'icon' => 'ri-macbook-line',    'color' => '#0ea5e9'),
         'android_auto' => array('label' => 'Android Auto',    'icon' => 'ri-car-line',        'color' => '#64748b'),
+        'lg_tv'        => array('label' => 'TV LG (webOS)',   'icon' => 'ri-tv-line',         'color' => '#a50034'),
+        'samsung_tv'   => array('label' => 'TV Samsung',      'icon' => 'ri-tv-line',         'color' => '#1428a0'),
     );
 }
 

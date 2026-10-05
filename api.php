@@ -1,4 +1,7 @@
 <?php 
+// Apps de TV (LG / Samsung) chamam a API a partir do próprio app instalado (sem origem web)
+header('Access-Control-Allow-Origin: *');
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') { header('Access-Control-Allow-Methods: POST, GET'); header('Access-Control-Allow-Headers: Content-Type'); exit; }
 include("includes/db_helper.php");
 include("includes/lb_helper.php"); 
 include("language/api_language.php"); 

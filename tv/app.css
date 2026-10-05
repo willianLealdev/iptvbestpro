@@ -1,0 +1,137 @@
+/* IPTV Best Pro — app de TV (LG webOS / Samsung Tizen). Tela desenhada em 1920x1080 e escalada. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #050814; color: #fff;
+  font-family: "LG Smart UI", "Samsung One", Roboto, "Segoe UI", Arial, sans-serif; }
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden;
+  -webkit-transform-origin: 0 0; transform-origin: 0 0; background: #070b18 url(bg.jpg) center / cover no-repeat; }
+#stage:before { content: ""; position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(5, 8, 20, .55); }
+.screen { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+.hide { display: none !important; }
+
+/* foco do controle remoto */
+.f { -webkit-transition: -webkit-transform .12s, box-shadow .12s, background .12s; transition: transform .12s, box-shadow .12s, background .12s; }
+.f.on { box-shadow: 0 0 0 5px #f5b82e, 0 10px 30px rgba(0, 0, 0, .5); }
+
+/* topo */
+.top { position: absolute; left: 70px; right: 70px; top: 40px; height: 90px; display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center; }
+.top img.logo { width: 76px; height: 76px; border-radius: 16px; object-fit: contain; }
+.top .brand { font-size: 40px; font-weight: 700; margin-left: 22px; }
+.top .title { font-size: 34px; font-weight: 600; margin-left: 22px; color: #e9edf7; }
+.top .right { margin-left: auto; font-size: 30px; color: #c8d0e4; }
+
+/* abertura */
+.splash { display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+  -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center; }
+.splash img { width: 260px; height: 260px; border-radius: 48px; -webkit-animation: pulse 1.8s infinite; animation: pulse 1.8s infinite; }
+.splash .name { font-size: 54px; font-weight: 700; margin-top: 30px; }
+@-webkit-keyframes pulse { 50% { -webkit-transform: scale(1.06); } }
+@keyframes pulse { 50% { transform: scale(1.06); } }
+.spin { width: 64px; height: 64px; border: 7px solid rgba(255, 255, 255, .15); border-top-color: #f5b82e; border-radius: 50%;
+  margin: 34px auto 0; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
+@-webkit-keyframes spin { to { -webkit-transform: rotate(360deg); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* cartão central (ativação, avisos) */
+.card { position: absolute; left: 50%; top: 50%; width: 900px; margin-left: -450px; -webkit-transform: translateY(-50%); transform: translateY(-50%);
+  background: rgba(17, 26, 51, .95); border: 2px solid rgba(255, 255, 255, .08); border-radius: 34px; padding: 56px 70px; text-align: center; }
+.card img.logo { width: 130px; height: 130px; border-radius: 26px; }
+.card h1 { font-size: 46px; margin-top: 18px; }
+.card h2 { font-size: 36px; color: #ffd56b; margin-top: 22px; }
+.card p { font-size: 28px; color: #c8d0e4; margin-top: 14px; line-height: 1.4; }
+.devid { margin: 30px auto 0; padding: 18px; background: rgba(255, 255, 255, .06); border-radius: 18px; font-size: 26px; color: #9aa6c2; }
+.devid b { display: block; font-size: 38px; color: #fff; letter-spacing: 3px; font-family: monospace; margin-top: 6px; }
+.code { display: block; width: 100%; height: 100px; margin-top: 30px; background: #0b1226; border: 3px solid #2b3b66; border-radius: 22px;
+  color: #fff; font-size: 54px; font-weight: 700; text-align: center; letter-spacing: 16px; outline: none; }
+.code.on { border-color: #f5b82e; box-shadow: none; }
+.btn { display: block; width: 100%; height: 88px; line-height: 88px; margin-top: 22px; border-radius: 22px; font-size: 32px; font-weight: 700;
+  background: rgba(255, 255, 255, .08); color: #fff; text-align: center; }
+.btn.gold { background: #f5b82e; color: #1b1300; }
+.btn.on { -webkit-transform: scale(1.03); transform: scale(1.03); }
+.err { color: #ff8a8a !important; }
+.qr { background: #fff; padding: 14px; border-radius: 18px; display: inline-block; margin-top: 24px; }
+.qr img, .qr canvas { display: block; width: 260px; height: 260px; }
+
+/* tela inicial */
+.tiles { position: absolute; left: 70px; right: 70px; bottom: 90px; display: -webkit-flex; display: flex; }
+.tile { -webkit-flex: 1; flex: 1; height: 330px; margin-right: 30px; border-radius: 30px; background: rgba(10, 20, 50, .88);
+  border: 2px solid rgba(255, 255, 255, .08); display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+  -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center; }
+.tile:last-child { margin-right: 0; }
+.tile .ic { font-size: 96px; line-height: 1; }
+.tile .lb { font-size: 38px; font-weight: 800; margin-top: 26px; letter-spacing: 1px; }
+.tile.on { -webkit-transform: scale(1.05); transform: scale(1.05); background: rgba(20, 40, 90, .95); }
+.hero { position: absolute; left: 0; right: 0; top: 170px; text-align: center; }
+.hero img { height: 330px; }
+
+/* colunas: lista à esquerda + conteúdo à direita */
+.left { position: absolute; left: 70px; top: 160px; width: 640px; bottom: 50px; overflow: hidden; }
+.right { position: absolute; left: 750px; right: 70px; top: 160px; bottom: 50px; overflow: hidden; }
+.scroll { position: relative; height: 100%; overflow: hidden; }
+.row { position: relative; height: 92px; display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+  padding: 0 24px; margin-bottom: 8px; border-radius: 16px; font-size: 30px; white-space: nowrap; overflow: hidden; background: rgba(255, 255, 255, .03); }
+.row img { width: 96px; height: 64px; object-fit: contain; margin-right: 22px; background: rgba(255, 255, 255, .05); border-radius: 10px; }
+.row span { overflow: hidden; text-overflow: ellipsis; }
+.row.sel { color: #f5b82e; }
+.row.sel:before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 6px; border-radius: 3px; background: #f5b82e; }
+.row.on { background: rgba(245, 184, 46, .14); box-shadow: none; }
+.row .badge { margin-left: auto; font-size: 24px; color: #22c55e; }
+
+/* TV ao vivo */
+.pvbox { position: absolute; left: 0; top: 0; width: 1100px; height: 619px; background: #000; border-radius: 22px; overflow: hidden; }
+.pvbox video { width: 100%; height: 100%; background: #000; }
+.pvbox.full { position: fixed; left: 0 !important; top: 0 !important; width: 1920px !important; height: 1080px !important; border-radius: 0; z-index: 50; }
+.pvmsg { position: absolute; left: 0; right: 0; top: 45%; text-align: center; font-size: 30px; color: #c8d0e4; }
+.epg { position: absolute; left: 0; top: 650px; width: 1100px; font-size: 30px; }
+.epg .now { font-size: 36px; font-weight: 700; }
+.epg .next { color: #9aa6c2; margin-top: 12px; }
+.epg .ch { color: #f5b82e; font-weight: 700; margin-bottom: 10px; }
+.zap { position: fixed; left: 60px; top: 50px; z-index: 60; background: rgba(11, 18, 38, .9); border: 3px solid #f5b82e; border-radius: 22px;
+  padding: 24px 40px; font-size: 40px; font-weight: 700; }
+
+/* capas (filmes / séries) */
+.grid { position: relative; display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+.poster { position: relative; width: 250px; height: 375px; margin: 0 22px 26px 0; border-radius: 18px; overflow: hidden; background: #111a33; }
+.poster img { width: 100%; height: 100%; object-fit: cover; }
+.poster .pt { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px; font-size: 22px; background: rgba(0, 0, 0, .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poster.on { -webkit-transform: scale(1.06); transform: scale(1.06); }
+
+/* detalhes */
+.det { position: absolute; left: 70px; right: 70px; top: 170px; bottom: 60px; display: -webkit-flex; display: flex; }
+.det .cover { width: 420px; height: 630px; border-radius: 22px; object-fit: cover; background: #111a33; }
+.det .info { margin-left: 60px; -webkit-flex: 1; flex: 1; overflow: hidden; }
+.det h1 { font-size: 52px; }
+.det .meta { font-size: 28px; color: #9aa6c2; margin-top: 14px; }
+.det .plot { font-size: 28px; color: #d6dcea; margin-top: 26px; line-height: 1.45; max-height: 250px; overflow: hidden; }
+.det .acts { display: -webkit-flex; display: flex; margin-top: 34px; }
+.det .acts .btn { width: auto; padding: 0 50px; margin-right: 24px; margin-top: 0; }
+.seasons { display: -webkit-flex; display: flex; margin-top: 30px; }
+.seasons .btn { width: auto; padding: 0 34px; height: 70px; line-height: 70px; margin: 0 16px 0 0; font-size: 26px; }
+.seasons .btn.sel { color: #f5b82e; }
+.eps { position: relative; height: 330px; overflow: hidden; margin-top: 24px; }
+
+/* player de filme / episódio */
+.player { position: fixed; left: 0; top: 0; width: 1920px; height: 1080px; background: #000; z-index: 70; }
+.player video { width: 100%; height: 100%; }
+.player .bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 80px 60px; background: linear-gradient(transparent, rgba(0, 0, 0, .85)); }
+.player .ttl { font-size: 38px; font-weight: 700; }
+.player .track { height: 10px; background: rgba(255, 255, 255, .25); border-radius: 5px; margin-top: 24px; }
+.player .track i { display: block; height: 100%; width: 0; background: #f5b82e; border-radius: 5px; }
+.player .tm { font-size: 26px; color: #c8d0e4; margin-top: 14px; }
+.player .msg { position: absolute; left: 0; right: 0; top: 45%; text-align: center; font-size: 34px; }
+
+/* configurações */
+.sets { position: absolute; left: 70px; right: 70px; top: 180px; display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+.set { width: 420px; height: 220px; margin: 0 30px 30px 0; border-radius: 26px; background: rgba(10, 20, 50, .88); border: 2px solid rgba(255, 255, 255, .08);
+  display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; -webkit-align-items: center; align-items: center;
+  -webkit-justify-content: center; justify-content: center; text-align: center; padding: 20px; }
+.set .ic { font-size: 64px; }
+.set .lb { font-size: 30px; font-weight: 700; margin-top: 16px; }
+.set .sub { font-size: 24px; color: #9aa6c2; margin-top: 8px; }
+.set.on { -webkit-transform: scale(1.04); transform: scale(1.04); }
+
+/* janelas e avisos */
+.modal { position: fixed; left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(0, 0, 0, .7); z-index: 90; }
+.toast { position: fixed; left: 50%; bottom: 70px; -webkit-transform: translateX(-50%); transform: translateX(-50%); z-index: 99;
+  background: rgba(17, 26, 51, .96); border: 2px solid #f5b82e; padding: 22px 44px; border-radius: 20px; font-size: 30px; max-width: 1400px; text-align: center; }
+.empty { font-size: 32px; color: #9aa6c2; padding: 40px; }
