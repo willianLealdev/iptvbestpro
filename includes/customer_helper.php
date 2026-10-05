@@ -216,6 +216,24 @@ function subscription_code_is_numeric($code){
  * O cliente digita o código numérico no app: ativa o aparelho pelo período do plano.
  * O código só pode ser usado uma vez. Retorna array('ok', 'msg', 'device').
  */
+// Copia as listas dos outros aparelhos do cliente para um aparelho que ainda não tem nenhuma
+function customer_copy_playlists($mysqli, $customer_id, $device_id, $device_pk){
+    require_once(__DIR__."/playlist_helper.php");
+    playlists_migrate($mysqli);
+    if (playlist_list($mysqli, $device_id)) return 0;
+    $cid = (int)$customer_id; $dpk = (int)$device_pk;
+    $res = mysqli_query($mysqli, "SELECT u.* FROM tbl_users u JOIN tbl_devices d ON d.device_id = u.device_id
+                                  WHERE d.owner = 'customer' AND d.customer_id = $cid AND d.id <> $dpk AND u.status = '1' ORDER BY u.id ASC");
+    $seen = array(); $n = 0;
+    while ($res && $u = mysqli_fetch_assoc($res)) {
+        $key = strtolower($u['user_name'].'|'.$u['dns_base']);
+        if (isset($seen[$key])) continue;
+        $seen[$key] = 1;
+        if (playlist_save($mysqli, $device_id, $u['playlist_name'], $u['user_name'], $u['user_password'], $u['dns_base'], 'auto: outros aparelhos do cliente', isset($u['source']) ? $u['source'] : 'account')) $n++;
+    }
+    return $n;
+}
+
 function subscription_activate_device($mysqli, $data){
     customers_migrate($mysqli);
     $ip = devices_client_ip();
@@ -266,6 +284,9 @@ function subscription_activate_device($mysqli, $data){
     mysqli_stmt_bind_param($stmt, 'iisiiisi', $cid, $now, $by, $now, $now, $expires, $cname, $dpk);
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
+
+    // Aparelho novo sem lista: recebe as listas que o cliente já tem nos outros aparelhos dele
+    customer_copy_playlists($mysqli, $cid, $device['device_id'], $dpk);
 
     $device = devices_find($mysqli, $device['device_id'], $device['application_id']);
     return array('ok' => true, 'msg' => 'Assinatura ativada! Válida até '.date('d/m/Y', $expires).'.', 'device' => $device);
