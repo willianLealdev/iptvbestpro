@@ -123,9 +123,12 @@ function theme_model_css($base, $settings){
 }
 
 // Primeiro pôster ativo da galeria Movie UI (para a pré-visualização do MovieUI)
-function theme_movie_poster($mysqli){
+function theme_movie_poster($mysqli, $scope = 0){
     $t = mysqli_query($mysqli, "SHOW TABLES LIKE 'tbl_poster_gallery'");
     if (!$t || mysqli_num_rows($t) == 0) return '';
-    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT poster_image FROM tbl_poster_gallery WHERE status = '1' ORDER BY id DESC LIMIT 1"));
+    // Cada dono vê só os próprios pôsteres (admin = 0, revenda = id)
+    $c = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_poster_gallery` LIKE 'reseller_id'");
+    $owner = ($c && mysqli_num_rows($c) > 0) ? " AND reseller_id = ".(int)$scope : "";
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT poster_image FROM tbl_poster_gallery WHERE status = '1'".$owner." ORDER BY id DESC LIMIT 1"));
     return ($r && $r['poster_image'] != '') ? $r['poster_image'] : '';
 }

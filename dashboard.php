@@ -338,7 +338,9 @@
                             // Tema personalizado em uso: mostra como ele aparece no app
                             require_once("includes/theme_preview.php");
                             theme_preview_styles();
-                            $dash_poster = theme_movie_poster($mysqli);
+                            // Só os pôsteres do admin (reseller_id = 0) — nunca o de uma revenda
+                            require_once("includes/poster_helper.php");
+                            $dash_poster = posters_preview_image($mysqli, 0);
                             echo '<div style="max-width:900px;border-radius:10px;overflow:hidden;">';
                             theme_mini_preview($dash_saved['settings_arr'], $dash_active['base'], 'images/', brand_logo_url(), APP_NAME,
                                                $dash_poster != '' ? 'images/'.$dash_poster : 'assets/images/themes/MovieUI.png');
