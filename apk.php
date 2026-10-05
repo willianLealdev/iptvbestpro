@@ -3,5 +3,6 @@
 require_once(__DIR__."/includes/app_release.php");
 $rel = app_release();
 if (!is_file(__DIR__.'/'.$rel['file'])) { header('Location: /download'); exit; }
-header('Location: /'.$rel['file'], true, 302);
+header('Cache-Control: no-store');
+header('Location: /'.$rel['file'].'?v='.(int)$rel['version_code'], true, 302);
 exit;

@@ -70,7 +70,7 @@ a{color:inherit;text-decoration:none}
         <h1>Baixe o <?php echo dl_e($name); ?></h1>
         <p>Para celular Android, TV Box, Android TV, Google TV e Fire TV Stick.</p>
         <?php if ($size > 0) { ?>
-            <a class="btn-dl" href="<?php echo dl_e($rel['file']); ?>" download><i class="ri-download-2-fill"></i> Baixar o app (APK)</a>
+            <a class="btn-dl" href="<?php echo dl_e($rel['file']).'?v='.(int)$rel['version_code']; ?>" download><i class="ri-download-2-fill"></i> Baixar o app (APK)</a>
             <div class="meta">Versão <?php echo dl_e($rel['version']); ?> · <?php echo dl_e(str_replace('.', ',', (string)$size)); ?> MB · Android <?php echo dl_e($rel['min_android']); ?> ou superior</div>
         <?php } else { ?>
             <div class="warn">O arquivo do app ainda não foi publicado. Volte em instantes.</div>
