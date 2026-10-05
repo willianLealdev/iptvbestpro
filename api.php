@@ -99,7 +99,7 @@ if($get_helper['helper_name']=="app_details"){
         $data_arr['app_developed_by'] = $data['app_developed_by'];
         
         // Envato
-        $data_arr['envato_api_key'] = $data['envato_api_key'] != '' ? substr(hash('sha256', 'app:'.$data['envato_api_key']), 0, 32) : '';
+        $data_arr['envato_api_key'] = $data['envato_api_key'];
         
         // is_
         $data_arr['is_rtl'] = $data['is_rtl'];

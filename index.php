@@ -282,6 +282,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
             <a href="#planos">Planos</a>
             <a href="#revenda">Revenda</a>
             <a href="#faq">Dúvidas</a>
+            <a href="download">Baixar app</a>
         </nav>
         <div class="nav-cta">
             <?php echo i18n_switcher('dark'); ?>
@@ -297,6 +298,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
         <a href="#planos">Planos</a>
         <a href="#revenda">Revenda</a>
         <a href="#faq">Dúvidas</a>
+        <a href="download">Baixar app</a>
         <div class="btns">
             <a href="revenda/" class="btn btn-ghost"><i class="ri-store-2-line"></i> Revenda</a>
             <a href="cliente/" class="btn btn-gold"><i class="ri-user-3-line"></i> Cliente</a>
@@ -312,7 +314,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
             <p class="lead">Você já tem o conteúdo. Faltava um player que não trava, não mostra anúncios e funciona em qualquer aparelho Android. O <?php echo lp_e($name); ?> foi feito para isso.</p>
             <div class="ctas">
                 <a href="cliente/register.php" class="btn btn-gold btn-lg"><i class="ri-flashlight-fill"></i> Ativar meu aparelho</a>
-                <a href="#como-funciona" class="btn btn-ghost btn-lg"><i class="ri-play-circle-line"></i> Como funciona</a>
+                <a href="download" class="btn btn-ghost btn-lg"><i class="ri-download-2-line"></i> Baixar o app</a>
             </div>
             <div class="platforms">
                 <?php foreach ($platforms as $p) { ?>

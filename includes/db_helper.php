@@ -41,7 +41,7 @@ if ($mysqli->connect_errno) {
     // Buscadores: só o site público pode aparecer no Google; painel, revenda, cliente, pagamento e API nunca
     if (PHP_SAPI !== 'cli' && !headers_sent()) {
         $__script = str_replace(chr(92), '/', isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '');
-        if (!in_array($__script, array('/index.php', '/terms.php', '/privacy_policy.php'), true)) header('X-Robots-Tag: noindex, nofollow, noarchive');
+        if (!in_array($__script, array('/index.php', '/terms.php', '/privacy_policy.php', '/download.php'), true)) header('X-Robots-Tag: noindex, nofollow, noarchive');
     }
     
     if(isset($_SESSION['id'])){

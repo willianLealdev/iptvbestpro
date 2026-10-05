@@ -3,5 +3,7 @@ Allow: /$
 Allow: /index.php
 Allow: /terms.php
 Allow: /privacy_policy.php
+Allow: /download
+Allow: /download.php
 Allow: /assets/
 Disallow: /
