@@ -5,8 +5,8 @@
  */
 function app_release(){
     return array(
-        'version'      => '1.0.12',
-        'version_code' => 13,
+        'version'      => '1.0.13',
+        'version_code' => 14,
         'date'         => '2026-10-04',
         'file'         => 'downloads/iptvbestpro.apk',
         'min_android'  => '6.0',
