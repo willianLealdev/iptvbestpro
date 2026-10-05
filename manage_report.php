@@ -22,7 +22,9 @@
         $start = 0; 
     } 
     
-    $sql_query="SELECT * FROM tbl_reports ORDER BY tbl_reports.`id` DESC LIMIT $start, $limit"; 
+    require_once("includes/support_helper.php");
+    support_migrate($mysqli);
+    $sql_query="SELECT tbl_reports.*, r.name AS reseller_name FROM tbl_reports LEFT JOIN tbl_resellers r ON r.id = tbl_reports.reseller_id ORDER BY tbl_reports.`id` DESC LIMIT $start, $limit"; 
     $result=mysqli_query($mysqli,$sql_query) or die(mysqli_error($mysqli));
 ?>
 
@@ -53,6 +55,7 @@
                             <thead>
                                 <tr>
                                     <th>User</th>
+                                    <th>Aparelho / Revenda</th>
                                     <th>Title</th>
                                     <th>Report</th>
                                     <th class="text-center">Date</th>
@@ -63,6 +66,7 @@
                                 <?php $i=0; while($row=mysqli_fetch_array($result)) { ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars((string)$row['user_name'], ENT_QUOTES, 'UTF-8', false);?></td>
+                                        <td><small><?php echo htmlspecialchars((string)$row['device_id'], ENT_QUOTES, 'UTF-8', false);?><?php if (!empty($row['device_model'])) echo '<br>'.htmlspecialchars((string)$row['device_model'], ENT_QUOTES, 'UTF-8', false); ?><br><b><?php echo !empty($row['reseller_name']) ? htmlspecialchars((string)$row['reseller_name'], ENT_QUOTES, 'UTF-8', false) : 'Sem revenda'; ?></b></small></td>
                                         <td><?php echo htmlspecialchars((string)$row['report_title'], ENT_QUOTES, 'UTF-8', false);?></td>
                                         <td><?php echo htmlspecialchars((string)$row['report_msg'], ENT_QUOTES, 'UTF-8', false);?></td>
                                         <td class="text-center"><?php echo date('d-m-Y',$row['report_on']);?></td>
