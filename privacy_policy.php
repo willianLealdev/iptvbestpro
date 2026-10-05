@@ -62,9 +62,18 @@
         <div class="card-body p-4">
             <div class="privacyHeader mb-2">
                 <h2>Privacy Policy for <?php echo APP_NAME;?></h2>
-                <p>Updated <?php echo date('D m, Y ');?></p>
+                <p>Updated October 5, 2026</p>
             </div>
-            <?=stripslashes($settings_details['app_privacy_policy'])?>
+            <?php
+            // Texto do painel; se estiver vazio, usa a política padrão (inglês, português e espanhol)
+            $pp_text = stripslashes((string)$settings_details['app_privacy_policy']);
+            if (trim(strip_tags($pp_text)) === '') {
+                require_once('includes/privacy_default.php');
+                echo privacy_default_html(APP_NAME, 'https://iptvbestpro.com');
+            } else {
+                echo $pp_text;
+            }
+            ?>
         </div>
     </main>
     <!-- End: 404 -->
