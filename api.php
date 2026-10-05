@@ -141,6 +141,17 @@ if($get_helper['helper_name']=="app_details"){
         $data_arr['app_new_version'] = $data['app_new_version'];
         $data_arr['app_update_desc'] = $data['app_update_desc'];
         $data_arr['app_redirect_url'] = $data['app_redirect_url'];
+        // IPTV Best Pro: versão publicada na página de download — o app avisa e se atualiza sozinho
+        require_once(__DIR__.'/includes/app_release.php');
+        require_once(__DIR__.'/includes/brand_helper.php');
+        $rel = app_release();
+        if (is_file(__DIR__.'/'.$rel['file'])) {
+            $base = function_exists('brand_mail_base_url') ? rtrim(brand_mail_base_url(), '/') : '';
+            $data_arr['app_update_status'] = 'true';
+            $data_arr['app_new_version'] = (string)(int)$rel['version_code'];
+            $data_arr['app_update_desc'] = 'Nova versão '.$rel['version'].' disponível.';
+            if ($base != '') $data_arr['app_redirect_url'] = $base.'/apk';
+        }
         
         // Custom Ads
         $data_arr['custom_ads'] = $data['custom_ads'];
