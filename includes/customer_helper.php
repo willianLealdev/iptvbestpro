@@ -74,6 +74,9 @@ function customers_migrate($mysqli){
         KEY `idx_status` (`status`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+    $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_subscriptions` LIKE 'is_demo'");
+    if ($col && mysqli_num_rows($col) == 0) mysqli_query($mysqli, "ALTER TABLE `tbl_subscriptions` ADD `is_demo` TINYINT(1) NOT NULL DEFAULT 0");
+
     $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_devices` LIKE 'customer_id'");
     if ($col && mysqli_num_rows($col) == 0) {
         mysqli_query($mysqli, "ALTER TABLE `tbl_devices` ADD `customer_id` INT(11) NOT NULL DEFAULT 0, ADD KEY `idx_customer` (`customer_id`)");
@@ -216,6 +219,48 @@ function subscription_code_is_numeric($code){
  * O cliente digita o código numérico no app: ativa o aparelho pelo período do plano.
  * O código só pode ser usado uma vez. Retorna array('ok', 'msg', 'device').
  */
+/* ---------- Teste para lojas (Amazon / Google) ---------- */
+
+// Coloca a lista de demonstração (conteúdo livre) no aparelho, se ele ainda não tiver
+function demo_attach_playlist($mysqli, $device_id){
+    require_once(__DIR__."/playlist_helper.php");
+    require_once(__DIR__."/demo_catalog.php");
+    require_once(__DIR__."/brand_helper.php");
+    playlists_migrate($mysqli);
+    foreach (playlist_list($mysqli, $device_id) as $p) if ($p['user_name'] === DEMO_USER) return true;
+    $base = rtrim(brand_mail_base_url(), '/');
+    return playlist_save($mysqli, $device_id, 'Demo (conteúdo livre)', DEMO_USER, DEMO_PASS, $base, 'auto: teste das lojas', 'url');
+}
+
+// Gera um código de teste: cliente "Teste das lojas", 1 mês, pago, vale em vários aparelhos
+function demo_store_code_create($mysqli, $admin_id = 0){
+    customers_migrate($mysqli);
+    $email = 'teste-lojas@iptvbestpro.com';
+    $c = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id FROM tbl_customers WHERE email = '".mysqli_real_escape_string($mysqli, $email)."'"));
+    if (!$c) {
+        $hash = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+        $now = time();
+        $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_customers (name, email, password, status, created_at) VALUES ('Teste das lojas', ?, ?, 1, ?)");
+        mysqli_stmt_bind_param($stmt, 'ssi', $email, $hash, $now);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        $cid = mysqli_insert_id($mysqli);
+    } else {
+        $cid = (int)$c['id'];
+        mysqli_query($mysqli, "UPDATE tbl_customers SET status = 1 WHERE id = $cid");
+    }
+    $code = subscription_code_generate($mysqli);
+    if (!$code || !$cid) return false;
+    $now = time();
+    $aid = (int)$admin_id;
+    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_subscriptions (customer_id, plan_id, plan_name, months, currency, amount, status, created_at, code, paid_at, admin_id, reference, is_demo)
+                                     VALUES (?, 0, 'Teste das lojas', 1, 'USD', 0, 'paid', ?, ?, ?, ?, 'Teste das lojas', 1)");
+    mysqli_stmt_bind_param($stmt, 'iisii', $cid, $now, $code, $now, $aid);
+    $ok = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    return $ok ? $code : false;
+}
+
 // Copia as listas dos outros aparelhos do cliente para um aparelho que ainda não tem nenhuma
 function customer_copy_playlists($mysqli, $customer_id, $device_id, $device_pk){
     require_once(__DIR__."/playlist_helper.php");
@@ -258,7 +303,8 @@ function subscription_activate_device($mysqli, $data){
     if (!$device) return array('ok' => false, 'msg' => 'Erro ao registrar o dispositivo.', 'device' => null);
 
     // Código já usado: só vale para o mesmo aparelho (reabrir o app depois de ativado)
-    if ((int)$sub['code_used_at'] > 0) {
+    $is_demo = !empty($sub['is_demo']);
+    if ((int)$sub['code_used_at'] > 0 && !$is_demo) {
         if ((int)$sub['device_pk'] === (int)$device['id']) return array('ok' => true, 'msg' => 'Dispositivo já ativado.', 'device' => $device);
         return array('ok' => false, 'msg' => 'Este código já foi usado em outro aparelho. Para ativar outro aparelho, contrate uma nova assinatura.', 'device' => null);
     }
@@ -273,8 +319,12 @@ function subscription_activate_device($mysqli, $data){
     // Marca o código como usado (somente se ainda estiver livre)
     $sid = (int)$sub['id'];
     $dpk = (int)$device['id'];
-    mysqli_query($mysqli, "UPDATE tbl_subscriptions SET code_used_at = $now, device_pk = $dpk, activated_at = $now, expires_at = $expires WHERE id = $sid AND code_used_at = 0");
-    if (mysqli_affected_rows($mysqli) == 0) return array('ok' => false, 'msg' => 'Este código já foi usado.', 'device' => null);
+    if ($is_demo) {
+        mysqli_query($mysqli, "UPDATE tbl_subscriptions SET code_used_at = IF(code_used_at = 0, $now, code_used_at), device_pk = $dpk, activated_at = IF(activated_at = 0, $now, activated_at), expires_at = $expires WHERE id = $sid");
+    } else {
+        mysqli_query($mysqli, "UPDATE tbl_subscriptions SET code_used_at = $now, device_pk = $dpk, activated_at = $now, expires_at = $expires WHERE id = $sid AND code_used_at = 0");
+        if (mysqli_affected_rows($mysqli) == 0) return array('ok' => false, 'msg' => 'Este código já foi usado.', 'device' => null);
+    }
 
     $cid = (int)$sub['customer_id'];
     $by = 'cliente: '.$sub['customer_email'];
@@ -287,6 +337,8 @@ function subscription_activate_device($mysqli, $data){
 
     // Aparelho novo sem lista: recebe as listas que o cliente já tem nos outros aparelhos dele
     customer_copy_playlists($mysqli, $cid, $device['device_id'], $dpk);
+    // Código de teste das lojas: já vem com a lista de demonstração (conteúdo livre)
+    if ($is_demo) demo_attach_playlist($mysqli, $device['device_id']);
 
     $device = devices_find($mysqli, $device['device_id'], $device['application_id']);
     return array('ok' => true, 'msg' => 'Assinatura ativada! Válida até '.date('d/m/Y', $expires).'.', 'device' => $device);

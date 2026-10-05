@@ -24,6 +24,13 @@
         header("Location:".$back);
         exit;
     }
+    // Código de teste para a revisão das lojas (Amazon / Google): ativa na hora e já traz a lista de demonstração
+    if(isset($_POST['store_test_code']) && $_SESSION['admin_type'] == 3){
+        $code = demo_store_code_create($mysqli, $admin_id);
+        sb_flash((bool)$code, $code ? 'Código de teste para as lojas: '.$code.' — vale 1 mês, em vários aparelhos, e já vem com a lista de demonstração (conteúdo livre).' : 'Não foi possível gerar o código de teste.');
+        header("Location:".$back);
+        exit;
+    }
     if(isset($_POST['cancel_sub'])){
         $ok = subscription_cancel($mysqli, (int)$_POST['sub_id']);
         sb_flash($ok, $ok ? 'Pedido cancelado.' : 'Este pedido não está mais pendente.');
@@ -95,6 +102,18 @@
             <div class="col-6 col-lg"><div class="card sb-card p-3"><div class="text-muted small">Assinaturas ativas</div><div class="fs-3 fw-bold" style="color:#16a34a;"><?php echo (int)$tot['active']; ?></div></div></div>
             <div class="col-6 col-lg"><div class="card sb-card p-3"><div class="text-muted small">Recebido no mês</div><div class="fw-bold"><?php echo money_format_currency($tot['month_brl'], 'BRL'); ?><br><?php echo money_format_currency($tot['month_usd'], 'USD'); ?></div></div></div>
         </div>
+
+        <?php if ($_SESSION['admin_type'] == 3) { ?>
+        <div class="card sb-card mb-4">
+            <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <div class="fw-bold"><i class="ri-store-2-line"></i> Teste para lojas (Amazon / Google)</div>
+                    <div class="text-muted small">Gera um código que ativa na hora, vale 1 mês em vários aparelhos e já traz a lista de demonstração (filmes livres da Blender Foundation e streams de teste). Use nas instruções de teste da loja.</div>
+                </div>
+                <form method="post"><button type="submit" name="store_test_code" class="btn btn-primary"><i class="ri-key-2-line"></i> Gerar código de teste</button></form>
+            </div>
+        </div>
+        <?php } ?>
 
         <div class="card sb-card">
             <div class="card-body p-4">
