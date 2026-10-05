@@ -34,17 +34,17 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050814; c
 
 /* cartão central (ativação, avisos) */
 .card { position: absolute; left: 50%; top: 50%; width: 900px; margin-left: -450px; -webkit-transform: translateY(-50%); transform: translateY(-50%);
-  background: rgba(17, 26, 51, .95); border: 2px solid rgba(255, 255, 255, .08); border-radius: 34px; padding: 56px 70px; text-align: center; }
-.card img.logo { width: 130px; height: 130px; border-radius: 26px; }
-.card h1 { font-size: 46px; margin-top: 18px; }
-.card h2 { font-size: 36px; color: #ffd56b; margin-top: 22px; }
+  background: rgba(17, 26, 51, .95); border: 2px solid rgba(255, 255, 255, .08); border-radius: 34px; padding: 40px 70px; text-align: center; max-height: 1040px; overflow-y: auto; }
+.card img.logo { width: 100px; height: 100px; border-radius: 22px; }
+.card h1 { font-size: 40px; margin-top: 12px; }
+.card h2 { font-size: 34px; color: #ffd56b; margin-top: 14px; }
 .card p { font-size: 28px; color: #c8d0e4; margin-top: 14px; line-height: 1.4; }
-.devid { margin: 30px auto 0; padding: 18px; background: rgba(255, 255, 255, .06); border-radius: 18px; font-size: 26px; color: #9aa6c2; }
+.devid { margin: 20px auto 0; padding: 14px; background: rgba(255, 255, 255, .06); border-radius: 18px; font-size: 26px; color: #9aa6c2; }
 .devid b { display: block; font-size: 38px; color: #fff; letter-spacing: 3px; font-family: monospace; margin-top: 6px; }
-.code { display: block; width: 100%; height: 100px; margin-top: 30px; background: #0b1226; border: 3px solid #2b3b66; border-radius: 22px;
+.code { display: block; width: 100%; height: 90px; margin-top: 22px; background: #0b1226; border: 3px solid #2b3b66; border-radius: 22px;
   color: #fff; font-size: 54px; font-weight: 700; text-align: center; letter-spacing: 16px; outline: none; }
 .code.on { border-color: #f5b82e; box-shadow: none; }
-.btn { display: block; width: 100%; height: 88px; line-height: 88px; margin-top: 22px; border-radius: 22px; font-size: 32px; font-weight: 700;
+.btn { display: block; width: 100%; height: 80px; line-height: 80px; margin-top: 16px; border-radius: 22px; font-size: 32px; font-weight: 700;
   background: rgba(255, 255, 255, .08); color: #fff; text-align: center; }
 .btn.gold { background: #f5b82e; color: #1b1300; }
 .btn.on { -webkit-transform: scale(1.03); transform: scale(1.03); }
@@ -67,7 +67,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050814; c
 /* colunas: lista à esquerda + conteúdo à direita */
 .left { position: absolute; left: 70px; top: 160px; width: 640px; bottom: 50px; overflow: hidden; }
 .right { position: absolute; left: 750px; right: 70px; top: 160px; bottom: 50px; overflow: hidden; }
-.scroll { position: relative; height: 100%; overflow: hidden; }
+.scroll { position: relative; height: 100%; overflow-y: auto; overflow-x: hidden; }
+.scroll::-webkit-scrollbar { width: 10px; }
+.scroll::-webkit-scrollbar-thumb { background: rgba(245, 184, 46, .55); border-radius: 5px; }
+.scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, .04); }
 .row { position: relative; height: 92px; display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
   padding: 0 24px; margin-bottom: 8px; border-radius: 16px; font-size: 30px; white-space: nowrap; overflow: hidden; background: rgba(255, 255, 255, .03); }
 .row img { width: 96px; height: 64px; object-fit: contain; margin-right: 22px; background: rgba(255, 255, 255, .05); border-radius: 10px; }
