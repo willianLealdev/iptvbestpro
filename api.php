@@ -69,6 +69,21 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
         'days_left'    => ($device && $status == 'active' && (int)$device['expires_at'] > 0) ? (string)max(0, (int)ceil(($device['expires_at'] - time()) / 86400)) : '',
         'reseller'     => $device ? devices_owner_name($mysqli, $device) : '',
     );
+    // IPTV Best Pro: suporte e renovação no app
+    //  - suporte: WhatsApp da revenda dona do aparelho; sem revenda, o do admin
+    //  - renovação/compra pelo QR Code: só para cliente direto (sem revenda) — cliente de revenda renova com a revenda
+    require_once("includes/support_helper.php");
+    require_once("includes/brand_helper.php");
+    support_migrate($mysqli);
+    $sp = support_contact_for_device($mysqli, $device);
+    $sp_base = rtrim(brand_mail_base_url(), '/');
+    $last = count($set[$API_NAME]) - 1;
+    $set[$API_NAME][$last]['owner'] = $device ? (string)$device['owner'] : '';
+    $set[$API_NAME][$last]['support_name'] = $sp['name'];
+    $set[$API_NAME][$last]['support_whatsapp'] = $sp['whatsapp'];
+    $set[$API_NAME][$last]['support_note'] = $sp['note'];
+    $set[$API_NAME][$last]['renew_url'] = ($device && $device['owner'] != 'reseller') ? $sp_base.'/cliente/' : '';
+    $set[$API_NAME][$last]['portal_url'] = $sp_base.'/cliente/';
     header( 'Content-Type: application/json; charset=utf-8' );
     echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     die();
@@ -358,12 +373,30 @@ else if($get_helper['helper_name']=="post_report"){
 	$report_title=cleanInput($get_helper['report_title']);
 	$report_msg=cleanInput($get_helper['report_msg']);
     
+	// IPTV Best Pro: guarda o aparelho e a revenda dona dele (ela vê no painel); a senha da lista não é guardada
+	require_once("includes/support_helper.php");
+	support_migrate($mysqli);
+	$rp_dev = isset($get_helper['device_id']) ? substr(trim((string)$get_helper['device_id']), 0, 191) : '';
+	$rp_app = isset($get_helper['application_id']) ? substr(trim((string)$get_helper['application_id']), 0, 191) : '';
+	$rp_reseller = 0;
+	if ($rp_dev !== '') {
+	    $st = mysqli_prepare($mysqli, "SELECT reseller_id FROM tbl_devices WHERE device_id = ? AND application_id = ? AND owner = 'reseller' LIMIT 1");
+	    mysqli_stmt_bind_param($st, 'ss', $rp_dev, $rp_app);
+	    mysqli_stmt_execute($st);
+	    $rr = mysqli_fetch_assoc(mysqli_stmt_get_result($st));
+	    mysqli_stmt_close($st);
+	    if ($rr) $rp_reseller = (int)$rr['reseller_id'];
+	}
 	$data = array(
         'user_name' => $user_name,
-        'user_pass'  =>  $user_pass,
+        'user_pass'  =>  '',
         'report_title'  =>  $report_title,
         'report_msg'  =>  $report_msg,
-        'report_on'  =>  strtotime(date('d-m-Y h:i:s A'))
+        'report_on'  =>  strtotime(date('d-m-Y h:i:s A')),
+        'device_id' => cleanInput($rp_dev),
+        'reseller_id' => $rp_reseller,
+        'device_model' => cleanInput(isset($get_helper['device_model']) ? substr((string)$get_helper['device_model'], 0, 100) : ''),
+        'is_read' => 0
     );
     $qry = Insert('tbl_reports',$data);
     

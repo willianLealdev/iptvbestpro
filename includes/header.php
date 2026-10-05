@@ -273,6 +273,14 @@ $mysqli->set_charset("utf8mb4");
                             </a>
                         </li>
                         
+                        <?php require_once(__DIR__."/support_helper.php"); support_migrate($mysqli); $sp_unread_admin = support_unread_admin($mysqli); ?>
+                        <li class="nsofts-sidebar-nav__item">
+                            <a href="manage_support.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_support.php") { ?>active<?php } ?>">
+                                <i class="ri-customer-service-2-line nsofts-sidebar-nav__icon"></i>
+                                <span class="nsofts-sidebar-nav__text">Suporte<?php if ($sp_unread_admin) { ?> <span class="badge bg-danger rounded-pill"><?php echo $sp_unread_admin; ?></span><?php } ?></span>
+                            </a>
+                        </li>
+
                         <li class="nsofts-sidebar-nav__item">
                             <a href="manage_report.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_report.php" or $currentFile == "view_report.php") { ?>active<?php } ?>">
                                 <i class="ri-feedback-line nsofts-sidebar-nav__icon"></i>

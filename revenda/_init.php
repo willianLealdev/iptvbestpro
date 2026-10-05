@@ -118,8 +118,13 @@ function rv_header($mysqli, $reseller, $title, $active){
                     <li class="nav-item"><a class="nav-link <?php if($active=='dns'){echo 'active';} ?>" href="dns.php"><i class="ri-server-line me-1"></i>DNS</a></li>
                     <li class="nav-item"><a class="nav-link <?php if($active=='theme'){echo 'active';} ?>" href="theme.php"><i class="ri-palette-line me-1"></i>Minha Marca</a></li>
                     <li class="nav-item"><a class="nav-link <?php if($active=='posters'){echo 'active';} ?>" href="posters.php"><i class="ri-image-line me-1"></i>Pôsteres</a></li>
+                    <?php require_once(__DIR__."/../includes/support_helper.php"); support_migrate($mysqli); $rv_sp_unread = support_unread_reseller($mysqli, (int)$reseller['id']); ?>
+                    <li class="nav-item"><a class="nav-link <?php if($active=='support'){echo 'active';} ?>" href="support.php"><i class="ri-customer-service-2-line me-1"></i>Suporte<?php if ($rv_sp_unread) echo ' <span class="badge bg-danger rounded-pill">'.$rv_sp_unread.'</span>'; ?></a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-3 py-2 py-lg-0">
+                    <?php $rv_tg = support_telegram_url($mysqli); if ($rv_tg !== '') { ?>
+                        <a href="<?php echo rv_e($rv_tg); ?>" target="_blank" rel="noopener" class="btn btn-sm d-inline-flex align-items-center gap-1" style="background:#229ED9;color:#fff;border-radius:20px;padding:6px 14px;" title="Canal no Telegram"><i class="ri-telegram-fill"></i><span>Canal Telegram</span></a>
+                    <?php } ?>
                     <?php echo i18n_switcher(); ?>
                     <span class="rv-balance"><i class="ri-coin-fill me-1"></i><?php echo (int)$reseller['credits']; ?> créditos</span>
                     <div class="dropdown">
