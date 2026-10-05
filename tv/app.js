@@ -301,6 +301,30 @@
   function qrHtml(text) {
     try { var q = qrcode(0, 'M'); q.addData(text); q.make(); return '<div class="qr">' + q.createImgTag(8, 0) + '</div>'; } catch (e) { return ''; }
   }
+  /* ---------------- vídeo: player da TV ou, se ela não tocar HLS, o hls.js ---------------- */
+  var NATIVE_HLS = !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl');
+  function loadHls(cb) {
+    if (window.Hls) return cb();
+    var sc = document.createElement('script'); sc.src = SRV + '/tv/hls.light.min.js'; sc.onload = cb; sc.onerror = cb; document.body.appendChild(sc);
+  }
+  function unsetSrc(v) { if (v && v._hls) { try { v._hls.destroy(); } catch (e) {} v._hls = null; } }
+  function setSrc(v, url, onFatal) {
+    unsetSrc(v);
+    if (/\.m3u8(\?|$)/i.test(url) && !NATIVE_HLS) {
+      loadHls(function () {
+        if (window.Hls && Hls.isSupported()) {
+          var h = new Hls({ maxBufferLength: 30, backBufferLength: 30 });
+          v._hls = h;
+          h.on(Hls.Events.ERROR, function (ev, d) { if (d && d.fatal && onFatal) onFatal(); });
+          h.on(Hls.Events.MANIFEST_PARSED, function () { try { v.play(); } catch (e) {} });
+          h.loadSource(url); h.attachMedia(v);
+        } else { v.src = url; try { v.play(); } catch (e) {} }
+      });
+      return;
+    }
+    v.src = url;
+    try { v.play(); } catch (e) {}
+  }
   function waLink(phone) { var d = String(phone || '').replace(/\D+/g, ''); return d.length >= 10 ? 'https://wa.me/' + d : ''; }
 
   /* ---------------- abertura e ativação ---------------- */
@@ -547,8 +571,7 @@
   }
   function startLive() {
     var c = L.playList[L.playIdx]; if (!c || !L.video) return;
-    L.video.src = liveUrl(c);
-    try { L.video.play(); } catch (e) {}
+    setSrc(L.video, liveUrl(c), onLiveError);
     LS.setJ('bp_last_live', { cat: L.cats[L.catIdx] ? L.cats[L.catIdx].category_id : '', sid: c.stream_id });
     markPlaying(); loadEpg(c);
     if (L.full) zapBanner((L.playIdx + 1) + '  ·  ' + c.name);
@@ -610,7 +633,7 @@
     return false;
   }
   function liveBack() { if (L.mode === 'chans') renderCats(); else { stopPreview(); home(); } }
-  function stopPreview() { if (L.video) { try { L.video.pause(); L.video.removeAttribute('src'); L.video.load(); } catch (e) {} L.video = null; } L.playIdx = -1; L.full = false; }
+  function stopPreview() { if (L.video) { unsetSrc(L.video); try { L.video.pause(); L.video.removeAttribute('src'); L.video.load(); } catch (e) {} L.video = null; } L.playIdx = -1; L.full = false; }
 
   /* ---------------- filmes e séries ---------------- */
   var V = { movie: { cats: null, catIdx: 0, items: [] }, series: { cats: null, catIdx: 0, items: [] } };
@@ -740,13 +763,13 @@
     PL.video.addEventListener('loadedmetadata', function () { if (startAt > 0 && !seeked) { seeked = true; try { PL.video.currentTime = startAt; } catch (e) {} } });
     PL.video.addEventListener('timeupdate', function () { var v = PL.video; if (!v || !v.duration) return; $('ptr').style.width = (v.currentTime / v.duration * 100) + '%'; $('ptm').textContent = fmtTime(v.currentTime) + ' / ' + fmtTime(v.duration); });
     PL.video.addEventListener('playing', function () { $('pmsg').classList.add('hide'); });
-    PL.video.addEventListener('error', function () { errs++; var m = $('pmsg'); if (!m) return; if (errs <= 1) { m.textContent = t('reconnect'); m.classList.remove('hide'); setTimeout(function () { if (PL.video) { PL.video.src = url; PL.video.play(); } }, 2500); } else { m.textContent = t('play_err'); m.classList.remove('hide'); } });
-    PL.video.src = url;
-    try { PL.video.play(); } catch (e) {}
+    function verr() { errs++; var m = $('pmsg'); if (!m) return; if (errs <= 1) { m.textContent = t('reconnect'); m.classList.remove('hide'); setTimeout(function () { if (PL.video) setSrc(PL.video, url, verr); }, 2500); } else { m.textContent = t('play_err'); m.classList.remove('hide'); } }
+    PL.video.addEventListener('error', verr);
+    setSrc(PL.video, url, verr);
     showBar();
     PL.saveT = setInterval(save, 60000); // salva onde parou a cada 1 minuto (sobrescreve)
     var prevKeys = S.keys;
-    function close() { save(); clearInterval(PL.saveT); try { PL.video.pause(); PL.video.removeAttribute('src'); PL.video.load(); } catch (e) {} var el = $('player'); if (el) el.parentNode.removeChild(el); PL.video = null; S.keys = prevKeys; S.back = back; }
+    function close() { save(); clearInterval(PL.saveT); unsetSrc(PL.video); try { PL.video.pause(); PL.video.removeAttribute('src'); PL.video.load(); } catch (e) {} var el = $('player'); if (el) el.parentNode.removeChild(el); PL.video = null; S.keys = prevKeys; S.back = back; }
     S.keys = function (k) {
       var v = PL.video; if (!v) return true;
       if (k === 'back') { close(); return true; }
