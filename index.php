@@ -4,7 +4,8 @@
  * O login do painel administrativo fica em gerencia.php.
  */
 require_once("includes/brand_helper.php");
-if (!file_exists("includes/.lic")) {
+require_once("includes/install_state.php");
+if (!panel_installed()) {
     header("Location:install/index.php");
     exit;
 }

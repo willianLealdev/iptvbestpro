@@ -1,7 +1,7 @@
 <?php
     require_once("includes/brand_helper.php"); // logo padrão também na tela de requisitos do servidor
-    $license_filename="includes/.lic";
-    if(!file_exists($license_filename)){
+    require_once("includes/install_state.php");
+    if(!panel_installed()){
         header("Location:install/index.php");
         exit;
     }
