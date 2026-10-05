@@ -345,17 +345,40 @@
     S.brand.logo = tc.logo || DEF_LOGO;
     S.brand.showName = tc.show_brand_name !== '0';
     S.brand.banner = tc.banner || '';
-    stage.style.backgroundImage = 'url("' + (tc.background_image || DEF_BG) + '")';
+    setBg(tc.background_image || (S.posters && S.posters.length ? S.posters[0] : DEF_BG));
     var o = parseInt(tc.background_overlay, 10); if (isNaN(o)) o = 55;
+    var css = '#stage:before{background:rgba(5,8,20,' + Math.max(0, Math.min(95, o)) / 100 + ')}';
+    // cor dos blocos escolhida no tema (Personalizar tema)
+    var ms = tc.model_settings || {}, tcol = hexRgb(ms.tile_color || ms.card_color || '');
+    if (tcol) css += '.tile,.set{background:rgba(' + tcol + ',.9)}.tile.on,.set.on{background:rgba(' + tcol + ',1)}';
     var st = $('bpov'); if (!st) { st = document.createElement('style'); st.id = 'bpov'; document.head.appendChild(st); }
-    st.textContent = '#stage:before{background:rgba(5,8,20,' + Math.max(0, Math.min(95, o)) / 100 + ')}';
+    st.textContent = css;
     LS.setJ('bp_brand', tc);
+  }
+  function hexRgb(h) {
+    var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(h || ''));
+    return m ? parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) : '';
+  }
+  function setBg(url) { stage.style.backgroundImage = 'url("' + url + '")'; }
+  // Tema MovieUI: o fundo são os pôsteres do dono do aparelho (os seus ou os da revenda), trocando a cada 20 s
+  var posterT = null;
+  function loadPosters(tc) {
+    clearInterval(posterT);
+    if (tc.background_image || String(tc.theme_id) !== '4') return;
+    api('get_poster', {}, function (err, arr) {
+      var l = [];
+      for (var i = 0; arr && i < arr.length; i++) if (arr[i].poster_image) l.push(arr[i].poster_image);
+      if (!l.length) return;
+      S.posters = l; var k = 0; setBg(l[0]);
+      if (l.length > 1) posterT = setInterval(function () { k = (k + 1) % l.length; setBg(l[k]); }, 20000);
+    });
   }
   function fetchBrand(cb) {
     api('app_details', {}, function (err, j) {
       try {
-        var d = j && j.details ? j.details[0] : (j && j[0] ? j[0] : null);
-        if (d && d.theme_config) applyBrand(d.theme_config);
+        // o tema vem em theme_config, no mesmo nível de details
+        var tc = j && j.theme_config ? j.theme_config : (j && j.details && j.details[0] && j.details[0].theme_config) || null;
+        if (tc) { applyBrand(tc); loadPosters(tc); }
       } catch (e) {}
       if (cb) cb();
     });
