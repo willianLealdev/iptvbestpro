@@ -452,6 +452,8 @@ return array(
   'Baixar app' => array('pt' => 'Baixar app', 'en' => 'Download app', 'es' => 'Descargar app'),
   'Baixar o app' => array('pt' => 'Baixar o app', 'en' => 'Download the app', 'es' => 'Descargar la app'),
   'Instalar' => array('pt' => 'Instalar', 'en' => 'Install', 'es' => 'Instalar'),
+  'Atualizar' => array('pt' => 'Atualizar', 'en' => 'Refresh', 'es' => 'Actualizar'),
+  'Atualiza sozinho a cada 10 segundos' => array('pt' => 'Atualiza sozinho a cada 10 segundos', 'en' => 'Refreshes automatically every 10 seconds', 'es' => 'Se actualiza sola cada 10 segundos'),
   'Créditos iniciais' => array('pt' => 'Créditos iniciais', 'en' => 'Initial credits', 'es' => 'Créditos iniciales'),
   'Créditos insuficientes (precisa de {}).' => array('pt' => 'Créditos insuficientes (precisa de {0}).', 'en' => 'Not enough credits (needs {0}).', 'es' => 'Créditos insuficientes (necesita {0}).'),
   'Créditos insuficientes (precisa de' => array('pt' => 'Créditos insuficientes (precisa de', 'en' => 'Not enough credits (needs', 'es' => 'Créditos insuficientes (necesita'),

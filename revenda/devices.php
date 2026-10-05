@@ -97,6 +97,7 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
             </select>
             <button class="btn btn-outline-secondary" type="submit"><i class="ri-search-line"></i></button>
         </form>
+        <button type="button" class="btn btn-outline-secondary js-devices-refresh" title="Atualiza sozinho a cada 10 segundos"><i class="ri-refresh-line"></i> Atualizar</button>
     </div>
 
     <div class="table-responsive">
@@ -259,4 +260,5 @@ document.addEventListener('click', function (e) {
     <?php if ($auto_open) { ?>open(<?php echo $auto_open; ?>, <?php echo json_encode($auto_mac); ?>);<?php } ?>
 })();
 </script>
+<?php require_once(__DIR__."/../includes/devices_live.php"); devices_live_script("devices_sig"); ?>
 <?php rv_footer(ob_get_clean()); ?>

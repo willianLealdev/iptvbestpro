@@ -286,6 +286,7 @@
                             <a href="manage_devices.php" class="btn btn-outline-secondary d-inline-flex align-items-center">Limpar</a>
                         <?php } ?>
                     </form>
+                    <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center js-devices-refresh" title="Atualiza sozinho a cada 10 segundos"><i class="ri-refresh-line"></i><span class="ps-1">Atualizar</span></button>
                     <a href="javascript:void(0)" class="btn dv-btn-add d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
                         <i class="ri-add-line"></i><span class="ps-1">Ativação manual</span>
                     </a>
@@ -563,5 +564,7 @@ document.addEventListener('click', function (e) {
     }
 });
 </script>
+
+<?php require_once("includes/devices_live.php"); devices_live_script("devices_sig"); ?>
 
 <?php include("includes/footer.php");?>
