@@ -291,7 +291,7 @@
   }
   function header(title) {
     return '<div class="top"><img class="logo" src="' + esc(S.brand.logo) + '" onerror="this.style.visibility=\'hidden\'">' +
-      (title ? '<div class="title">' + esc(title) + '</div>' : '<div class="brand">' + esc(S.brand.name) + '</div>') +
+      (title ? '<div class="title">' + esc(title) + '</div>' : (S.brand.showName === false ? '' : '<div class="brand">' + esc(S.brand.name) + '</div>')) +
       '<div class="right" id="clock"></div></div>';
   }
   var timers = [];
@@ -336,19 +336,33 @@
     S.status = o || {};
     LS.setJ('bp_status', S.status);
   }
-  function boot() {
-    splash();
+  /* Marca do dono do aparelho (admin ou revenda): logo, nome, fundo, transparência e banner — igual ao app Android */
+  var DEF_LOGO = SRV + '/assets/images/brand/iptvbestpro_logo.png', DEF_BG = SRV + '/tv/bg.jpg';
+  function applyBrand(tc) {
+    tc = tc || {};
+    S.brand.name = tc.brand_name || 'IPTV Best Pro';
+    S.brand.logo = tc.logo || DEF_LOGO;
+    S.brand.showName = tc.show_brand_name !== '0';
+    S.brand.banner = tc.banner || '';
+    stage.style.backgroundImage = 'url("' + (tc.background_image || DEF_BG) + '")';
+    var o = parseInt(tc.background_overlay, 10); if (isNaN(o)) o = 55;
+    var st = $('bpov'); if (!st) { st = document.createElement('style'); st.id = 'bpov'; document.head.appendChild(st); }
+    st.textContent = '#stage:before{background:rgba(5,8,20,' + Math.max(0, Math.min(95, o)) / 100 + ')}';
+    LS.setJ('bp_brand', tc);
+  }
+  function fetchBrand(cb) {
     api('app_details', {}, function (err, j) {
       try {
         var d = j && j.details ? j.details[0] : (j && j[0] ? j[0] : null);
-        var tc = d && d.theme_config ? d.theme_config : null;
-        if (tc) {
-          if (tc.brand_name) S.brand.name = tc.brand_name;
-          if (tc.logo) S.brand.logo = tc.logo;
-        }
+        if (d && d.theme_config) applyBrand(d.theme_config);
       } catch (e) {}
-      checkStatus();
+      if (cb) cb();
     });
+  }
+  function boot() {
+    applyBrand(LS.getJ('bp_brand', null)); // mostra já a última marca conhecida
+    splash();
+    fetchBrand(checkStatus);
   }
   function checkStatus() {
     api('device_status', {}, function (err, arr) {
@@ -371,7 +385,7 @@
       var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i));
       for (var j = 0; j < ks.length; j++) if (!keep[ks[j]] && ks[j].indexOf('bp_') === 0) localStorage.removeItem(ks[j]);
     } catch (e) {}
-    S.pl = null; S.login = null; S.pls = [];
+    S.pl = null; S.login = null; S.pls = []; S.brandFresh = false;
   }
 
   function activation(status, msg) {
@@ -427,6 +441,8 @@
   /* ---------------- listas do aparelho ---------------- */
   function loadPlaylists(chooser) {
     splash();
+    // depois de ativar (ou trocar de dono) busca de novo a marca do dono do aparelho
+    if (!chooser && !S.brandFresh) { S.brandFresh = true; return fetchBrand(function () { loadPlaylists(false); }); }
     api('get_device_user', {}, function (err, arr) {
       if (err) { toast(t(err.status === 0 ? 'no_net' : 'server_err')); return noList(); }
       S.pls = (arr || []).filter(function (p) { return p && p.user_name; });
@@ -489,7 +505,7 @@
     var tiles = [['live', IC.tv, 'live'], ['movies', IC.movie, 'movies'], ['series', IC.series, 'series'], ['playlist', IC.list, 'playlist'], ['settings', IC.gear, 'settings']];
     var h = '';
     for (var i = 0; i < tiles.length; i++) h += '<div class="tile f" data-a="' + tiles[i][0] + '"><div class="ic">' + svg(tiles[i][1]) + '</div><div class="lb">' + esc(t(tiles[i][2])) + '</div></div>';
-    show(header('') + '<div class="hero"><img src="' + esc(S.brand.logo) + '" onerror="this.style.display=\'none\'"></div><div class="tiles">' + h + '</div>', {
+    show(header('') + '<div class="hero"><img src="' + esc(S.brand.banner || S.brand.logo) + '" onerror="this.style.display=\'none\'"></div><div class="tiles">' + h + '</div>', {
       focus: '[data-a=' + (LS.get('bp_home', 'live')) + ']',
       back: confirmExit,
       acts: {
