@@ -152,7 +152,17 @@ function devices_register($mysqli, $data){
         $fields['platform'], $fields['device_model'], $fields['os_version'], $fields['ip_address'],
         $fields['country_code'], $fields['country_name'], $now, $now);
     $ok = mysqli_stmt_execute($stmt);
+    $is_new = $ok && mysqli_stmt_affected_rows($stmt) == 1; // 1 = aparelho novo no painel (2 = já existia)
     mysqli_stmt_close($stmt);
+    // Aparelho novo (ou que foi excluído do painel): nenhuma lista antiga com este ID pode voltar
+    if ($is_new) {
+        $del = mysqli_prepare($mysqli, "DELETE FROM tbl_users WHERE device_id = ?");
+        if ($del) {
+            mysqli_stmt_bind_param($del, 's', $fields['device_id']);
+            mysqli_stmt_execute($del);
+            mysqli_stmt_close($del);
+        }
+    }
     return $ok;
 }
 

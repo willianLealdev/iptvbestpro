@@ -335,6 +335,8 @@ function subscription_activate_device($mysqli, $data){
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
 
+    // Aparelho que era de outro dono: apaga as listas antigas antes de tudo
+    if ($device['owner'] != 'customer' || (int)$device['customer_id'] !== $cid) devices_wipe_playlists($mysqli, $device['device_id']);
     // Aparelho novo sem lista: recebe as listas que o cliente já tem nos outros aparelhos dele
     customer_copy_playlists($mysqli, $cid, $device['device_id'], $dpk);
     // Código de teste das lojas: já vem com a lista de demonstração (conteúdo livre)

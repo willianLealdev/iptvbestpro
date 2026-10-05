@@ -158,7 +158,8 @@
 				else if($table=='tbl_devices'){
                     $device_ids = implode(',', array_filter(array_map('intval', explode(',', $ids))));
                     if($device_ids != '' && isset($_SESSION['admin_type']) && $_SESSION['admin_type'] != 0){
-                        mysqli_query($mysqli, "DELETE FROM tbl_devices WHERE `id` IN ($device_ids)");
+                        require_once("includes/reseller_helper.php");
+                        devices_purge($mysqli, $device_ids); // apaga o aparelho e todas as listas dele
                     }
                 }
 

@@ -624,6 +624,27 @@ function devices_find($mysqli, $device_id, $application_id){
  * Aparelho ativo e válido com outro dono não pode ser "roubado".
  * Retorna array('ok' => bool, 'msg' => string, 'device' => row|null)
  */
+// Apaga todas as listas (playlists) de um aparelho
+function devices_wipe_playlists($mysqli, $device_id){
+    $device_id = (string)$device_id;
+    if ($device_id === '') return;
+    $stmt = mysqli_prepare($mysqli, "DELETE FROM tbl_users WHERE device_id = ?");
+    mysqli_stmt_bind_param($stmt, 's', $device_id);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+}
+
+// Excluir aparelho = apagar tudo dele (listas incluídas). Ao voltar, ele chega zerado.
+function devices_purge($mysqli, $ids){
+    $ids = array_filter(array_map('intval', is_array($ids) ? $ids : explode(',', (string)$ids)));
+    if (!$ids) return 0;
+    $in = implode(',', $ids);
+    $res = mysqli_query($mysqli, "SELECT device_id FROM tbl_devices WHERE id IN ($in)");
+    while ($res && $d = mysqli_fetch_assoc($res)) devices_wipe_playlists($mysqli, $d['device_id']);
+    mysqli_query($mysqli, "DELETE FROM tbl_devices WHERE id IN ($in)");
+    return mysqli_affected_rows($mysqli);
+}
+
 function devices_link($mysqli, $data){
     resellers_migrate($mysqli);
     // Código numérico (8 dígitos) = assinatura de cliente final
@@ -657,6 +678,8 @@ function devices_link($mysqli, $data){
 
     if (!$same_owner) {
         $now = time();
+        // Troca de dono: as listas do dono anterior nunca passam para o novo
+        devices_wipe_playlists($mysqli, $device_id);
         // Troca de dono: zera ativação vencida/pendente do dono anterior
         mysqli_query($mysqli, "UPDATE tbl_devices SET owner = '".$owner['owner']."', reseller_id = $new_reseller, linked_at = $now,
                                package = IF(package <> '' AND expires_at > 0 AND expires_at < $now, '', package)
