@@ -90,6 +90,7 @@ function devices_normalize_platform($platform){
         'auto' => 'android_auto', 'android_auto' => 'android_auto',
         'lg_tv' => 'lg_tv', 'webos' => 'lg_tv', 'lg' => 'lg_tv',
         'samsung_tv' => 'samsung_tv', 'tizen' => 'samsung_tv', 'samsung' => 'samsung_tv',
+        'roku' => 'roku', 'roku_tv' => 'roku',
     );
     return isset($map[$p]) ? $map[$p] : 'android';
 }
@@ -104,6 +105,7 @@ function devices_platform_labels(){
         'android_auto' => array('label' => 'Android Auto',    'icon' => 'ri-car-line',        'color' => '#64748b'),
         'lg_tv'        => array('label' => 'TV LG (webOS)',   'icon' => 'ri-tv-line',         'color' => '#a50034'),
         'samsung_tv'   => array('label' => 'TV Samsung',      'icon' => 'ri-tv-line',         'color' => '#1428a0'),
+        'roku'         => array('label' => 'Roku',            'icon' => 'ri-tv-line',         'color' => '#6c3c97'),
     );
 }
 
