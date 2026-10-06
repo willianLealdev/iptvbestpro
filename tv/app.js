@@ -345,12 +345,38 @@
     S.brand.logo = tc.logo || DEF_LOGO;
     S.brand.showName = tc.show_brand_name !== '0';
     S.brand.banner = tc.banner || '';
-    setBg(tc.background_image || (S.posters && S.posters.length ? S.posters[0] : DEF_BG));
     var o = parseInt(tc.background_overlay, 10); if (isNaN(o)) o = 55;
     var css = '#stage:before{background:rgba(5,8,20,' + Math.max(0, Math.min(95, o)) / 100 + ')}';
-    // cor dos blocos escolhida no tema (Personalizar tema)
-    var ms = tc.model_settings || {}, tcol = hexRgb(ms.tile_color || ms.card_color || '');
-    if (tcol) css += '.tile,.set{background:rgba(' + tcol + ',.9)}.tile.on,.set.on{background:rgba(' + tcol + ',1)}';
+    // Cores escolhidas no tema (Personalizar tema): tudo o que muda no painel muda aqui
+    var ms = tc.customized === '1' && tc.model_settings ? tc.model_settings : {};
+    function pick(keys) { for (var i = 0; i < keys.length; i++) { var v = hexRgb(ms[keys[i]]); if (v) return v; } return ''; }
+    var acc = pick(['theme_primary', 'accent', 'accent_start', 'buttons', 'live_color']);
+    if (acc) {
+      var a = acc.split(','), dark = (0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2]) / 255 > 0.6;
+      var A = 'rgb(' + acc + ')';
+      css += '.f.on{box-shadow:0 0 0 5px ' + A + ',0 10px 30px rgba(0,0,0,.5)}.spin{border-top-color:' + A + '}.code.on{border-color:' + A + '}' +
+        '.btn.gold{background:' + A + ';color:' + (dark ? '#1b1300' : '#fff') + '}.row.sel,.epg .ch,.seasons .btn.sel{color:' + A + '}' +
+        '.row.sel:before,.player .track i{background:' + A + '}.row.on{background:rgba(' + acc + ',.16)}.zap,.toast{border-color:' + A + '}';
+    }
+    var card = pick(['theme_surface', 'card', 'panel_top']) || (ms.tile_auto === '0' ? hexRgb(ms.tile_color) : '');
+    if (card) css += '.tile,.set,.card{background:rgba(' + card + ',.9)}.tile.on,.set.on{background:rgba(' + card + ',1)}.poster,.det .cover{background:rgb(' + card + ')}';
+    var txt = hexRgb(ms.theme_text);
+    if (txt) css += '#stage{color:rgb(' + txt + ')}';
+    // cor de cada seção na tela inicial (ícone ou cartão)
+    var secs = { live: ['live_color', 'live_top'], movies: ['movies_color', 'movies_top'], series: ['series_color', 'series_top'] };
+    for (var k in secs) {
+      var ic = hexRgb(ms[secs[k][0]]), tl = hexRgb(ms[secs[k][1]]);
+      if (ic) css += '.tile[data-a="' + k + '"] .ic{color:rgb(' + ic + ')}';
+      if (tl) css += '.tile[data-a="' + k + '"]{background:rgba(' + tl + ',.92)}';
+    }
+    // fundo: imagem do tema, pôsteres, cores do tema (degradê) ou o padrão
+    var top = pick(['bg_top', 'bg', 'theme_background']), bot = hexRgb(ms.bg_bottom) || top;
+    if (tc.background_image || (S.posters && S.posters.length) || !top) {
+      setBg(tc.background_image || (S.posters && S.posters.length ? S.posters[0] : DEF_BG));
+    } else {
+      stage.style.backgroundImage = 'none';
+      css += '#stage{background:-webkit-linear-gradient(top,rgb(' + top + '),rgb(' + bot + '));background:linear-gradient(to bottom,rgb(' + top + '),rgb(' + bot + '))}#stage:before{background:transparent}';
+    }
     var st = $('bpov'); if (!st) { st = document.createElement('style'); st.id = 'bpov'; document.head.appendChild(st); }
     st.textContent = css;
     LS.setJ('bp_brand', tc);
@@ -862,15 +888,5 @@
   /* ---------------- início ---------------- */
   // Samsung: registra as teclas de mídia e números do controle
   try { if (window.tizen && tizen.tvinputdevice) { ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'ChannelUp', 'ChannelDown', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(function (k) { try { tizen.tvinputdevice.registerKey(k); } catch (e) {} }); } } catch (e) {}
-  // a cada 30 minutos confere se o aparelho continua ativo
-  setInterval(function () {
-    if (S.screen === 'act') return;
-    api('device_status', {}, function (err, arr) {
-      if (err) return;
-      var o = arr && arr[0] ? arr[0] : {};
-      saveStatus(o);
-      if (o.status && o.status !== 'active') { stopPreview(); var pl = $('player'); if (pl) pl.parentNode.removeChild(pl); activation(o.status, ''); }
-    });
-  }, 30 * 60000);
   boot();
 })();
