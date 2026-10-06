@@ -17,6 +17,8 @@ function playlists_migrate($mysqli){
         'source'        => "VARCHAR(10) NOT NULL DEFAULT 'account'", // 'url' = servidor fixo da URL | 'account' = DNS automático
         'dns_status'    => "VARCHAR(10) NOT NULL DEFAULT 'online'",  // 'online' | 'offline' (procurando servidor)
         'dns_last_ok'   => "INT(11) NOT NULL DEFAULT 0",
+        'dns_server'    => "VARCHAR(191) NOT NULL DEFAULT ''",  // servidor de verdade informado pelo painel IPTV (o DNS pode ser só uma porta)
+        'dns_full_at'   => "INT(11) NOT NULL DEFAULT 0",       // última busca completa (lista numa porta: procura o servidor de verdade a cada 6 h)
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_users` LIKE '$name'");
@@ -48,13 +50,39 @@ function dns_list_active($mysqli, $scope = 0){
     $list = array();
     $scope = (int)$scope;
     $where = $scope > 0 ? "(reseller_id = 0 OR reseller_id = $scope OR id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = $scope))" : "reseller_id = 0";
-    $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base FROM tbl_xui_dns WHERE status = '1' AND $where ORDER BY (reseller_id = 0) ASC, id ASC");
+    $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base, catch_all FROM tbl_xui_dns WHERE status = '1' AND $where ORDER BY (reseller_id = 0) ASC, id ASC");
     while ($res && $r = mysqli_fetch_assoc($res)) {
         $base = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/'); // a página de DNS grava com htmlentities
         $norm = dns_normalize($base);
-        if ($norm != '') $list[] = array('id' => $r['id'], 'title' => $r['dns_title'], 'base' => $base, 'norm' => $norm);
+        if ($norm != '') $list[] = array('id' => $r['id'], 'title' => $r['dns_title'], 'base' => $base, 'norm' => $norm, 'catch_all' => (int)$r['catch_all'] == 1);
     }
     return $list;
+}
+
+/**
+ * Alguns servidores respondem "login aceito" para QUALQUER usuário e senha (até inventados).
+ * Eles não servem para descobrir de qual servidor é a lista: ficam por último na escolha.
+ * Testa com um usuário inventado no máximo a cada 6 horas por servidor.
+ */
+function dns_catch_all_refresh($mysqli, $force = false){
+    $now = time();
+    $where = $force ? "" : " AND catch_checked < ".($now - 21600);
+    $res = mysqli_query($mysqli, "SELECT id, dns_base FROM tbl_xui_dns WHERE status = '1'".$where);
+    $tasks = array();
+    while ($res && $r = mysqli_fetch_assoc($res)) {
+        $base = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/');
+        if (dns_normalize($base) == '') continue;
+        $tasks[(int)$r['id']] = array('base' => $base, 'username' => 'bpx'.bin2hex(random_bytes(5)), 'password' => bin2hex(random_bytes(6)));
+    }
+    if (!$tasks) return 0;
+    $marked = 0;
+    foreach (playlist_probe_tasks($tasks, 5, 20) as $id => $probe) {
+        if ($probe['result'] == 'unreachable') continue; // fora do ar: testa de novo depois
+        $ca = $probe['result'] == 'ok' ? 1 : 0;
+        $marked += $ca;
+        mysqli_query($mysqli, "UPDATE tbl_xui_dns SET catch_all = $ca, catch_checked = $now WHERE id = ".(int)$id);
+    }
+    return $marked;
 }
 
 /**
@@ -134,7 +162,15 @@ function playlist_probe_result($body, $code){
     if (is_array($json) && isset($json['user_info']['auth']) && (int)$json['user_info']['auth'] == 1) {
         $exp = isset($json['user_info']['exp_date']) && $json['user_info']['exp_date'] !== null ? (int)$json['user_info']['exp_date'] : null;
         $status = isset($json['user_info']['status']) ? (string)$json['user_info']['status'] : '';
-        return array('result' => 'ok', 'exp_date' => $exp, 'status' => $status);
+        // servidor de verdade da lista (o que o próprio painel IPTV informa); um DNS "porta" aponta para outro endereço
+        $server = '';
+        $si = isset($json['server_info']) && is_array($json['server_info']) ? $json['server_info'] : array();
+        if (!empty($si['url'])) {
+            $proto = !empty($si['server_protocol']) ? strtolower($si['server_protocol']) : 'http';
+            $port = $proto == 'https' ? (isset($si['https_port']) ? $si['https_port'] : '') : (isset($si['port']) ? $si['port'] : '');
+            $server = dns_normalize($proto.'://'.$si['url'].($port !== '' ? ':'.$port : ''));
+        }
+        return array('result' => 'ok', 'exp_date' => $exp, 'status' => $status, 'server' => $server);
     }
     if (is_array($json) || $code == 401 || $code == 403 || $code == 200) return array('result' => 'auth_fail', 'exp_date' => null, 'status' => '');
     return array('result' => 'unreachable', 'exp_date' => null, 'status' => '');
@@ -146,15 +182,33 @@ function playlist_probe_result($body, $code){
  * Retorna array('ok' => bool, 'msg' => string, 'dns' => item|null, 'probe' => array|null)
  */
 function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $timeout = PLAYLIST_PROBE_TIMEOUT, $scope = 0){
+    dns_health_migrate($mysqli);
+    dns_catch_all_refresh($mysqli); // só testa os servidores que não foram verificados nas últimas 6 horas
     $list = dns_list_active($mysqli, $scope);
     if (!$list) return array('ok' => false, 'msg' => 'Nenhum servidor DNS ativo. Cadastre em Servidores DNS.', 'dns' => null, 'probe' => null);
 
     $results = playlist_probe_parallel($list, $username, $password, $timeout);
     $winner = null;
-    foreach ($list as $i => $d) {
-        if ($results[$i]['result'] != 'ok') continue;
-        if ($winner === null || $d['norm'] == $prefer_norm) $winner = $i;
-        if ($d['norm'] == $prefer_norm) break;
+    // Ordem de escolha quando mais de um servidor aceita o mesmo usuário:
+    //  1º o servidor preferido (o da URL colada / o último que funcionou), se ele for confiável;
+    //  2º o servidor "de verdade": o endereço dele é o mesmo que o painel IPTV informa (os outros são só portas para ele);
+    //  3º qualquer um que aceite; por último os que aceitam qualquer usuário.
+    foreach (array(false, true) as $loose) {
+        $pref = null; $native = null; $first = null;
+        foreach ($list as $i => $d) {
+            if ($results[$i]['result'] != 'ok' || !empty($d['catch_all']) != $loose) continue;
+            if ($first === null) $first = $i;
+            if ($d['norm'] == $prefer_norm) $pref = $i;
+            $srv = isset($results[$i]['server']) ? $results[$i]['server'] : '';
+            if ($native === null && $srv != '' && $srv == $d['norm']) $native = $i;
+        }
+        // o servidor de hoje é só uma porta e existe um cadastrado que é o de verdade: usa o de verdade
+        if ($pref !== null && $native !== null && $pref != $native) {
+            $sp = isset($results[$pref]['server']) ? $results[$pref]['server'] : '';
+            if ($sp != '' && $sp != $list[$pref]['norm']) $pref = $native;
+        }
+        $winner = $pref !== null ? $pref : ($native !== null ? $native : $first);
+        if ($winner !== null) break;
     }
     if ($winner !== null) {
         return array('ok' => true, 'msg' => 'Servidor encontrado: '.$list[$winner]['title'].'.', 'dns' => $list[$winner], 'probe' => $results[$winner]);
@@ -182,7 +236,7 @@ function playlist_current_dns($mysqli, $row){
 
     $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']));
     $base = $find['ok'] ? $find['dns']['base'] : $row['dns_base'];
-    playlist_set_dns_state($mysqli, $row['id'], $base, $find['ok']);
+    playlist_set_dns_state($mysqli, $row['id'], $base, $find['ok'], $find['ok'] && isset($find['probe']['server']) ? $find['probe']['server'] : null);
     return $base;
 }
 
@@ -199,6 +253,8 @@ function dns_health_migrate($mysqli){
         'offline_since' => "INT(11) NOT NULL DEFAULT 0",        // desde quando está offline (0 = online)
         'reseller_id'   => "INT(11) NOT NULL DEFAULT 0",        // 0 = DNS do admin | id = DNS exclusivo do revendedor
         'created_at'    => "INT(11) NOT NULL DEFAULT 0",
+        'catch_all'     => "TINYINT(1) NOT NULL DEFAULT 0",     // 1 = aceita qualquer usuário/senha (não serve para identificar o servidor da lista)
+        'catch_checked' => "INT(11) NOT NULL DEFAULT 0",
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_xui_dns` LIKE '$name'");
@@ -444,7 +500,7 @@ function dns_health_check_all($mysqli, $timeout = 5, $only_reseller = null){
     return $out;
 }
 
-function playlist_set_dns_state($mysqli, $id, $base, $online){
+function playlist_set_dns_state($mysqli, $id, $base, $online, $server = null){
     $now = time();
     $status = $online ? 'online' : 'offline';
     $stmt = mysqli_prepare($mysqli, "UPDATE tbl_users SET dns_base = ?, dns_status = ?, dns_checked_at = ?, dns_last_ok = IF(? = 'online', ?, dns_last_ok) WHERE id = ?");
@@ -452,6 +508,12 @@ function playlist_set_dns_state($mysqli, $id, $base, $online){
     mysqli_stmt_bind_param($stmt, 'ssisii', $base, $status, $now, $status, $now, $id);
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
+    if ($server !== null) {
+        $stmt = mysqli_prepare($mysqli, "UPDATE tbl_users SET dns_server = ? WHERE id = ?");
+        mysqli_stmt_bind_param($stmt, 'si', $server, $id);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+    }
 }
 
 /**
@@ -463,13 +525,14 @@ function playlist_set_dns_state($mysqli, $id, $base, $online){
 function playlist_monitor_run($mysqli){
     playlists_migrate($mysqli);
     $health = dns_health_check_all($mysqli);
+    dns_catch_all_refresh($mysqli);
     $stats = array('checked' => 0, 'online' => 0, 'switched' => 0, 'offline' => 0,
                    'dns_online' => count(array_keys($health, 'online')), 'dns_offline' => count(array_keys($health, 'offline')),
                    'dns_deleted' => dns_auto_cleanup($mysqli));
 
     // Playlists por usuário/senha + revendedor dono do aparelho (define quais DNS valem para ela)
     $rows = array();
-    $res = mysqli_query($mysqli, "SELECT u.id, u.user_name, u.user_password, u.dns_base, u.device_id,
+    $res = mysqli_query($mysqli, "SELECT u.id, u.user_name, u.user_password, u.dns_base, u.dns_server, u.dns_full_at, u.device_id,
                                          COALESCE((SELECT d.reseller_id FROM tbl_devices d WHERE d.device_id = u.device_id AND d.owner = 'reseller' ORDER BY d.id DESC LIMIT 1), 0) AS scope
                                   FROM tbl_users u WHERE u.status = '1' AND u.source = 'account'");
     while ($res && $r = mysqli_fetch_assoc($res)) $rows[$r['id']] = $r;
@@ -492,13 +555,23 @@ function playlist_monitor_run($mysqli){
         $norm = dns_normalize($r['dns_base']);
         $allowed = $scopes[(int)$r['scope']];
         if (!isset($allowed[$norm])) { $failed[$id] = $r; continue; } // DNS removido, desligado ou de outro dono
+        // servidor atual aceita qualquer usuário: procura de novo o servidor certo da lista
+        if (!empty($allowed[$norm]['catch_all'])) { $failed[$id] = $r; continue; }
         $tasks[$id] = array('base' => $allowed[$norm]['base'], 'username' => $r['user_name'], 'password' => $r['user_password']);
     }
     $results = playlist_probe_tasks($tasks, 5, 20);
     foreach ($results as $id => $probe) {
         $stats['checked']++;
         if ($probe['result'] == 'ok') {
-            playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true);
+            $srv = isset($probe['server']) ? $probe['server'] : '';
+            $allowed = $scopes[(int)$rows[$id]['scope']];
+            // a lista está numa "porta" (o servidor de verdade é outro): procura o de verdade, no máximo a cada 6 horas
+            if ($srv != '' && $srv != dns_normalize($rows[$id]['dns_base']) && (isset($allowed[$srv]) || time() - (int)$rows[$id]['dns_full_at'] > 21600)) {
+                mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = ".time()." WHERE id = ".(int)$id);
+                $failed[$id] = $rows[$id];
+                continue;
+            }
+            playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true, $srv);
             $stats['online']++;
         } else {
             $failed[$id] = $rows[$id];
@@ -511,7 +584,7 @@ function playlist_monitor_run($mysqli){
         $find = playlist_find_dns($mysqli, $r['user_name'], $r['user_password'], dns_normalize($r['dns_base']), 5, (int)$r['scope']);
         if ($find['ok']) {
             $switched = dns_normalize($find['dns']['base']) != dns_normalize($r['dns_base']);
-            playlist_set_dns_state($mysqli, $id, $find['dns']['base'], true);
+            playlist_set_dns_state($mysqli, $id, $find['dns']['base'], true, isset($find['probe']['server']) ? $find['probe']['server'] : '');
             $stats[$switched ? 'switched' : 'online']++;
         } else {
             playlist_set_dns_state($mysqli, $id, $r['dns_base'], false);
@@ -601,6 +674,14 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
 
     if (!playlist_save($mysqli, $device_id, $name, $username, $password, $find['dns']['base'], $created_by, 'account')) {
         return array('ok' => false, 'msg' => 'Erro ao salvar a playlist.');
+    }
+    // guarda o servidor de verdade informado pelo painel IPTV (aparece no painel embaixo do nome da playlist)
+    if (!empty($find['probe']['server'])) {
+        $srv = $find['probe']['server'];
+        $stmt = mysqli_prepare($mysqli, "UPDATE tbl_users SET dns_server = ? WHERE device_id = ? AND user_name = ? ORDER BY id DESC LIMIT 1");
+        mysqli_stmt_bind_param($stmt, 'sss', $srv, $device_id, $username);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
     }
     return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada. Servidor encontrado automaticamente.');
 }

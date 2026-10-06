@@ -153,7 +153,10 @@ function playlist_list_render($playlists, $hidden_html){ ?>
                     <div class="pl-item__body">
                         <div class="pl-item__name"><?php echo htmlspecialchars(isset($p['playlist_name']) && $p['playlist_name'] != '' ? $p['playlist_name'] : $p['user_name']); ?></div>
                         <?php if (!empty($p['dns_base']) && (!isset($p['source']) || $p['source'] == 'account')) { global $mysqli; ?>
-                            <div class="pl-item__dns"><i class="ri-server-line"></i> DNS: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $p['dns_base'])); ?></b></div>
+                            <div class="pl-item__dns"><i class="ri-server-line"></i> DNS: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $p['dns_base'])); ?></b>
+                                <?php if (!empty($p['dns_server']) && $p['dns_server'] != dns_normalize($p['dns_base'])) { ?>
+                                    <span title="O DNS é uma porta: os canais vêm deste servidor">→ servidor: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $p['dns_server'])); ?></b></span>
+                                <?php } ?></div>
                         <?php } ?>
                         <?php if (!isset($p['source']) || $p['source'] == 'account') {
                             $online = !isset($p['dns_status']) || $p['dns_status'] != 'offline'; ?>
