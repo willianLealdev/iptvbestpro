@@ -238,6 +238,9 @@ function LastID($table_name){
 }
 
 function call_api($data){
+    // Segurança: o painel não conversa mais com o servidor do fornecedor (api.nemosofts.com).
+    // Nenhum dado (domínio, código de compra, licença) sai daqui.
+    return json_encode(array('status' => false, 'message' => 'Desativado: este painel não usa mais o servidor do fornecedor.'));
     $curl = curl_init();
     curl_setopt($curl, CURLOPT_POST, 1);
     if($data){

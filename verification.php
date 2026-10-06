@@ -1,3 +1,8 @@
+<?php
+// Desligado: esta página mandava o código de compra para o servidor do fornecedor (nemosofts).
+header('Location: dashboard.php');
+exit;
+?>
 <?php 
     $page_title='Envato Verify Purchase';
     include("includes/header.php");

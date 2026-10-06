@@ -346,12 +346,7 @@ $mysqli->set_charset("utf8mb4");
                             </ul>
                         </li>
                         
-                        <li class="nsofts-sidebar-nav__item">
-                            <a href="verification.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "verification.php") { ?>active<?php } ?>">
-                                <i class="ri-shield-check-line nsofts-sidebar-nav__icon"></i>
-                                <span class="nsofts-sidebar-nav__text">Verification</span>
-                            </a>
-                        </li>
+                        <?php /* menu "Verificar compra" removido (falava com o fornecedor) */ ?>
                     <?php } ?>
                 <?php } ?>
                 

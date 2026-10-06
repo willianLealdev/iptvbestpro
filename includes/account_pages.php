@@ -77,6 +77,8 @@ function accp_forgot_page($mysqli, $cfg){
                 mysqli_stmt_execute($stmt);
                 $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
                 mysqli_stmt_close($stmt);
+                // segurança: e-mail do fornecedor antigo (nemosofts) nunca recebe link de troca de senha
+                if ($row && preg_match('/nemosoft/i', (string)$row['email'])) $row = null;
                 if ($row && ($cfg['type'] == 'admin' ? (int)$row['id'] > 0 : true)) acc_send_reset($mysqli, $cfg['type'], $row);
             }
             $done = true;

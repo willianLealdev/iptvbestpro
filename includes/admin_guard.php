@@ -87,6 +87,14 @@ if (!empty($_FILES)) {
     }
 }
 
+// 2b) segurança: o instalador original cadastrava o admin com o e-mail do fornecedor (nemosofts).
+//     Esse e-mail recebia "esqueci a senha" e alertas do painel: é apagado e o admin cadastra o seu em Perfil.
+if (isset($mysqli) && empty($_SESSION['__vendor_mail_checked'])) {
+    $__vm = mysqli_query($mysqli, "SELECT id FROM tbl_admin WHERE email LIKE '%nemosoft%' LIMIT 1");
+    if ($__vm && mysqli_num_rows($__vm) > 0) mysqli_query($mysqli, "UPDATE tbl_admin SET email = '' WHERE email LIKE '%nemosoft%'");
+    $_SESSION['__vendor_mail_checked'] = 1;
+}
+
 // 3) senha padrão: só a página de troca de senha (e sair) ficam liberadas
 if (!empty($_SESSION['admin_must_change_pw']) && !in_array($__guard_file, array('auth_change_password.php', 'logout.php'))) {
     header("Location: auth_change_password.php");
