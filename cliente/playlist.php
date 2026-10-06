@@ -55,7 +55,7 @@ playlist_form_styles(); ?>
     <div class="col-xl-5">
         <div class="cl-card p-4 h-100">
             <h2 class="cl-title fs-5 mb-3">Playlists deste aparelho</h2>
-            <?php playlist_list_render($playlists, cl_csrf_field()); ?>
+            <?php playlist_list_render($playlists, cl_csrf_field(), false); ?>
         </div>
     </div>
 </div>

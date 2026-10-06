@@ -34,6 +34,15 @@ function playlist_form_styles(){ ?>
     .pl-item__name { font-weight: 600; }
     .pl-item__dns { color: #6b7280; font-size: 13px; margin-top: 2px; }
     .pl-item__dns b { color: #374151; }
+    .pl-pin { color: #2563eb; font-weight: 600; }
+    .pl-srv-link { margin-left: 8px; font-size: 12px; font-weight: 600; text-decoration: none; }
+    .pl-srv { margin-top: 10px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; background: #fafbfc; }
+    .pl-srv__title { font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 6px; }
+    .pl-srv__row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px dashed #e5e7eb; font-size: 13px; color: #9ca3af; }
+    .pl-srv__row:first-of-type { border-top: 0; }
+    .pl-srv__row.is-ok { color: #374151; }
+    .pl-srv__name { font-weight: 600; min-width: 120px; }
+    .pl-srv__res { flex: 1; }
     .pl-item__meta { color: #6b7280; font-size: 13px; margin-top: 2px; }
     .pl-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
     .pl-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
@@ -144,7 +153,11 @@ function playlist_form_script(){ ?>
 /**
  * Lista as playlists do aparelho com botão de excluir.
  */
-function playlist_list_render($playlists, $hidden_html){ ?>
+function playlist_list_render($playlists, $hidden_html, $allow_pin = true){
+    global $mysqli;
+    $check_id = $allow_pin && isset($_GET['pl_check']) ? (int)$_GET['pl_check'] : 0;
+    $self = strtok($_SERVER['REQUEST_URI'], '?');
+    $qs = $_GET; unset($qs['pl_check']); ?>
     <?php if ($playlists) { ?>
         <div class="pl-list">
             <?php foreach ($playlists as $p) { ?>
@@ -156,7 +169,38 @@ function playlist_list_render($playlists, $hidden_html){ ?>
                             <div class="pl-item__dns"><i class="ri-server-line"></i> DNS: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $p['dns_base'])); ?></b>
                                 <?php if (!empty($p['dns_server']) && $p['dns_server'] != dns_normalize($p['dns_base'])) { ?>
                                     <span title="O DNS é uma porta: os canais vêm deste servidor">→ servidor: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $p['dns_server'])); ?></b></span>
+                                <?php } ?>
+                                <?php if (!empty($p['dns_pin'])) { ?><span class="pl-pin" title="Escolhido no painel">· fixado</span><?php } ?>
+                                <?php if ($allow_pin) { $q = $qs; $q['pl_check'] = (int)$p['id']; ?>
+                                    <a class="pl-srv-link" href="<?php echo htmlspecialchars($self.'?'.http_build_query($q)); ?>"><i class="ri-route-line"></i> Servidores</a>
                                 <?php } ?></div>
+                            <?php if ($check_id == (int)$p['id']) { $chk = playlist_check_servers($mysqli, $p); ?>
+                                <div class="pl-srv">
+                                    <div class="pl-srv__title">Em quais servidores este login funciona</div>
+                                    <?php foreach ($chk as $c) {
+                                        $is_cur = $c['norm'] == dns_normalize($p['dns_base']);
+                                        $txt = $c['result'] == 'ok' ? 'Aceita' : ($c['result'] == 'auth_fail' ? 'Recusou' : 'Não respondeu'); ?>
+                                        <div class="pl-srv__row <?php echo $c['result'] == 'ok' ? 'is-ok' : ''; ?>">
+                                            <span class="pl-srv__name"><?php echo htmlspecialchars(html_entity_decode($c['title'], ENT_QUOTES, 'UTF-8')); ?><?php if ($is_cur) { ?> <small>(em uso)</small><?php } ?></span>
+                                            <span class="pl-srv__res"><?php echo $txt; ?><?php if ($c['result'] == 'ok' && $c['server'] != '' && $c['server'] != $c['norm']) { ?> · aponta para <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $c['server'])); ?></b><?php } ?><?php if ($c['catch_all']) { ?> · aceita qualquer usuário<?php } ?></span>
+                                            <?php if ($c['result'] == 'ok' && (!$is_cur || empty($p['dns_pin']))) { ?>
+                                                <form method="post" class="m-0"><?php echo $hidden_html; ?>
+                                                    <input type="hidden" name="playlist_id" value="<?php echo (int)$p['id']; ?>">
+                                                    <input type="hidden" name="dns_id" value="<?php echo (int)$c['id']; ?>">
+                                                    <button type="submit" name="playlist_pin" class="btn btn-sm btn-outline-primary">Usar este</button>
+                                                </form>
+                                            <?php } ?>
+                                        </div>
+                                    <?php } ?>
+                                    <?php if (!empty($p['dns_pin'])) { ?>
+                                        <form method="post" class="mt-2"><?php echo $hidden_html; ?>
+                                            <input type="hidden" name="playlist_id" value="<?php echo (int)$p['id']; ?>">
+                                            <input type="hidden" name="dns_id" value="0">
+                                            <button type="submit" name="playlist_pin" class="btn btn-sm btn-outline-secondary">Voltar para automático</button>
+                                        </form>
+                                    <?php } ?>
+                                </div>
+                            <?php } ?>
                         <?php } ?>
                         <?php if (!isset($p['source']) || $p['source'] == 'account') {
                             $online = !isset($p['dns_status']) || $p['dns_status'] != 'offline'; ?>

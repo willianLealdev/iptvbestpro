@@ -33,6 +33,12 @@
         header("Location:device_playlist.php?device=".$pk);
         exit;
     }
+    if(isset($_POST['playlist_pin'])){
+        $r = playlist_handle_pin($mysqli, $device['device_id'], $_POST);
+        pl_flash($r['ok'], $r['msg']);
+        header("Location:device_playlist.php?device=".$pk);
+        exit;
+    }
     if(isset($_POST['playlist_delete'])){
         $ok = playlist_delete($mysqli, $_POST['playlist_id'], $device['device_id']);
         pl_flash($ok, $ok ? 'Playlist removida.' : 'Playlist não encontrada.');

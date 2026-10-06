@@ -23,6 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else if (isset($_POST['playlist_delete'])) {
         $ok = playlist_delete($mysqli, $_POST['playlist_id'], $device['device_id']);
         rv_flash($ok ? 'success' : 'error', $ok ? 'Playlist removida.' : 'Playlist não encontrada.');
+    } else if (isset($_POST['playlist_pin'])) {
+        $r = playlist_handle_pin($mysqli, $device['device_id'], $_POST);
+        rv_flash($r['ok'] ? 'success' : 'error', $r['msg']);
     }
     rv_redirect('playlist.php?device='.$pk);
 }
