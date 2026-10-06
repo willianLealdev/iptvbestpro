@@ -348,7 +348,7 @@
     var o = parseInt(tc.background_overlay, 10); if (isNaN(o)) o = 55;
     var css = '#stage:before{background:rgba(5,8,20,' + Math.max(0, Math.min(95, o)) / 100 + ')}';
     // Cores escolhidas no tema (Personalizar tema): tudo o que muda no painel muda aqui
-    var ms = tc.customized === '1' && tc.model_settings ? tc.model_settings : {};
+    var ms = tc.customized === '1' && tc.model_settings ? tc.model_settings : (tc.model_defaults || {}); // tema sem personalizar: cores originais do modelo
     function pick(keys) { for (var i = 0; i < keys.length; i++) { var v = hexRgb(ms[keys[i]]); if (v) return v; } return ''; }
     var acc = pick(['theme_primary', 'accent', 'accent_start', 'buttons', 'live_color']);
     if (acc) {

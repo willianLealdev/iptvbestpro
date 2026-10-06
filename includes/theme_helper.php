@@ -396,7 +396,19 @@ function theme_payload_from($t, $base_url, $brand_name, $owner, $theme_id, $cust
         'background_overlay' => isset($t['theme_bg_overlay']) ? (string)$t['theme_bg_overlay'] : '60',
         'banner'             => ($customized && isset($t['theme_banner'])) ? $img($t['theme_banner']) : '',
         'model_settings'     => $customized ? $model : new stdClass(),
+        // valores originais do modelo: Roku e TVs usam quando o tema não foi personalizado
+        'model_defaults'     => theme_model_plain_defaults($theme_id),
     );
+}
+
+// Cores e níveis originais do modelo (sem imagens), para os apps de TV
+function theme_model_plain_defaults($theme_id){
+    $out = array();
+    foreach (theme_model_schema($theme_id) as $key => $f) {
+        if ($f['type'] == 'image' || $f['type'] == 'info') continue;
+        $out[$key] = isset($f['default']) ? (string)$f['default'] : '';
+    }
+    return $out;
 }
 
 // Payload do tema ativo de um escopo (0 = admin, id = revendedor)
