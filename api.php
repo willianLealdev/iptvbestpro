@@ -35,6 +35,32 @@ if($get_helper['helper_name']=="device_register"){
     die();
 }
 
+// Resetar licença: o cliente quer usar outro código (trocou de revenda).
+// O aparelho sai do painel de quem era dono (revenda, admin ou assinatura), perde a ativação e as listas.
+// device_reset: { device_id, application_id } -> status: unlinked
+if($get_helper['helper_name']=="device_reset"){
+    require_once("includes/reseller_helper.php");
+    resellers_migrate($mysqli);
+    $did = !empty($get_helper['device_id']) ? devices_clean($get_helper['device_id'], 191) : '';
+    $aid = devices_clean(isset($get_helper['application_id']) ? $get_helper['application_id'] : '', 191);
+    $ok = '0';
+    if ($did !== '') {
+        $device = devices_find($mysqli, $did, $aid);
+        devices_wipe_playlists($mysqli, $did);
+        if ($device) {
+            mysqli_query($mysqli, "UPDATE tbl_devices SET owner = '', reseller_id = 0, package = '', expires_at = 0, linked_at = 0 WHERE id = ".(int)$device['id']);
+            // cliente de assinatura: solta o vínculo com o cliente (coluna existe só com o módulo de clientes)
+            $c = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_devices` LIKE 'customer_id'");
+            if ($c && mysqli_num_rows($c) > 0) mysqli_query($mysqli, "UPDATE tbl_devices SET customer_id = 0 WHERE id = ".(int)$device['id']);
+        }
+        $ok = '1';
+    }
+    $set[$API_NAME][] = array('success' => $ok, 'status' => 'unlinked', 'MSG' => $ok == '1' ? 'Licença resetada. Digite o novo código.' : 'Dispositivo não identificado.');
+    header( 'Content-Type: application/json; charset=utf-8' );
+    echo $val= str_replace('\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    die();
+}
+
 // Ativação por código de revendedor
 // device_link:   { device_id, code, platform?, device_model?, ... } -> vincula o aparelho ao dono do código
 // device_status: { device_id } -> status: unlinked | pending | active | expired

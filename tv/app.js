@@ -39,6 +39,7 @@
   /* ---------------- idiomas ---------------- */
   var T = {
     pt: {
+      lic_reset: 'Resetar licença', lic_reset_msg: 'Isso desvincula este aparelho da revenda atual e apaga as listas. Depois você digita um novo código. Deseja continuar?', lic_yes: 'Sim, resetar', lic_cancel: 'Cancelar', lic_done: 'Licença resetada. Digite o novo código.',
       act_title: 'Ative este aparelho', act_msg: 'Digite o código da sua revenda (6 letras) ou da sua assinatura (8 números).',
       act_dev: 'ID do aparelho', act_btn: 'Ativar', act_check: 'Checar agora', act_wait: 'Aguarde o revendedor liberar',
       act_wait_msg: 'Seu código foi enviado. Esta tela verifica sozinha a cada 5 segundos.', act_other: 'Usar outro código',
@@ -59,6 +60,7 @@
       exit_q: 'Sair do app?', yes: 'Sim', no: 'Não'
     },
     en: {
+      lic_reset: 'Reset license', lic_reset_msg: 'This unlinks this device from the current reseller and erases the lists. Then you can enter a new code. Continue?', lic_yes: 'Yes, reset', lic_cancel: 'Cancel', lic_done: 'License reset. Enter the new code.',
       act_title: 'Activate this device', act_msg: 'Enter your reseller code (6 letters) or your subscription code (8 numbers).',
       act_dev: 'Device ID', act_btn: 'Activate', act_check: 'Check now', act_wait: 'Waiting for your reseller',
       act_wait_msg: 'Your code was sent. This screen checks automatically every 5 seconds.', act_other: 'Use another code',
@@ -79,6 +81,7 @@
       exit_q: 'Exit the app?', yes: 'Yes', no: 'No'
     },
     es: {
+      lic_reset: 'Restablecer licencia', lic_reset_msg: 'Esto desvincula este dispositivo del revendedor actual y borra las listas. Luego escribes un nuevo código. ¿Deseas continuar?', lic_yes: 'Sí, restablecer', lic_cancel: 'Cancelar', lic_done: 'Licencia restablecida. Escribe el nuevo código.',
       act_title: 'Activa este dispositivo', act_msg: 'Escribe el código de tu revendedor (6 letras) o de tu suscripción (8 números).',
       act_dev: 'ID del dispositivo', act_btn: 'Activar', act_check: 'Verificar ahora', act_wait: 'Espera que tu revendedor lo libere',
       act_wait_msg: 'Tu código fue enviado. Esta pantalla verifica sola cada 5 segundos.', act_other: 'Usar otro código',
@@ -857,7 +860,7 @@
   function settings() {
     var langName = { pt: 'Português', en: 'English', es: 'Español' };
     var items = [['lang', IC.globe, t('language'), langName[LANG]], ['dev', IC.id, t('device'), DID], ['sup', IC.chat, t('support'), ''],
-      ['ref', IC.sync, t('refresh'), ''], ['pl', IC.list, t('playlist'), S.pl ? (S.pl.playlist_name || S.pl.user_name) : ''], ['about', IC.info, t('about'), 'v' + VER]];
+      ['ref', IC.sync, t('refresh'), ''], ['pl', IC.list, t('playlist'), S.pl ? (S.pl.playlist_name || S.pl.user_name) : ''], ['about', IC.info, t('about'), 'v' + VER], ['reset', IC.sync, t('lic_reset'), '']];
     var h = '';
     for (var i = 0; i < items.length; i++) h += '<div class="set f" data-a="' + items[i][0] + '"><div class="ic">' + svg(items[i][1], 64) + '</div><div class="lb">' + esc(items[i][2]) + '</div><div class="sub">' + esc(items[i][3]) + '</div></div>';
     show(header(t('settings')) + '<div class="sets">' + h + '</div>', {
@@ -871,7 +874,18 @@
         sup: support,
         ref: function () { L.cats = null; V.movie.cats = null; V.series.cats = null; toast(t('refresh_ok')); },
         pl: function () { loadPlaylists(true); },
-        about: function () { modal('<img class="logo" src="' + esc(S.brand.logo) + '"><h1>' + esc(S.brand.name) + '</h1><p>v' + VER + ' · ' + (PLATFORM === 'lg_tv' ? 'LG webOS' : 'Samsung Tizen') + '</p><div class="btn f" data-a="_close">' + esc(t('close')) + '</div>'); }
+        about: function () { modal('<img class="logo" src="' + esc(S.brand.logo) + '"><h1>' + esc(S.brand.name) + '</h1><p>v' + VER + ' · ' + (PLATFORM === 'lg_tv' ? 'LG webOS' : 'Samsung Tizen') + '</p><div class="btn f" data-a="_close">' + esc(t('close')) + '</div>'); },
+        // Resetar licença: o cliente trocou de revenda e quer digitar um código novo neste aparelho
+        reset: function () {
+          modal('<h2>' + esc(t('lic_reset')) + '</h2><p>' + esc(t('lic_reset_msg')) + '</p><div class="btn f" data-a="_close">' + esc(t('lic_cancel')) + '</div><div class="btn gold f" data-a="y">' + esc(t('lic_yes')) + '</div>',
+            { y: function () {
+              closeModal(true); splash();
+              api('device_reset', {}, function (err) {
+                if (err) { toast(t('no_net')); return settings(); }
+                clearLocal(); toast(t('lic_done')); activation('unlinked', '');
+              });
+            } });
+        }
       }
     });
     S.screen = 'set'; clock();
