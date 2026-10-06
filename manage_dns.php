@@ -27,6 +27,16 @@
     // Status online/offline dos servidores (o monitor atualiza a cada 5 minutos)
     dns_health_migrate($mysqli);
     $never_checked = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_xui_dns WHERE health = '' AND reseller_id = 0"));
+    if(isset($_POST['discover_sources'])){
+        $n = dns_discover_sources($mysqli, 25);
+        $_SESSION['dns_src_msg'] = $n > 0 ? 'Fonte descoberta para '.$n.' servidor(es).' : 'Nenhuma fonte descoberta: as playlists cadastradas não funcionam nesses servidores.';
+        header("Location:manage_dns.php");
+        exit;
+    }
+    // mesma fonte: quais DNS apontam para o mesmo servidor de verdade
+    $src_groups = array();
+    $sg = mysqli_query($mysqli, "SELECT dns_title, real_server FROM tbl_xui_dns WHERE real_server <> ''");
+    while ($sg && $g = mysqli_fetch_assoc($sg)) $src_groups[$g['real_server']][] = html_entity_decode($g['dns_title'], ENT_QUOTES, 'UTF-8');
     if(isset($_POST['check_now']) || (int)$never_checked['num'] > 0){
         dns_health_check_all($mysqli, 4);
         if(isset($_POST['check_now'])){
@@ -84,6 +94,12 @@
                 </a>
                 <span class="ps-2 lh-1">Total DNS (<?=$total_pages ?>)</span>
                 <div class="d-flex mt-2 mt-md-0">
+                    <form method="post" class="me-2" onsubmit="this.querySelector('button').disabled=true;this.querySelector('span').textContent='Testando...';">
+                        <button type="submit" name="discover_sources" class="btn btn-outline-secondary d-inline-flex align-items-center" data-bs-toggle="tooltip" title="Testa os logins das playlists em todos os servidores e mostra para onde cada DNS aponta">
+                            <i class="ri-node-tree"></i>
+                            <span class="ps-1 text-nowrap d-none d-sm-block">Descobrir fontes</span>
+                        </button>
+                    </form>
                     <form method="post" class="me-2">
                         <button type="submit" name="check_now" class="btn btn-outline-secondary d-inline-flex align-items-center" data-bs-toggle="tooltip" title="Testar todos os servidores agora">
                             <i class="ri-refresh-line"></i>
@@ -155,6 +171,13 @@
                         <button type="submit" name="save_alerts" class="btn btn-primary px-4"><i class="ri-save-3-line"></i> Salvar alertas</button>
                     </div>
                 </form>
+                <?php if(!empty($_SESSION['dns_src_msg'])){ ?><div class="alert alert-info py-2"><?php echo htmlspecialchars($_SESSION['dns_src_msg']); unset($_SESSION['dns_src_msg']); ?></div><?php } ?>
+                <?php $multi = array_filter($src_groups, function ($l) { return count($l) > 1; }); if($multi){ ?>
+                    <div class="alert alert-warning py-2 small">
+                        <b>Servidores da mesma fonte</b> (não servem de reserva um do outro: se a fonte cair, caem juntos):
+                        <?php foreach($multi as $srv => $names){ ?><div>· <?php echo htmlspecialchars(implode(', ', $names)); ?> → <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $srv)); ?></b></div><?php } ?>
+                    </div>
+                <?php } ?>
                 <?php if(mysqli_num_rows($result) > 0){ ?>
                     <div class="row g-4 mb-3">
                         <?php $i=0; while($row=mysqli_fetch_array($result)) { ?>
@@ -170,6 +193,11 @@
                                         <?php echo htmlspecialchars((string)$row['dns_title'], ENT_QUOTES, 'UTF-8', false);?>
                                     </h5>
                                     <p class="mb-1"><?php echo htmlspecialchars((string)$row['dns_base'], ENT_QUOTES, 'UTF-8', false);?></p>
+                                    <?php if(!empty($row['real_server'])){ $same = isset($src_groups[$row['real_server']]) ? count($src_groups[$row['real_server']]) : 1; ?>
+                                        <p class="small mb-1 text-muted"><i class="ri-node-tree"></i> Fonte: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $row['real_server'])); ?></b><?php if($same > 1){ ?> · <span class="text-warning-emphasis">mesma fonte de outros <?php echo $same - 1; ?></span><?php } ?></p>
+                                    <?php } else { ?>
+                                        <p class="small mb-1 text-muted"><i class="ri-node-tree"></i> Fonte: ainda não descoberta</p>
+                                    <?php } ?>
                                     <p class="small mb-3" style="color:<?php echo $dot; ?>;">
                                         <b><?php echo $label; ?></b>
                                         <?php if($h == 'online' && (int)$row['latency_ms'] > 0){ ?> · <?php echo (int)$row['latency_ms']; ?> ms<?php } ?>

@@ -189,6 +189,7 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
     if (!$list) return array('ok' => false, 'msg' => 'Nenhum servidor DNS ativo. Cadastre em Servidores DNS.', 'dns' => null, 'probe' => null);
 
     $results = playlist_probe_parallel($list, $username, $password, $timeout);
+    foreach ($list as $i => $d) if ($results[$i]['result'] == 'ok' && !empty($results[$i]['server'])) dns_note_real($mysqli, $d['id'], $results[$i]['server']);
     $winner = null;
     // Ordem de escolha quando mais de um servidor aceita o mesmo usuário:
     //  1º o servidor preferido (o da URL colada / o último que funcionou), se ele for confiável;
@@ -258,6 +259,8 @@ function dns_health_migrate($mysqli){
         'created_at'    => "INT(11) NOT NULL DEFAULT 0",
         'catch_all'     => "TINYINT(1) NOT NULL DEFAULT 0",     // 1 = aceita qualquer usuário/senha (não serve para identificar o servidor da lista)
         'catch_checked' => "INT(11) NOT NULL DEFAULT 0",
+        'real_server'   => "VARCHAR(191) NOT NULL DEFAULT ''",  // fonte de verdade para onde este DNS aponta (aprendido com logins reais)
+        'real_at'       => "INT(11) NOT NULL DEFAULT 0",
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_xui_dns` LIKE '$name'");
@@ -570,6 +573,8 @@ function playlist_monitor_run($mysqli){
         if ($probe['result'] == 'ok') {
             $srv = isset($probe['server']) ? $probe['server'] : '';
             $allowed = $scopes[(int)$rows[$id]['scope']];
+            $tn = dns_normalize($tasks[$id]['base']);
+            if ($srv != '' && isset($allowed[$tn])) dns_note_real($mysqli, $allowed[$tn]['id'], $srv);
             if (!empty($rows[$id]['dns_pin']) && isset($allowed[$rows[$id]['dns_pin']])) {
                 playlist_set_dns_state($mysqli, $id, $allowed[$rows[$id]['dns_pin']]['base'], true, $srv);
                 $stats['online']++;
@@ -745,4 +750,45 @@ function playlist_handle_pin($mysqli, $device_id, $post){
     mysqli_stmt_close($stmt);
     playlist_set_dns_state($mysqli, $pid, $chosen['base'], true, isset($probe[0]['server']) ? $probe[0]['server'] : '');
     return array('ok' => true, 'msg' => 'A playlist agora usa o servidor "'.$chosen['title'].'". Se ele cair, troca sozinha e volta para ele quando voltar.');
+}
+
+/* ---------- Fonte de cada DNS: para onde ele aponta (aprende com os logins reais das playlists) ---------- */
+
+function dns_note_real($mysqli, $dns_id, $server){
+    $server = (string)$server;
+    if ((int)$dns_id <= 0 || $server == '') return;
+    $now = time();
+    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_xui_dns SET real_server = ?, real_at = ? WHERE id = ?");
+    $id = (int)$dns_id;
+    mysqli_stmt_bind_param($stmt, 'sii', $server, $now, $id);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+}
+
+// Testa os logins das playlists (até $max contas diferentes) em todos os DNS e anota a fonte de cada um.
+// As senhas não saem do servidor. Retorna quantos DNS tiveram a fonte descoberta.
+function dns_discover_sources($mysqli, $max = 25){
+    dns_health_migrate($mysqli);
+    playlists_migrate($mysqli);
+    $all = array();
+    $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base FROM tbl_xui_dns WHERE status = '1'");
+    while ($res && $r = mysqli_fetch_assoc($res)) {
+        $base = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/');
+        if (dns_normalize($base) != '') $all[] = array('id' => (int)$r['id'], 'base' => $base);
+    }
+    if (!$all) return 0;
+    $found = array();
+    $lg = mysqli_query($mysqli, "SELECT user_name, user_password FROM tbl_users WHERE status = '1' AND user_name <> '' GROUP BY user_name, user_password ORDER BY MAX(id) DESC LIMIT ".(int)$max);
+    while ($lg && $u = mysqli_fetch_assoc($lg)) {
+        $todo = array();
+        foreach ($all as $i => $d) if (!isset($found[$d['id']])) $todo[$i] = $d;
+        if (!$todo) break;
+        foreach (playlist_probe_parallel($todo, $u['user_name'], $u['user_password'], 6) as $i => $p) {
+            if ($p['result'] == 'ok' && !empty($p['server'])) {
+                $found[$todo[$i]['id']] = $p['server'];
+                dns_note_real($mysqli, $todo[$i]['id'], $p['server']);
+            }
+        }
+    }
+    return count($found);
 }
