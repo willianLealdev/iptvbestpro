@@ -261,6 +261,7 @@ function dns_health_migrate($mysqli){
         'catch_checked' => "INT(11) NOT NULL DEFAULT 0",
         'real_server'   => "VARCHAR(191) NOT NULL DEFAULT ''",  // fonte de verdade para onde este DNS aponta (aprendido com logins reais)
         'real_at'       => "INT(11) NOT NULL DEFAULT 0",
+        'real_list'     => "VARCHAR(1000) NOT NULL DEFAULT ''",  // todos os servidores de vídeo já vistos (o painel IPTV distribui os clientes entre vários)
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_xui_dns` LIKE '$name'");
@@ -758,11 +759,41 @@ function dns_note_real($mysqli, $dns_id, $server){
     $server = (string)$server;
     if ((int)$dns_id <= 0 || $server == '') return;
     $now = time();
-    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_xui_dns SET real_server = ?, real_at = ? WHERE id = ?");
     $id = (int)$dns_id;
-    mysqli_stmt_bind_param($stmt, 'sii', $server, $now, $id);
+    // junta com os servidores já vistos (o mesmo DNS pode mandar cada cliente para um servidor de vídeo diferente)
+    $cur = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT real_list FROM tbl_xui_dns WHERE id = $id"));
+    $set = array_values(array_filter(explode(',', $cur ? (string)$cur['real_list'] : '')));
+    $set = array_values(array_unique(array_merge(array($server), $set)));
+    $list = '';
+    foreach ($set as $x) { if (strlen($list) + strlen($x) + 1 > 990) break; $list .= ($list == '' ? '' : ',').$x; }
+    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_xui_dns SET real_server = ?, real_list = ?, real_at = ? WHERE id = ?");
+    mysqli_stmt_bind_param($stmt, 'ssii', $server, $list, $now, $id);
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
+}
+
+// Agrupa os DNS que são da mesma fonte (têm pelo menos um servidor de vídeo em comum).
+// Retorna array de grupos: array('names' => [...], 'servers' => [...]) só com 2 ou mais DNS.
+function dns_source_groups($mysqli){
+    $rows = array();
+    $res = mysqli_query($mysqli, "SELECT id, dns_title, real_list FROM tbl_xui_dns WHERE real_list <> ''");
+    while ($res && $r = mysqli_fetch_assoc($res)) $rows[(int)$r['id']] = array('name' => html_entity_decode($r['dns_title'], ENT_QUOTES, 'UTF-8'), 'srv' => array_filter(explode(',', $r['real_list'])));
+    $parent = array();
+    foreach ($rows as $id => $r) $parent[$id] = $id;
+    $find = function ($x) use (&$parent, &$find) { return $parent[$x] == $x ? $x : ($parent[$x] = $find($parent[$x])); };
+    $owner = array();
+    foreach ($rows as $id => $r) foreach ($r['srv'] as $s) {
+        if (isset($owner[$s])) $parent[$find($id)] = $find($owner[$s]); else $owner[$s] = $id;
+    }
+    $groups = array();
+    foreach ($rows as $id => $r) {
+        $g = $find($id);
+        if (!isset($groups[$g])) $groups[$g] = array('names' => array(), 'servers' => array(), 'ids' => array());
+        $groups[$g]['names'][] = $r['name'];
+        $groups[$g]['ids'][] = $id;
+        $groups[$g]['servers'] = array_values(array_unique(array_merge($groups[$g]['servers'], $r['srv'])));
+    }
+    return array_values(array_filter($groups, function ($g) { return count($g['names']) > 1; }));
 }
 
 // Testa os logins das playlists (até $max contas diferentes) em todos os DNS e anota a fonte de cada um.

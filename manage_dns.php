@@ -34,9 +34,9 @@
         exit;
     }
     // mesma fonte: quais DNS apontam para o mesmo servidor de verdade
-    $src_groups = array();
-    $sg = mysqli_query($mysqli, "SELECT dns_title, real_server FROM tbl_xui_dns WHERE real_server <> ''");
-    while ($sg && $g = mysqli_fetch_assoc($sg)) $src_groups[$g['real_server']][] = html_entity_decode($g['dns_title'], ENT_QUOTES, 'UTF-8');
+    $src_groups = dns_source_groups($mysqli);
+    $src_of = array(); // id do DNS => quantos outros DNS são da mesma fonte
+    foreach ($src_groups as $g) foreach ($g['ids'] as $gid) $src_of[$gid] = count($g['ids']) - 1;
     if(isset($_POST['check_now']) || (int)$never_checked['num'] > 0){
         dns_health_check_all($mysqli, 4);
         if(isset($_POST['check_now'])){
@@ -172,10 +172,10 @@
                     </div>
                 </form>
                 <?php if(!empty($_SESSION['dns_src_msg'])){ ?><div class="alert alert-info py-2"><?php echo htmlspecialchars($_SESSION['dns_src_msg']); unset($_SESSION['dns_src_msg']); ?></div><?php } ?>
-                <?php $multi = array_filter($src_groups, function ($l) { return count($l) > 1; }); if($multi){ ?>
+                <?php if($src_groups){ ?>
                     <div class="alert alert-warning py-2 small">
                         <b>Servidores da mesma fonte</b> (não servem de reserva um do outro: se a fonte cair, caem juntos):
-                        <?php foreach($multi as $srv => $names){ ?><div>· <?php echo htmlspecialchars(implode(', ', $names)); ?> → <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $srv)); ?></b></div><?php } ?>
+                        <?php foreach($src_groups as $g){ ?><div>· <b><?php echo htmlspecialchars(implode(', ', $g['names'])); ?></b> → <?php echo htmlspecialchars(implode(', ', array_map(function ($s) use ($mysqli) { return dns_title_for_base($mysqli, $s); }, array_slice($g['servers'], 0, 4)))); ?><?php if(count($g['servers']) > 4){ ?> e mais <?php echo count($g['servers']) - 4; ?><?php } ?></div><?php } ?>
                     </div>
                 <?php } ?>
                 <?php if(mysqli_num_rows($result) > 0){ ?>
@@ -193,8 +193,8 @@
                                         <?php echo htmlspecialchars((string)$row['dns_title'], ENT_QUOTES, 'UTF-8', false);?>
                                     </h5>
                                     <p class="mb-1"><?php echo htmlspecialchars((string)$row['dns_base'], ENT_QUOTES, 'UTF-8', false);?></p>
-                                    <?php if(!empty($row['real_server'])){ $same = isset($src_groups[$row['real_server']]) ? count($src_groups[$row['real_server']]) : 1; ?>
-                                        <p class="small mb-1 text-muted"><i class="ri-node-tree"></i> Fonte: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $row['real_server'])); ?></b><?php if($same > 1){ ?> · <span class="text-warning-emphasis">mesma fonte de outros <?php echo $same - 1; ?></span><?php } ?></p>
+                                    <?php if(!empty($row['real_list'])){ $srvs = array_filter(explode(',', $row['real_list'])); $same = isset($src_of[(int)$row['id']]) ? $src_of[(int)$row['id']] : 0; ?>
+                                        <p class="small mb-1 text-muted"><i class="ri-node-tree"></i> Vídeo sai de: <b><?php echo htmlspecialchars(implode(', ', array_map(function ($s) use ($mysqli) { return dns_title_for_base($mysqli, $s); }, array_slice($srvs, 0, 3)))); ?></b><?php if(count($srvs) > 3){ ?> +<?php echo count($srvs) - 3; ?><?php } ?><?php if($same > 0){ ?> · <span class="text-warning-emphasis">mesma fonte de outros <?php echo $same; ?></span><?php } ?></p>
                                     <?php } else { ?>
                                         <p class="small mb-1 text-muted"><i class="ri-node-tree"></i> Fonte: ainda não descoberta</p>
                                     <?php } ?>
