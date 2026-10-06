@@ -32,6 +32,8 @@ function playlist_form_styles(){ ?>
     .pl-item__icon { width: 40px; height: 40px; border-radius: 10px; background: #eef3ff; color: #3b6cf6; display: flex; align-items: center; justify-content: center; font-size: 20px; flex: 0 0 40px; }
     .pl-item__body { flex: 1 1 auto; min-width: 0; }
     .pl-item__name { font-weight: 600; }
+    .pl-item__dns { color: #6b7280; font-size: 13px; margin-top: 2px; }
+    .pl-item__dns b { color: #374151; }
     .pl-item__meta { color: #6b7280; font-size: 13px; margin-top: 2px; }
     .pl-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
     .pl-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
@@ -150,6 +152,9 @@ function playlist_list_render($playlists, $hidden_html){ ?>
                     <div class="pl-item__icon"><i class="ri-play-list-2-line"></i></div>
                     <div class="pl-item__body">
                         <div class="pl-item__name"><?php echo htmlspecialchars(isset($p['playlist_name']) && $p['playlist_name'] != '' ? $p['playlist_name'] : $p['user_name']); ?></div>
+                        <?php if (!empty($p['dns_base']) && (!isset($p['source']) || $p['source'] == 'account')) { global $mysqli; ?>
+                            <div class="pl-item__dns"><i class="ri-server-line"></i> DNS: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $p['dns_base'])); ?></b></div>
+                        <?php } ?>
                         <?php if (!isset($p['source']) || $p['source'] == 'account') {
                             $online = !isset($p['dns_status']) || $p['dns_status'] != 'offline'; ?>
                             <div class="pl-item__meta">

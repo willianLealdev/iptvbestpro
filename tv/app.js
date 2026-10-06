@@ -256,6 +256,7 @@
   function activate(el) {
     if (el.tagName === 'INPUT') { el.focus(); return; }
     var a = el.getAttribute('data-a');
+    if (a === '_reload') { toast(t('loading')); setTimeout(function () { location.reload(); }, 300); return; }
     if (a && S.acts && S.acts[a]) S.acts[a](el, el.getAttribute('data-i'));
   }
 
@@ -295,7 +296,8 @@
   function header(title) {
     return '<div class="top"><img class="logo" src="' + esc(S.brand.logo) + '" onerror="this.style.visibility=\'hidden\'">' +
       (title ? '<div class="title">' + esc(title) + '</div>' : (S.brand.showName === false ? '' : '<div class="brand">' + esc(S.brand.name) + '</div>')) +
-      '<div class="right" id="clock"></div></div>';
+      // tela inicial: botão Atualizar ao lado do relógio (recarrega o app inteiro sem sair)
+      '<div class="right">' + (title ? '' : '<div class="reload f" data-a="_reload">' + svg(IC.sync, 40) + '</div>') + '<span id="clock"></span></div></div>';
   }
   var timers = [];
   function every(fn, ms) { timers.push(setInterval(fn, ms)); }

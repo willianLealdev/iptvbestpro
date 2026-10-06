@@ -23,6 +23,7 @@
     if(isset($_POST['delete_dns'])){
         $id = (int)$_POST['dns_id'];
         mysqli_query($mysqli, "DELETE FROM tbl_xui_dns WHERE id = $id AND reseller_id > 0");
+        if (mysqli_affected_rows($mysqli) > 0) @mysqli_query($mysqli, "DELETE FROM tbl_dns_share WHERE dns_id = $id");
         rd_flash(mysqli_affected_rows($mysqli) > 0, mysqli_affected_rows($mysqli) > 0 ? 'Servidor removido.' : 'Servidor não encontrado.');
         header("Location:".$back_url);
         exit;

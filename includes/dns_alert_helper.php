@@ -130,6 +130,7 @@ function dns_alert_admin_recipients($mysqli, $cfg){
  */
 function dns_alerts_run($mysqli){
     dns_alert_migrate($mysqli);
+    if (function_exists('dns_health_migrate')) dns_health_migrate($mysqli); // garante a tabela de DNS compartilhado
     acc_migrate($mysqli);
     $cfg = dns_alert_cfg($mysqli);
     $now = time();
@@ -141,11 +142,19 @@ function dns_alerts_run($mysqli){
         $item = array('title' => $d['dns_title'], 'base' => rtrim(html_entity_decode($d['dns_base'], ENT_QUOTES, 'UTF-8'), '/'),
                       'offline_since' => (int)$d['offline_since'], 'reseller' => (int)$d['reseller_id'] > 0 ? (string)$d['reseller_name'] : '');
         $scope = (int)$d['reseller_id'];
+        // DNS compartilhado: as revendas que usam o mesmo servidor também recebem o aviso
+        $scopes_of = array($scope);
+        if ($scope > 0) {
+            $sh = mysqli_query($mysqli, "SELECT reseller_id FROM tbl_dns_share WHERE dns_id = ".(int)$d['id']);
+            while ($sh && $x = mysqli_fetch_assoc($sh)) $scopes_of[] = (int)$x['reseller_id'];
+        }
         if ($d['health'] == 'offline' && (int)$d['offline_since'] > 0 && $now - (int)$d['offline_since'] >= $wait && $d['alert_state'] != 'offline') {
-            $down[$scope][] = $item; $ids_down[] = (int)$d['id'];
+            foreach ($scopes_of as $sc) $down[$sc][] = $item;
+            $ids_down[] = (int)$d['id'];
         } else if ($d['health'] == 'online' && $d['alert_state'] == 'offline') {
             $item['offline_since'] = (int)$d['alert_at'] > 0 ? (int)$d['alert_at'] : $now - $wait; // alert_at guarda o início da queda
-            $up[$scope][] = $item; $ids_up[] = (int)$d['id'];
+            foreach ($scopes_of as $sc) $up[$sc][] = $item;
+            $ids_up[] = (int)$d['id'];
         }
     }
     // marca primeiro (evita repetir o mesmo aviso se o envio demorar ou falhar)

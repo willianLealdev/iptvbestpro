@@ -7,6 +7,20 @@
     
     $page_save=(isset($_GET['dns_id'])) ? 'Save' : 'Create';
     
+    require_once("includes/playlist_helper.php");
+    dns_health_migrate($mysqli);
+    // Servidor repetido: o mesmo endereço não pode ser cadastrado duas vezes
+    if(isset($_POST['submit'])){
+        $__dup = dns_find_by_base($mysqli, trim($_POST['dns_base']), isset($_POST['dns_id']) ? (int)$_POST['dns_id'] : 0);
+        if ($__dup) {
+            $_SESSION['class'] = 'error';
+            $_SESSION['msg'] = 'dns_duplicate';
+            $_SESSION['dns_dup_name'] = html_entity_decode($__dup['dns_title'], ENT_QUOTES, 'UTF-8');
+            header("Location:".(isset($_POST['dns_id']) ? "create_dns.php?dns_id=".(int)$_POST['dns_id'] : "create_dns.php?add=yes"));
+            exit;
+        }
+    }
+
     if(isset($_POST['submit']) and isset($_GET['add'])){
 
         $base_url = htmlentities(trim($_POST['dns_base']));

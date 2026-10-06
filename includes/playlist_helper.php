@@ -47,7 +47,7 @@ function dns_list_active($mysqli, $scope = 0){
     dns_health_migrate($mysqli);
     $list = array();
     $scope = (int)$scope;
-    $where = $scope > 0 ? "(reseller_id = 0 OR reseller_id = $scope)" : "reseller_id = 0";
+    $where = $scope > 0 ? "(reseller_id = 0 OR reseller_id = $scope OR id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = $scope))" : "reseller_id = 0";
     $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base FROM tbl_xui_dns WHERE status = '1' AND $where ORDER BY (reseller_id = 0) ASC, id ASC");
     while ($res && $r = mysqli_fetch_assoc($res)) {
         $base = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/'); // a página de DNS grava com htmlentities
@@ -210,6 +210,72 @@ function dns_health_migrate($mysqli){
     if ($idx && mysqli_num_rows($idx) == 0) {
         mysqli_query($mysqli, "ALTER TABLE `tbl_xui_dns` ADD KEY `idx_dns_reseller` (`reseller_id`)");
     }
+    // DNS compartilhado: o mesmo servidor existe uma vez só; as outras revendas que usam ficam ligadas a ele
+    mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `tbl_dns_share` (
+        `dns_id` INT(11) NOT NULL,
+        `reseller_id` INT(11) NOT NULL,
+        `created_at` INT(11) NOT NULL DEFAULT 0,
+        PRIMARY KEY (`dns_id`, `reseller_id`),
+        KEY `idx_share_reseller` (`reseller_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    dns_merge_duplicates($mysqli);
+}
+
+// Junta servidores repetidos (mesmo endereço): fica um só e quem tinha a cópia passa a usar o original.
+function dns_merge_duplicates($mysqli){
+    $res = mysqli_query($mysqli, "SELECT id, dns_base, reseller_id FROM tbl_xui_dns ORDER BY (reseller_id = 0) DESC, id ASC");
+    $keep = array();
+    $now = time();
+    while ($res && $r = mysqli_fetch_assoc($res)) {
+        $norm = dns_normalize(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8'));
+        if ($norm == '') continue;
+        if (!isset($keep[$norm])) { $keep[$norm] = $r; continue; }
+        $main = $keep[$norm];
+        $dup_id = (int)$r['id'];
+        $rid = (int)$r['reseller_id'];
+        // revenda dona da cópia passa a usar o servidor que ficou (se ele não for do admin, que já vale para todos)
+        if ($rid > 0 && (int)$main['reseller_id'] != $rid && (int)$main['reseller_id'] > 0) {
+            mysqli_query($mysqli, "INSERT IGNORE INTO tbl_dns_share (dns_id, reseller_id, created_at) VALUES (".(int)$main['id'].", $rid, $now)");
+        }
+        // quem estava ligado na cópia passa para o que ficou
+        $sh = mysqli_query($mysqli, "SELECT reseller_id FROM tbl_dns_share WHERE dns_id = $dup_id");
+        while ($sh && $s = mysqli_fetch_assoc($sh)) {
+            if ((int)$s['reseller_id'] != (int)$main['reseller_id'] && (int)$main['reseller_id'] > 0) {
+                mysqli_query($mysqli, "INSERT IGNORE INTO tbl_dns_share (dns_id, reseller_id, created_at) VALUES (".(int)$main['id'].", ".(int)$s['reseller_id'].", $now)");
+            }
+        }
+        mysqli_query($mysqli, "DELETE FROM tbl_dns_share WHERE dns_id = $dup_id");
+        mysqli_query($mysqli, "DELETE FROM tbl_xui_dns WHERE id = $dup_id");
+    }
+}
+
+// Procura um servidor já cadastrado com o mesmo endereço (de qualquer dono). $except = id para ignorar (edição).
+function dns_find_by_base($mysqli, $base, $except = 0){
+    $norm = dns_normalize(html_entity_decode((string)$base, ENT_QUOTES, 'UTF-8'));
+    if ($norm == '') return null;
+    $res = mysqli_query($mysqli, "SELECT * FROM tbl_xui_dns WHERE id <> ".(int)$except);
+    while ($res && $r = mysqli_fetch_assoc($res)) {
+        if (dns_normalize(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')) == $norm) return $r;
+    }
+    return null;
+}
+
+// Nome do servidor de uma playlist (só para mostrar no painel)
+function dns_title_for_base($mysqli, $base){
+    static $map = null;
+    if ($map === null) {
+        $map = array();
+        $res = mysqli_query($mysqli, "SELECT dns_title, dns_base FROM tbl_xui_dns");
+        while ($res && $r = mysqli_fetch_assoc($res)) {
+            $n = dns_normalize(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8'));
+            if ($n != '' && !isset($map[$n])) $map[$n] = html_entity_decode($r['dns_title'], ENT_QUOTES, 'UTF-8');
+        }
+    }
+    $n = dns_normalize($base);
+    if ($n == '') return '';
+    if (isset($map[$n])) return $map[$n];
+    $h = parse_url($n, PHP_URL_HOST);
+    return $h ? $h : $n;
 }
 
 define('DNS_OFFLINE_DELETE_DAYS', 15);
@@ -239,7 +305,11 @@ function dns_reseller_list($mysqli, $reseller_id){
     dns_health_migrate($mysqli);
     $rows = array();
     $rid = (int)$reseller_id;
-    $res = mysqli_query($mysqli, "SELECT * FROM tbl_xui_dns WHERE reseller_id = $rid ORDER BY id DESC");
+    $res = mysqli_query($mysqli, "SELECT d.*, (d.reseller_id = $rid) AS is_owner,
+                                     (SELECT COUNT(*) FROM tbl_dns_share s WHERE s.dns_id = d.id) + IF(d.reseller_id > 0, 1, 0) AS users
+                                     FROM tbl_xui_dns d
+                                     WHERE d.reseller_id = $rid OR d.id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = $rid)
+                                     ORDER BY d.id DESC");
     while ($res && $r = mysqli_fetch_assoc($res)) $rows[] = $r;
     return $rows;
 }
@@ -255,10 +325,20 @@ function dns_reseller_add($mysqli, $reseller_id, $title, $base){
     $norm = dns_normalize($base);
     if ($norm == '' || !filter_var($base, FILTER_VALIDATE_URL)) return array('ok' => false, 'msg' => 'Endereço inválido. Ex.: http://servidor.com:8080');
 
-    $count = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_xui_dns WHERE reseller_id = $rid"));
-    if ((int)$count['num'] >= DNS_MAX_PER_RESELLER) return array('ok' => false, 'msg' => 'Limite de '.DNS_MAX_PER_RESELLER.' servidores atingido.');
     foreach (dns_reseller_list($mysqli, $rid) as $d) {
-        if (dns_normalize(html_entity_decode($d['dns_base'], ENT_QUOTES, 'UTF-8')) == $norm) return array('ok' => false, 'msg' => 'Este servidor já está cadastrado.');
+        if (dns_normalize(html_entity_decode($d['dns_base'], ENT_QUOTES, 'UTF-8')) == $norm) return array('ok' => false, 'msg' => 'Este servidor já está na sua lista ("'.html_entity_decode($d['dns_title'], ENT_QUOTES, 'UTF-8').'").');
+    }
+    if (count(dns_reseller_list($mysqli, $rid)) >= DNS_MAX_PER_RESELLER) return array('ok' => false, 'msg' => 'Limite de '.DNS_MAX_PER_RESELLER.' servidores atingido.');
+    // Já existe no sistema (de outra revenda ou do admin): não cria outro, usa o mesmo
+    $exists = dns_find_by_base($mysqli, $norm);
+    if ($exists) {
+        $name = html_entity_decode($exists['dns_title'], ENT_QUOTES, 'UTF-8');
+        if ((int)$exists['reseller_id'] == 0) {
+            return array('ok' => true, 'msg' => 'Este servidor já está no sistema como "'.$name.'" e já vale para os seus clientes. Não precisa cadastrar de novo.');
+        }
+        $now = time();
+        mysqli_query($mysqli, "INSERT IGNORE INTO tbl_dns_share (dns_id, reseller_id, created_at) VALUES (".(int)$exists['id'].", $rid, $now)");
+        return array('ok' => true, 'msg' => 'Este servidor já existia no sistema como "'.$name.'". Ele foi adicionado à sua lista e é compartilhado com quem já usa.');
     }
 
     $now = time();
@@ -274,6 +354,16 @@ function dns_reseller_delete($mysqli, $reseller_id, $dns_id){
     $rid = (int)$reseller_id;
     $id = (int)$dns_id;
     if ($rid <= 0) return false;
+    mysqli_query($mysqli, "DELETE FROM tbl_dns_share WHERE dns_id = $id AND reseller_id = $rid");
+    if (mysqli_affected_rows($mysqli) > 0) return true;
+    $next = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT reseller_id FROM tbl_dns_share WHERE dns_id = $id ORDER BY created_at ASC LIMIT 1"));
+    if ($next) {
+        $nr = (int)$next['reseller_id'];
+        mysqli_query($mysqli, "UPDATE tbl_xui_dns SET reseller_id = $nr WHERE id = $id AND reseller_id = $rid");
+        $moved = mysqli_affected_rows($mysqli) > 0;
+        if ($moved) mysqli_query($mysqli, "DELETE FROM tbl_dns_share WHERE dns_id = $id AND reseller_id = $nr");
+        return $moved;
+    }
     mysqli_query($mysqli, "DELETE FROM tbl_xui_dns WHERE id = $id AND reseller_id = $rid");
     return mysqli_affected_rows($mysqli) > 0;
 }

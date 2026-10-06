@@ -20,6 +20,7 @@
     $client_lang['9'] = "Please enter email address..";
 
     $client_lang['10'] = "Added successfully.";
+    $client_lang['dns_duplicate'] = "Este servidor já está cadastrado".(!empty($_SESSION['dns_dup_name']) ? ' como "'.htmlspecialchars($_SESSION['dns_dup_name']).'"' : '').". Não é permitido repetir.";
 
     $client_lang['11'] = "Updated successfully.";
 
