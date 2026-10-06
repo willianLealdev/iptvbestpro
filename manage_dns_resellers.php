@@ -22,9 +22,12 @@
 
     if(isset($_POST['delete_dns'])){
         $id = (int)$_POST['dns_id'];
-        mysqli_query($mysqli, "DELETE FROM tbl_xui_dns WHERE id = $id AND reseller_id > 0");
-        if (mysqli_affected_rows($mysqli) > 0) @mysqli_query($mysqli, "DELETE FROM tbl_dns_share WHERE dns_id = $id");
-        rd_flash(mysqli_affected_rows($mysqli) > 0, mysqli_affected_rows($mysqli) > 0 ? 'Servidor removido.' : 'Servidor não encontrado.');
+        // Mesma regra da revenda: sai só da lista dessa revenda. Se outras usam o mesmo servidor,
+        // ele passa para a próxima e continua para elas; só é apagado de vez quando ninguém mais usa.
+        $own = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT reseller_id FROM tbl_xui_dns WHERE id = $id AND reseller_id > 0"));
+        $others = $own ? (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_dns_share WHERE dns_id = $id"))['n'] : 0;
+        $ok = $own ? dns_reseller_delete($mysqli, (int)$own['reseller_id'], $id) : false;
+        rd_flash($ok, !$ok ? 'Servidor não encontrado.' : ($others > 0 ? 'Removido da lista dessa revenda. O servidor continua para as outras '.$others.' revenda(s) que usam.' : 'Servidor removido (ninguém mais usava).'));
         header("Location:".$back_url);
         exit;
     }
@@ -55,7 +58,8 @@
     if($health_filter != ''){ $where[] = "d.health = '".$health_filter."'"; }
     $where_sql = 'WHERE '.implode(' AND ', $where);
 
-    $result = mysqli_query($mysqli, "SELECT d.*, r.name AS reseller_name, r.email AS reseller_email
+    $result = mysqli_query($mysqli, "SELECT d.*, r.name AS reseller_name, r.email AS reseller_email,
+                                     (SELECT COUNT(*) FROM tbl_dns_share s WHERE s.dns_id = d.id) AS shared_with
                                      FROM tbl_xui_dns d LEFT JOIN tbl_resellers r ON r.id = d.reseller_id
                                      $where_sql ORDER BY (d.health = 'offline') DESC, r.name ASC, d.id DESC");
 
@@ -132,7 +136,8 @@
                                     <?php if((int)$d['status'] != 1){ ?><br><small class="text-muted">Desligado</small><?php } ?>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold"><?php echo htmlspecialchars($d['dns_title']); ?></div>
+                                    <div class="fw-semibold"><?php echo htmlspecialchars($d['dns_title']); ?>
+                                        <?php if ((int)$d['shared_with'] > 0) { ?><span class="badge bg-info-subtle text-info-emphasis ms-1" title="Outras revendas usam o mesmo servidor">Compartilhado · +<?php echo (int)$d['shared_with']; ?> revenda(s)</span><?php } ?></div>
                                     <small class="text-muted text-break"><?php echo htmlspecialchars(html_entity_decode($d['dns_base'], ENT_QUOTES, 'UTF-8')); ?></small>
                                 </td>
                                 <td>
