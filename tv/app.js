@@ -555,8 +555,26 @@
   }
 
   /* ---------------- tela inicial ---------------- */
+  // Licença: confere ao voltar para a tela inicial (no máximo 1 vez por minuto) e a cada 10 minutos.
+  // Aparelho excluído/resetado no painel perde o acesso na hora, sem precisar fechar o app.
+  var lastLicCheck = 0;
+  function licenseCheck(force) {
+    if (S.screen === 'act' || (!force && Date.now() - lastLicCheck < 60000)) return;
+    lastLicCheck = Date.now();
+    api('device_status', {}, function (err, arr) {
+      if (err) return;
+      var o = arr && arr[0] ? arr[0] : {};
+      saveStatus(o);
+      if (o.status && o.status !== 'active') {
+        stopPreview(); var pl = $('player'); if (pl) pl.parentNode.removeChild(pl);
+        activation(o.status, '');
+      }
+    });
+  }
+  setInterval(function () { licenseCheck(true); }, 10 * 60000);
   function home() {
     stopPreview();
+    setTimeout(function () { licenseCheck(false); }, 1500);
     var tiles = [['live', IC.tv, 'live'], ['movies', IC.movie, 'movies'], ['series', IC.series, 'series'], ['playlist', IC.list, 'playlist'], ['settings', IC.gear, 'settings']];
     var h = '';
     for (var i = 0; i < tiles.length; i++) h += '<div class="tile f" data-a="' + tiles[i][0] + '"><div class="ic">' + svg(tiles[i][1]) + '</div><div class="lb">' + esc(t(tiles[i][2])) + '</div></div>';

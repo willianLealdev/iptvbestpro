@@ -46,13 +46,9 @@ if($get_helper['helper_name']=="device_reset"){
     $ok = '0';
     if ($did !== '') {
         $device = devices_find($mysqli, $did, $aid);
+        // apaga o aparelho de vez (some da lista da revenda e do admin) junto com as listas dele
         devices_wipe_playlists($mysqli, $did);
-        if ($device) {
-            mysqli_query($mysqli, "UPDATE tbl_devices SET owner = '', reseller_id = 0, package = '', expires_at = 0, linked_at = 0 WHERE id = ".(int)$device['id']);
-            // cliente de assinatura: solta o vínculo com o cliente (coluna existe só com o módulo de clientes)
-            $c = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_devices` LIKE 'customer_id'");
-            if ($c && mysqli_num_rows($c) > 0) mysqli_query($mysqli, "UPDATE tbl_devices SET customer_id = 0 WHERE id = ".(int)$device['id']);
-        }
+        if ($device) devices_purge($mysqli, array((int)$device['id']));
         $ok = '1';
     }
     $set[$API_NAME][] = array('success' => $ok, 'status' => 'unlinked', 'MSG' => $ok == '1' ? 'Licença resetada. Digite o novo código.' : 'Dispositivo não identificado.');
