@@ -198,6 +198,14 @@ $mysqli->set_charset("utf8mb4");
                         <li><a href="manage_sub_plans.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_sub_plans.php") { ?>active<?php } ?>">Planos</a></li>
                     </ul>
                 </li>
+
+                <!-- Histórico de pagamentos: créditos das revendas e assinaturas dos clientes -->
+                <li class="nsofts-sidebar-nav__item">
+                    <a href="manage_payments.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_payments.php") { ?>active<?php } ?>">
+                        <i class="ri-money-dollar-circle-line nsofts-sidebar-nav__icon"></i>
+                        <span class="nsofts-sidebar-nav__text">Histórico de Pagamentos</span>
+                    </a>
+                </li>
                 <?php } ?>
 
                 <li class="nsofts-sidebar-nav__item">
