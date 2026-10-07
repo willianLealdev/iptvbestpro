@@ -10,7 +10,7 @@ define('DEMO_PASS', 'bestpro');
 
 function demo_streams(){
     return array(
-        'akamai_live' => 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
+        'akamai_live' => 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8', // Apple (teste livre): o stream da Akamai não tocava na Roku
         'apple_adv'   => 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8',
         'apple_16x9'  => 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8',
         'bbb'         => 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
