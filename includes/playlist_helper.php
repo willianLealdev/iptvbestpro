@@ -229,13 +229,14 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
  * Failover para o app: devolve o DNS que funciona AGORA para esta playlist.
  * Usa cache curto; se o último servidor parar de aceitar (queda ou migração), procura em todos e atualiza.
  */
-function playlist_current_dns($mysqli, $row){
+function playlist_current_dns($mysqli, $row, $fresh = false){
     // Playlist cadastrada por URL: o servidor é o da própria URL, sem troca automática
     if (isset($row['source']) && $row['source'] != 'account') return $row['dns_base'];
-    // O monitor (a cada 5 min) mantém dns_base atualizado. Só testa aqui se a verificação estiver atrasada.
+    // O monitor (a cada 5 min) mantém dns_base atualizado. Só testa aqui se a verificação estiver atrasada
+    // ou se o cliente apertou "Atualizar" no app ($fresh: procura em todos os servidores agora).
     $stale_after = 600;
     $now = time();
-    if (!empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < $stale_after) return $row['dns_base'];
+    if (!$fresh && !empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < $stale_after) return $row['dns_base'];
 
     $pin = isset($row['dns_pin']) ? (string)$row['dns_pin'] : '';
     $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], $pin != '' ? $pin : dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '');

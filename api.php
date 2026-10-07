@@ -476,6 +476,8 @@ else if($get_helper['helper_name']=="get_device_user"){
     playlists_migrate($mysqli);
 
     $device_id=isset($get_helper['device_id']) ? trim($get_helper['device_id']) : '';
+    // botão "Atualizar" do app: confere o servidor de cada lista do zero (sem o cache de 10 min)
+    $fresh = !empty($get_helper['fresh']);
 
     $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_users WHERE status='1' AND device_id = ? ORDER BY id DESC");
     mysqli_stmt_bind_param($stmt, 's', $device_id);
@@ -487,7 +489,7 @@ else if($get_helper['helper_name']=="get_device_user"){
         $row['user_name'] = $data['user_name'];
         $row['user_password'] = $data['user_password'];
         // Failover: devolve o servidor DNS que aceita este usuário agora (queda ou migração de servidor)
-        $row['dns_base'] = playlist_current_dns($mysqli, $data);
+        $row['dns_base'] = playlist_current_dns($mysqli, $data, $fresh);
         $row['device_id'] = $data['device_id'];
         $row['playlist_name'] = isset($data['playlist_name']) ? $data['playlist_name'] : '';
         array_push($jsonObj,$row);

@@ -256,7 +256,7 @@
   function activate(el) {
     if (el.tagName === 'INPUT') { el.focus(); return; }
     var a = el.getAttribute('data-a');
-    if (a === '_reload') { toast(t('loading')); setTimeout(function () { location.reload(); }, 300); return; }
+    if (a === '_reload') { toast(t('loading')); try { sessionStorage.setItem('bp_fresh', '1'); } catch (e) {} setTimeout(function () { location.reload(); }, 300); return; }
     if (a && S.acts && S.acts[a]) S.acts[a](el, el.getAttribute('data-i'));
   }
 
@@ -498,7 +498,10 @@
     splash();
     // depois de ativar (ou trocar de dono) busca de novo a marca do dono do aparelho
     if (!chooser && !S.brandFresh) { S.brandFresh = true; return fetchBrand(function () { loadPlaylists(false); }); }
-    api('get_device_user', {}, function (err, arr) {
+    // botão Atualizar: o painel confere o servidor de cada lista do zero
+    var ex = {};
+    try { if (sessionStorage.getItem('bp_fresh')) { ex.fresh = '1'; sessionStorage.removeItem('bp_fresh'); } } catch (e) {}
+    api('get_device_user', ex, function (err, arr) {
       if (err) { toast(t(err.status === 0 ? 'no_net' : 'server_err')); return noList(); }
       S.pls = (arr || []).filter(function (p) { return p && p.user_name; });
       if (!S.pls.length) { clearLocal(); return noList(); }
