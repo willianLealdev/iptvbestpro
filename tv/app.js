@@ -28,7 +28,10 @@
   function hhmm(ts) { var d = new Date(ts * 1000); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 
   var UA = navigator.userAgent || '';
-  var PLATFORM = /Tizen/i.test(UA) ? 'samsung_tv' : 'lg_tv';
+  // Whale TV (Philips, Sharp, Toshiba, JVC...): app aberto pelo endereço /tv/?p=whale ou navegador da Whale
+  var IS_WHALE = /[?&]p=whale/i.test(location.search) || /WhaleTV|Whale ?OS|Zeasn/i.test(UA);
+  var PLATFORM = IS_WHALE ? 'whale_tv' : (/Tizen/i.test(UA) ? 'samsung_tv' : 'lg_tv');
+  var PLATFORM_NAME = { whale_tv: 'Whale TV', samsung_tv: 'Samsung Tizen', lg_tv: 'LG webOS' }[PLATFORM];
   var DID = LS.get('bp_did', '');
   if (!DID) {
     DID = 'tv';
@@ -151,7 +154,7 @@
   }
   function api(helper, extra, cb) {
     var o = { helper_name: helper, application_id: APP_ID, device_id: DID, platform: PLATFORM,
-      device_model: PLATFORM === 'lg_tv' ? 'LG webOS TV' : 'Samsung Smart TV', os_version: '', app_version: VER, app_name: 'IPTV Best Pro' };
+      device_model: PLATFORM === 'lg_tv' ? 'LG webOS TV' : (PLATFORM === 'whale_tv' ? 'Whale TV' : 'Samsung Smart TV'), os_version: '', app_version: VER, app_name: 'IPTV Best Pro' };
     for (var k in extra) if (extra.hasOwnProperty(k)) o[k] = extra[k];
     var fd = new FormData();
     fd.append('data', b64(JSON.stringify(o)));
@@ -907,7 +910,7 @@
         sup: support,
         ref: function () { L.cats = null; V.movie.cats = null; V.series.cats = null; toast(t('refresh_ok')); },
         pl: function () { loadPlaylists(true); },
-        about: function () { modal('<img class="logo" src="' + esc(S.brand.logo) + '"><h1>' + esc(S.brand.name) + '</h1><p>v' + VER + ' · ' + (PLATFORM === 'lg_tv' ? 'LG webOS' : 'Samsung Tizen') + '</p><div class="btn f" data-a="_close">' + esc(t('close')) + '</div>'); },
+        about: function () { modal('<img class="logo" src="' + esc(S.brand.logo) + '"><h1>' + esc(S.brand.name) + '</h1><p>v' + VER + ' · ' + PLATFORM_NAME + '</p><div class="btn f" data-a="_close">' + esc(t('close')) + '</div>'); },
         // Resetar licença: o cliente trocou de revenda e quer digitar um código novo neste aparelho
         reset: function () {
           modal('<h2>' + esc(t('lic_reset')) + '</h2><p>' + esc(t('lic_reset_msg')) + '</p><div class="btn f" data-a="_close">' + esc(t('lic_cancel')) + '</div><div class="btn gold f" data-a="y">' + esc(t('lic_yes')) + '</div>',

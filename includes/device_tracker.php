@@ -91,6 +91,7 @@ function devices_normalize_platform($platform){
         'lg_tv' => 'lg_tv', 'webos' => 'lg_tv', 'lg' => 'lg_tv',
         'samsung_tv' => 'samsung_tv', 'tizen' => 'samsung_tv', 'samsung' => 'samsung_tv',
         'roku' => 'roku', 'roku_tv' => 'roku',
+        'whale_tv' => 'whale_tv', 'whale' => 'whale_tv',
     );
     return isset($map[$p]) ? $map[$p] : 'android';
 }
@@ -106,6 +107,7 @@ function devices_platform_labels(){
         'lg_tv'        => array('label' => 'TV LG (webOS)',   'icon' => 'ri-tv-line',         'color' => '#a50034'),
         'samsung_tv'   => array('label' => 'TV Samsung',      'icon' => 'ri-tv-line',         'color' => '#1428a0'),
         'roku'         => array('label' => 'Roku',            'icon' => 'ri-tv-line',         'color' => '#6c3c97'),
+        'whale_tv'     => array('label' => 'TV Whale (Philips, Sharp, Toshiba...)', 'icon' => 'ri-tv-line', 'color' => '#0284c7'),
     );
 }
 

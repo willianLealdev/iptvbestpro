@@ -1580,4 +1580,5 @@ return array(
   'Baixar planilha (CSV)' => array('pt' => 'Baixar planilha (CSV)', 'en' => 'Download spreadsheet (CSV)', 'es' => 'Descargar planilla (CSV)'),
   'Nome, e-mail, nº do pedido ou referência' => array('pt' => 'Nome, e-mail, nº do pedido ou referência', 'en' => 'Name, email, order no. or reference', 'es' => 'Nombre, correo, nº de pedido o referencia'),
   '{} Pix · {} cartão · {} manual' => array('pt' => '{0} Pix · {1} cartão · {2} manual', 'en' => '{0} Pix · {1} card · {2} manual', 'es' => '{0} Pix · {1} tarjeta · {2} manual'),
+  'TV Whale (Philips, Sharp, Toshiba...)' => array('pt' => 'TV Whale (Philips, Sharp, Toshiba...)', 'en' => 'Whale TV (Philips, Sharp, Toshiba...)', 'es' => 'TV Whale (Philips, Sharp, Toshiba...)'),
 );
