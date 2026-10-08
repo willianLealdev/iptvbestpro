@@ -60,7 +60,12 @@
       sup_scan: 'Aponte a câmera do celular para abrir o WhatsApp', close: 'Fechar',
       exp_title: 'Seu plano está vencendo', exp_days: 'Seu plano vence em {0} dia(s).', exp_today: 'Seu plano vence hoje.',
       exp_reseller: 'Fale com a sua revenda para renovar e continuar assistindo.', exp_support: 'Fale com o suporte para renovar e continuar assistindo.',
-      exit_q: 'Sair do app?', yes: 'Sim', no: 'Não'
+      exit_q: 'Sair do app?', yes: 'Sim', no: 'Não',
+      search: 'BUSCA', favorites: 'FAVORITOS', cont_tile: 'CONTINUAR', cw_empty: 'Nada para continuar ainda. Assista um canal, filme ou episódio e ele aparece aqui.',
+      search_hint: 'Digite o nome do canal, filme ou série', search_go: 'Buscar', search_none: 'Nada encontrado.', searching: 'Buscando…',
+      fav_add: '★ Favoritar', fav_del: '★ Remover dos favoritos', fav_added: 'Adicionado aos favoritos.', fav_removed: 'Removido dos favoritos.',
+      fav_empty: 'Nenhum favorito ainda.', fav_live_hint: 'Botão colorido (ou INFO) = favoritar canal', fav_which: 'Favoritos de…',
+      ch_title: 'Canais', mv_title: 'Filmes', sr_title: 'Séries'
     },
     en: {
       lic_reset: 'Reset license', lic_reset_msg: 'This unlinks this device from the current reseller and erases the lists. Then you can enter a new code. Continue?', lic_yes: 'Yes, reset', lic_cancel: 'Cancel', lic_done: 'License reset. Enter the new code.',
@@ -81,7 +86,12 @@
       sup_scan: 'Point your phone camera at the code to open WhatsApp', close: 'Close',
       exp_title: 'Your plan is about to expire', exp_days: 'Your plan expires in {0} day(s).', exp_today: 'Your plan expires today.',
       exp_reseller: 'Talk to your reseller to renew and keep watching.', exp_support: 'Contact support to renew and keep watching.',
-      exit_q: 'Exit the app?', yes: 'Yes', no: 'No'
+      exit_q: 'Exit the app?', yes: 'Yes', no: 'No',
+      search: 'SEARCH', favorites: 'FAVORITES', cont_tile: 'CONTINUE', cw_empty: 'Nothing to continue yet. Watch a channel, movie or episode and it will show up here.',
+      search_hint: 'Type the name of a channel, movie or series', search_go: 'Search', search_none: 'Nothing found.', searching: 'Searching…',
+      fav_add: '★ Add to favorites', fav_del: '★ Remove from favorites', fav_added: 'Added to favorites.', fav_removed: 'Removed from favorites.',
+      fav_empty: 'No favorites yet.', fav_live_hint: 'Color button (or INFO) = favorite channel', fav_which: 'Favorites from…',
+      ch_title: 'Channels', mv_title: 'Movies', sr_title: 'Series'
     },
     es: {
       lic_reset: 'Restablecer licencia', lic_reset_msg: 'Esto desvincula este dispositivo del revendedor actual y borra las listas. Luego escribes un nuevo código. ¿Deseas continuar?', lic_yes: 'Sí, restablecer', lic_cancel: 'Cancelar', lic_done: 'Licencia restablecida. Escribe el nuevo código.',
@@ -102,7 +112,12 @@
       sup_scan: 'Apunta la cámara del celular al código para abrir WhatsApp', close: 'Cerrar',
       exp_title: 'Tu plan está por vencer', exp_days: 'Tu plan vence en {0} día(s).', exp_today: 'Tu plan vence hoy.',
       exp_reseller: 'Habla con tu revendedor para renovar y seguir viendo.', exp_support: 'Habla con soporte para renovar y seguir viendo.',
-      exit_q: '¿Salir de la app?', yes: 'Sí', no: 'No'
+      exit_q: '¿Salir de la app?', yes: 'Sí', no: 'No',
+      search: 'BUSCAR', favorites: 'FAVORITOS', cont_tile: 'SEGUIR', cw_empty: 'Nada para seguir todavía. Mira un canal, película o episodio y aparecerá aquí.',
+      search_hint: 'Escribe el nombre del canal, película o serie', search_go: 'Buscar', search_none: 'No se encontró nada.', searching: 'Buscando…',
+      fav_add: '★ Agregar a favoritos', fav_del: '★ Quitar de favoritos', fav_added: 'Agregado a favoritos.', fav_removed: 'Quitado de favoritos.',
+      fav_empty: 'Ningún favorito todavía.', fav_live_hint: 'Botón de color (o INFO) = favorito', fav_which: 'Favoritos de…',
+      ch_title: 'Canales', mv_title: 'Películas', sr_title: 'Series'
     }
   };
   var LANG = LS.get('bp_lang', '');
@@ -121,7 +136,10 @@
     id: '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>',
     chat: '<path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/>',
     sync: '<path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 6 6 6 6 0 0 1-.7 2.8l1.46 1.46A8 8 0 0 0 20 12a8 8 0 0 0-8-8zm0 14a6 6 0 0 1-6-6c0-1.01.25-1.97.7-2.8L5.24 7.74A8 8 0 0 0 4 12a8 8 0 0 0 8 8v3l4-4-4-4v3z"/>',
-    info: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>'
+    info: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>',
+    search: '<path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>',
+    star: '<path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>',
+    play: '<path d="M8 5v14l11-7z"/>'
   };
 
   /* ---------------- estado ---------------- */
@@ -230,6 +248,7 @@
     if (c === 461 || c === 10009 || c === 27 || (c === 8 && !(document.activeElement && document.activeElement.tagName === 'INPUT'))) return 'back';
     if (c === 33 || c === 427) return 'chup'; if (c === 34 || c === 428) return 'chdown';
     if (c === 415 || c === 19 || c === 10252 || c === 179) return 'playpause';
+    if (c === 403 || c === 404 || c === 405 || c === 406 || c === 457) return 'fav'; // botões coloridos / INFO
     if (c >= 48 && c <= 57) return 'n' + (c - 48);
     if (c >= 96 && c <= 105) return 'n' + (c - 96);
     return '';
@@ -556,7 +575,7 @@
     S.screen = 'pl';
     clock();
   }
-  function clearCatalog() { try { var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); for (var j = 0; j < ks.length; j++) if (/^bp_(last|cw|pos)/.test(ks[j])) localStorage.removeItem(ks[j]); } catch (e) {} }
+  function clearCatalog() { try { var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); for (var j = 0; j < ks.length; j++) if (/^bp_(last|cw|pos|fav|search)/.test(ks[j])) localStorage.removeItem(ks[j]); } catch (e) {} }
 
   /* ---------------- aviso de vencimento ---------------- */
   function expiryNotice() {
@@ -591,10 +610,12 @@
   function home() {
     stopPreview();
     setTimeout(function () { licenseCheck(false); }, 1500);
-    var tiles = [['live', IC.tv, 'live'], ['movies', IC.movie, 'movies'], ['series', IC.series, 'series'], ['playlist', IC.list, 'playlist'], ['settings', IC.gear, 'settings']];
-    var h = '';
+    var tiles = [['live', IC.tv, 'live'], ['movies', IC.movie, 'movies'], ['series', IC.series, 'series']];
+    var mini = [['cont', IC.play, 'cont_tile'], ['search', IC.search, 'search'], ['fav', IC.star, 'favorites'], ['playlist', IC.list, 'playlist'], ['settings', IC.gear, 'settings']];
+    var h = '', m = '';
     for (var i = 0; i < tiles.length; i++) h += '<div class="tile f" data-a="' + tiles[i][0] + '"><div class="ic">' + svg(tiles[i][1]) + '</div><div class="lb">' + esc(t(tiles[i][2])) + '</div></div>';
-    show(header('') + '<div class="hero"><img src="' + esc(S.brand.banner || S.brand.logo) + '" onerror="this.style.display=\'none\'"></div><div class="tiles">' + h + '</div>', {
+    for (var j = 0; j < mini.length; j++) m += '<div class="tile mini f" data-a="' + mini[j][0] + '"><div class="ic">' + svg(mini[j][1], 54) + '</div><div class="lb">' + esc(t(mini[j][2])) + '</div></div>';
+    show(header('') + '<div class="hero"><img src="' + esc(S.brand.banner || S.brand.logo) + '" onerror="this.style.display=\'none\'"></div><div class="tiles big">' + h + '</div><div class="tiles minis">' + m + '</div>', {
       focus: '[data-a=' + (LS.get('bp_home', 'live')) + ']',
       back: confirmExit,
       acts: {
@@ -602,6 +623,9 @@
         movies: function () { LS.set('bp_home', 'movies'); vodScreen('movie'); },
         series: function () { LS.set('bp_home', 'series'); vodScreen('series'); },
         playlist: function () { LS.set('bp_home', 'playlist'); loadPlaylists(true); },
+        cont: function () { LS.set('bp_home', 'cont'); continueLast(); },
+        search: function () { LS.set('bp_home', 'search'); searchScreen(); },
+        fav: function () { LS.set('bp_home', 'fav'); favoritesMenu(); },
         settings: function () { LS.set('bp_home', 'settings'); settings(); }
       }
     });
@@ -612,13 +636,14 @@
   /* ---------------- TV ao vivo ---------------- */
   var L = { cats: null, chans: [], catIdx: 0, catName: '', mode: 'cats', playList: [], playIdx: -1, full: false, video: null, err: 0 };
   function live() {
-    L.mode = 'cats'; L.full = false; L.err = 0;
+    L.mode = 'cats'; L.full = false; L.err = 0; L.curCat = '';
     show(header(t('live')) + '<div class="left"><div class="scroll" id="lst"></div></div>' +
       '<div class="right"><div class="pvbox" id="pv"><video id="vid" autoplay></video><div class="pvmsg hide" id="pvmsg"></div></div>' +
-      '<div class="epg" id="epg"></div></div>', {
+      '<div class="epg" id="epg"></div><div class="hint">' + esc(t('fav_live_hint')) + '</div></div>', {
       keys: liveKeys, back: liveBack,
       acts: {
         cat: function (el, i) { openCat(+i); },
+        favcat: function () { openChans(favList('live'), undefined, '_fav'); },
         ch: function (el, i) { i = +i; if (L.chans[i] && L.playIdx >= 0 && L.playList[L.playIdx] && L.playList[L.playIdx].stream_id == L.chans[i].stream_id) setFull(true); else playChan(i); }
       }
     });
@@ -629,22 +654,26 @@
     if (L.cats) { renderCats(); resumeLast(); return; }
     $('lst').innerHTML = '<div class="empty">' + esc(t('loading')) + '</div>';
     xt('get_live_categories', {}, function (err, j) {
-      if (err || !j || !j.length) { $('lst').innerHTML = '<div class="empty">' + esc(t(err ? 'list_err' : 'empty')) + '</div>'; return; }
+      if (err || !j || !j.length) { if (L.mode !== 'chans') $('lst').innerHTML = '<div class="empty">' + esc(t(err ? 'list_err' : 'empty')) + '</div>'; return; }
       L.cats = j.filter(function (c) { return !ADULT.test(c.category_name || ''); });
+      if (L.mode === 'chans') return; // já abriu favoritos/busca enquanto carregava
       renderCats(); resumeLast();
     });
   }
   function renderCats() {
     L.mode = 'cats';
     var h = '';
-    for (var i = 0; i < L.cats.length; i++) h += '<div class="row f' + (i === L.catIdx ? ' sel' : '') + '" data-a="cat" data-i="' + i + '"><span>' + esc(L.cats[i].category_name) + '</span></div>';
+    if (favList('live').length) h += '<div class="row f" data-a="favcat"><span>★ ' + esc(t('favorites')) + ' (' + favList('live').length + ')</span></div>';
+    for (var i = 0; i < L.cats.length; i++) h += '<div class="row f' + (i === L.catIdx && L.curCat !== '_fav' ? ' sel' : '') + '" data-a="cat" data-i="' + i + '"><span>' + esc(L.cats[i].category_name) + '</span></div>';
     $('lst').innerHTML = h || '<div class="empty">' + esc(t('empty')) + '</div>';
     var el = $('lst').querySelector('[data-i="' + L.catIdx + '"]'); focused = null; focus(el || $('lst').querySelector('.f'));
   }
   function resumeLast() {
+    if (L.skipResume) { L.skipResume = false; return; }
     if (L.playIdx >= 0) return;
     var last = LS.getJ('bp_last_live', null);
     if (!last) return;
+    if (last.cat === '_fav') { openChans(favList('live'), last.sid, '_fav'); return; }
     for (var i = 0; i < L.cats.length; i++) if (String(L.cats[i].category_id) === String(last.cat)) { L.catIdx = i; openCat(i, last.sid); return; }
   }
   function openCat(i, startSid) {
@@ -653,16 +682,27 @@
     xt('get_live_streams', { category_id: L.cats[i].category_id }, function (err, j) {
       if (S.screen !== 'live') return;
       if (err || !j || !j.length) { toast(t(err ? 'list_err' : 'empty')); renderCats(); return; }
-      L.chans = j; L.mode = 'chans';
-      var h = '';
-      for (var k = 0; k < j.length; k++) h += '<div class="row f" data-a="ch" data-i="' + k + '"><img src="' + esc(j[k].stream_icon || '') + '" onerror="this.style.visibility=\'hidden\'"><span>' + (k + 1) + '  ' + esc(j[k].name) + '</span></div>';
-      $('lst').innerHTML = h;
-      var start = 0;
-      if (startSid !== undefined) for (var q = 0; q < j.length; q++) if (String(j[q].stream_id) === String(startSid)) start = q;
-      if (L.playIdx < 0 || startSid !== undefined) playChan(start);
-      markPlaying();
-      var cur = $('lst').querySelector('.sel') || $('lst').querySelector('.f'); focused = null; focus(cur);
+      openChans(j, startSid, L.cats[i].category_id);
     });
+  }
+  // Mostra uma lista de canais (de uma categoria, dos favoritos ou da busca) e toca o canal pedido
+  function openChans(j, startSid, catId) {
+    if (!$('lst')) return;
+    if (!j || !j.length) { toast(t('fav_empty')); return; }
+    L.chans = j; L.mode = 'chans'; L.curCat = catId || '';
+    L.skipResume = false;
+    renderChans();
+    var start = 0;
+    if (startSid !== undefined) for (var q = 0; q < j.length; q++) if (String(j[q].stream_id) === String(startSid)) start = q;
+    if (L.playIdx < 0 || startSid !== undefined) playChan(start);
+    markPlaying();
+    var cur = $('lst').querySelector('.sel') || $('lst').querySelector('.f'); focused = null; focus(cur);
+    if (L.wantFull) { L.wantFull = false; setFull(true); }
+  }
+  function renderChans() {
+    var j = L.chans, h = '';
+    for (var k = 0; k < j.length; k++) h += '<div class="row f" data-a="ch" data-i="' + k + '"><img src="' + esc(j[k].stream_icon || '') + '" onerror="this.style.visibility=\'hidden\'"><span>' + (isFav('live', j[k]) ? '★ ' : '') + (k + 1) + '  ' + esc(j[k].name) + '</span></div>';
+    $('lst').innerHTML = h;
   }
   function markPlaying() {
     var rows = $('lst') ? $('lst').querySelectorAll('[data-a=ch]') : [];
@@ -678,7 +718,9 @@
     var c = L.playList[L.playIdx]; if (!c || !L.video) return;
     L.video._triedHls = false;
     setSrc(L.video, liveUrl(c), onLiveError);
-    LS.setJ('bp_last_live', { cat: L.cats[L.catIdx] ? L.cats[L.catIdx].category_id : '', sid: c.stream_id });
+    var catId = L.curCat || (L.cats && L.cats[L.catIdx] ? L.cats[L.catIdx].category_id : '');
+    LS.setJ('bp_last_live', { cat: catId, sid: c.stream_id });
+    setLastPlay({ kind: 'live', cat: catId, sid: c.stream_id, name: c.name, icon: c.stream_icon || '', list: catId === '_search' ? L.playList.slice(0, 80) : null });
     markPlaying(); loadEpg(c);
     if (L.full) zapBanner((L.playIdx + 1) + '  ·  ' + c.name);
   }
@@ -732,6 +774,14 @@
     }
     if (k === 'chup') { zap(1); return true; }
     if (k === 'chdown') { zap(-1); return true; }
+    if (k === 'fav') {
+      // favoritar: o canal com foco na lista ou o que está tocando
+      var c = null;
+      if (!L.full && focused && focused.getAttribute('data-a') === 'ch') c = L.chans[+focused.getAttribute('data-i')];
+      if (!c) c = L.playList[L.playIdx];
+      if (c) { favToggle('live', c); if (L.mode === 'chans') { var fi = focused ? focused.getAttribute('data-i') : null; renderChans(); markPlaying(); var el = fi !== null ? $('lst').querySelector('[data-i="' + fi + '"]') : null; if (el) { focused = null; focus(el); } } }
+      return true;
+    }
     if (L.full) {
       if (k === 'up') { zap(-1); return true; }
       if (k === 'down') { zap(1); return true; }
@@ -741,8 +791,105 @@
     }
     return false;
   }
-  function liveBack() { if (L.mode === 'chans') renderCats(); else { stopPreview(); home(); } }
+  function liveBack() { if (L.mode === 'chans') { L.curCat = ''; L.mode = 'cats'; if (L.cats) renderCats(); else { stopPreview(); home(); } } else { stopPreview(); home(); } }
   function stopPreview() { if (L.video) { unsetSrc(L.video); try { L.video.pause(); L.video.removeAttribute('src'); L.video.load(); } catch (e) {} L.video = null; } L.playIdx = -1; L.full = false; }
+
+  /* ---------------- favoritos e continuar assistindo ---------------- */
+  // Favoritos ficam no aparelho, por lista (trocar de lista apaga). kind: live | movie | series
+  function favKey(kind) { return 'bp_fav_' + kind; }
+  function favList(kind) { return LS.getJ(favKey(kind), []); }
+  function favId(kind, it) { return String(kind === 'series' ? (it.series_id || it.id) : (it.stream_id || it.id)); }
+  function isFav(kind, it) { var id = favId(kind, it), l = favList(kind); for (var i = 0; i < l.length; i++) if (favId(kind, l[i]) === id) return true; return false; }
+  function favToggle(kind, it) {
+    var id = favId(kind, it), l = favList(kind), out = [], had = false;
+    for (var i = 0; i < l.length; i++) { if (favId(kind, l[i]) === id) had = true; else out.push(l[i]); }
+    if (!had) {
+      var o = kind === 'series' ? { series_id: id, name: it.name, cover: it.cover || it.img || '' }
+        : (kind === 'movie' ? { stream_id: id, name: it.name, stream_icon: it.stream_icon || it.img || '', container_extension: it.container_extension || it.ext || 'mp4' }
+        : { stream_id: id, name: it.name, stream_icon: it.stream_icon || '' });
+      out.unshift(o);
+    }
+    LS.setJ(favKey(kind), out.slice(0, 300));
+    toast(t(had ? 'fav_removed' : 'fav_added'));
+    return !had;
+  }
+  // Último que o cliente assistiu (canal, filme ou episódio): botão "Continuar" da tela inicial abre direto nele
+  function setLastPlay(o) { LS.setJ('bp_last_play', o); }
+  function continueLast() {
+    var o = LS.getJ('bp_last_play', null);
+    if (!o) { toast(t('cw_empty'), 5000); return; }
+    if (o.kind === 'live') {
+      LS.setJ('bp_last_live', { cat: o.cat, sid: o.sid });
+      L.wantFull = true; L.playIdx = -1;
+      if (o.cat === '_fav' || o.cat === '_search') { L.skipResume = true; live(); openChans(o.cat === '_fav' ? favList('live') : (o.list || [{ stream_id: o.sid, name: o.name, stream_icon: o.icon || '' }]), o.sid, o.cat); return; }
+      live();
+      return;
+    }
+    if (o.kind === 'movie') { playVod('movie', o.id, o.name, o.ext || 'mp4', +LS.get('bp_pos_m_' + o.id, '0'), { name: o.name, stream_icon: o.icon || '' }); return; }
+    if (o.kind === 'series') { playVod('series', o.id, o.title || o.name, o.ext || 'mp4', +LS.get('bp_pos_e_' + o.id, '0'), null, o.series); return; }
+  }
+
+  /* ---------------- busca ---------------- */
+  function searchScreen(prev) {
+    var last = LS.get('bp_search', '');
+    show(header(t('search')) + '<div class="sbox"><input id="sq" class="code f" maxlength="60" autocomplete="off" spellcheck="false" placeholder="' + esc(t('search_hint')) + '" value="' + esc(last) + '">' +
+      '<div class="btn gold f" data-a="go">' + esc(t('search_go')) + '</div></div><div class="sres scroll" id="sres"></div>', {
+      focus: '#sq', back: home,
+      onInputDone: function () { runSearch(); },
+      acts: {
+        go: function () { runSearch(); },
+        r: function (el, ref) {
+          var pr = ref.split(':'), it = SR[pr[0]][+pr[1]];
+          if (pr[0] === 'live') { L.skipResume = true; L.wantFull = true; live(); openChans(SR.live, it.stream_id, '_search'); }
+          else if (pr[0] === 'movie') movieDetails(it, function () { searchScreen(); });
+          else seriesDetails(it, function () { searchScreen(); });
+        }
+      }
+    });
+    S.screen = 'search'; clock();
+    if (prev !== false && last && SR.text === last) renderSearch();
+  }
+  var SR = { text: '', live: [], movie: [], series: [] };
+  function runSearch() {
+    var q = ($('sq') ? $('sq').value : '').replace(/^\s+|\s+$/g, '');
+    if (q.length < 2) { toast(t('search_hint')); return; }
+    LS.set('bp_search', q);
+    SR = { text: q, live: [], movie: [], series: [] };
+    $('sres').innerHTML = '<div class="empty">' + esc(t('searching')) + '</div>';
+    var left = 3;
+    ['live', 'movie', 'series'].forEach(function (type) {
+      xt('search', { type: type, text: q }, function (err, j) {
+        if (SR.text !== q) return;
+        SR[type] = j && j.length ? j : [];
+        if (--left === 0 && S.screen === 'search') renderSearch();
+      });
+    });
+  }
+  function renderSearch() {
+    var h = '', groups = [['live', 'ch_title'], ['movie', 'mv_title'], ['series', 'sr_title']];
+    for (var g = 0; g < groups.length; g++) {
+      var l = SR[groups[g][0]]; if (!l.length) continue;
+      h += '<div class="shead">' + esc(t(groups[g][1])) + ' (' + l.length + ')</div>';
+      for (var i = 0; i < l.length; i++) {
+        var it = l[i], img = it.stream_icon || it.cover || '';
+        h += '<div class="row f" data-a="r" data-i="' + groups[g][0] + ':' + i + '"><img src="' + esc(img) + '" onerror="this.style.visibility=\'hidden\'"><span>' + esc(it.name) + '</span></div>';
+      }
+    }
+    var box = $('sres'); if (!box) return;
+    box.innerHTML = h || '<div class="empty">' + esc(t('search_none')) + '</div>';
+    box.scrollTop = 0;
+  }
+  function favoritesMenu() {
+    modal('<h2>' + esc(t('fav_which')) + '</h2>' +
+      '<div class="btn f" data-a="fl">' + esc(t('live')) + ' (' + favList('live').length + ')</div>' +
+      '<div class="btn f" data-a="fm">' + esc(t('movies')) + ' (' + favList('movie').length + ')</div>' +
+      '<div class="btn f" data-a="fs">' + esc(t('series')) + ' (' + favList('series').length + ')</div>' +
+      '<div class="btn f" data-a="_close">' + esc(t('close')) + '</div>', {
+      fl: function () { closeModal(true); if (!favList('live').length) return toast(t('fav_empty')); L.skipResume = true; live(); openChans(favList('live'), undefined, '_fav'); },
+      fm: function () { closeModal(true); V.movie.want = '_fav'; vodScreen('movie'); },
+      fs: function () { closeModal(true); V.series.want = '_fav'; vodScreen('series'); }
+    });
+  }
 
   /* ---------------- filmes e séries ---------------- */
   var V = { movie: { cats: null, catIdx: 0, items: [] }, series: { cats: null, catIdx: 0, items: [] } };
@@ -763,12 +910,13 @@
     });
     S.screen = type; clock(); every(clock, 20000);
     var act = type === 'movie' ? 'get_vod_categories' : 'get_series_categories';
-    if (st.cats) return renderVodCats(type);
+    if (st.cats) { if (st.want === '_fav') { st.want = ''; st.catIdx = 1; } return renderVodCats(type); }
     $('lst').innerHTML = '<div class="empty">' + esc(t('loading')) + '</div>';
     xt(act, {}, function (err, j) {
       if (err || !j) { $('lst').innerHTML = '<div class="empty">' + esc(t('list_err')) + '</div>'; return; }
-      st.cats = [{ category_id: '_cw', category_name: t('continue') }].concat(j.filter(function (c) { return !ADULT.test(c.category_name || ''); }));
-      st.catIdx = cwList(type).length ? 0 : (st.cats.length > 1 ? 1 : 0);
+      st.cats = [{ category_id: '_cw', category_name: t('continue') }, { category_id: '_fav', category_name: '★ ' + t('favorites') }].concat(j.filter(function (c) { return !ADULT.test(c.category_name || ''); }));
+      st.catIdx = cwList(type).length ? 0 : (st.cats.length > 2 ? 2 : 0);
+      if (st.want === '_fav') { st.want = ''; st.catIdx = 1; }
       renderVodCats(type);
     });
   }
@@ -785,6 +933,7 @@
     var c = st.cats[i];
     $('gridin').innerHTML = '<div class="empty">' + esc(t('loading')) + '</div>';
     if (c.category_id === '_cw') { st.items = cwList(type); return renderGrid(type); }
+    if (c.category_id === '_fav') { st.items = favList(type); return renderGrid(type); }
     xt(type === 'movie' ? 'get_vod_streams' : 'get_series', { category_id: c.category_id }, function (err, j) {
       if (S.screen !== type || st.catIdx !== i) return;
       st.items = (j || []).slice(0, 300);
@@ -800,17 +949,19 @@
     $('gridin').innerHTML = h || '<div class="empty">' + esc(t('empty')) + '</div>';
     $('grid').scrollTop = 0;
   }
-  function movieDetails(it) {
+  function movieDetails(it, backFn) {
     var id = it.stream_id || it.id;
     show(header(t('movies')) + '<div class="det"><img class="cover" src="' + esc(it.stream_icon || it.img || '') + '" onerror="this.style.visibility=\'hidden\'">' +
       '<div class="info"><h1>' + esc(it.name) + '</h1><div class="meta" id="meta"></div><div class="plot" id="plot">' + esc(t('loading')) + '</div><div class="acts" id="acts"></div></div></div>',
-      { back: function () { vodScreen('movie'); }, acts: {
+      { back: backFn || function () { vodScreen('movie'); }, acts: {
+        fav: function (el) { var on = favToggle('movie', it); el.textContent = t(on ? 'fav_del' : 'fav_add'); },
         play: function () { playVod('movie', id, it.name, it.container_extension || (it.ext) || 'mp4', 0, it); },
         resume: function () { playVod('movie', id, it.name, it.container_extension || it.ext || 'mp4', +LS.get('bp_pos_m_' + id, '0'), it); }
       } });
     S.screen = 'mdet';
     var pos = +LS.get('bp_pos_m_' + id, '0');
-    var acts = (pos > 30 ? '<div class="btn gold f" data-a="resume">' + esc(t('resume')) + ' ' + fmtTime(pos) + '</div><div class="btn f" data-a="play">' + esc(t('from_start')) + '</div>' : '<div class="btn gold f" data-a="play">' + esc(t('play')) + '</div>');
+    var acts = (pos > 30 ? '<div class="btn gold f" data-a="resume">' + esc(t('resume')) + ' ' + fmtTime(pos) + '</div><div class="btn f" data-a="play">' + esc(t('from_start')) + '</div>' : '<div class="btn gold f" data-a="play">' + esc(t('play')) + '</div>') +
+      '<div class="btn f" data-a="fav">' + esc(t(isFav('movie', it) ? 'fav_del' : 'fav_add')) + '</div>';
     $('acts').innerHTML = acts; focused = null; focusFirst();
     xt('get_vod_info', { vod_id: id }, function (err, j) {
       if (S.screen !== 'mdet') return;
@@ -820,12 +971,14 @@
       $('meta').textContent = [inf.releasedate || inf.release_date || '', inf.genre || '', inf.duration || ''].filter(function (x) { return x; }).join('  ·  ');
     });
   }
-  function seriesDetails(it) {
+  function seriesDetails(it, backFn) {
     var sid = it.series_id || it.id;
     show(header(t('series')) + '<div class="det"><img class="cover" src="' + esc(it.cover || it.img || '') + '" onerror="this.style.visibility=\'hidden\'">' +
       '<div class="info"><h1>' + esc(it.name) + '</h1><div class="meta" id="meta"></div><div class="plot" id="plot" style="max-height:140px">' + esc(t('loading')) + '</div>' +
       '<div class="seasons" id="seas"></div><div class="eps scroll" id="eps"></div></div></div>',
-      { back: function () { vodScreen('series'); }, acts: {} });
+      { back: backFn || function () { vodScreen('series'); }, acts: {
+        sfav: function (el) { var on = favToggle('series', it); el.textContent = t(on ? 'fav_del' : 'fav_add'); }
+      } });
     S.screen = 'sdet';
     xt('get_series_info', { series_id: sid }, function (err, j) {
       if (S.screen !== 'sdet') return;
@@ -836,6 +989,7 @@
       seasons.sort(function (a, b) { return +a - +b; });
       var sh = '';
       for (var s = 0; s < seasons.length; s++) sh += '<div class="btn f" data-a="season" data-i="' + esc(seasons[s]) + '">' + esc(t('season')) + ' ' + esc(seasons[s]) + '</div>';
+      sh += '<div class="btn f" data-a="sfav">' + esc(t(isFav('series', it) ? 'fav_del' : 'fav_add')) + '</div>';
       $('seas').innerHTML = sh;
       S.acts.season = function (el, n) {
         var b = $('seas').querySelectorAll('.btn'); for (var q = 0; q < b.length; q++) b[q].classList.toggle('sel', b[q] === el);
@@ -849,7 +1003,7 @@
       S.acts.ep = function (el, ref) {
         var pr = ref.split(':'), ep = eps[pr[0]][+pr[1]], p = +LS.get('bp_pos_e_' + ep.id, '0');
         cwAdd('series', { id: sid, series_id: sid, name: it.name, cover: it.cover || it.img || '' });
-        playVod('series', ep.id, it.name + ' – ' + (ep.title || ''), ep.container_extension || 'mp4', p > 30 ? p : 0, null);
+        playVod('series', ep.id, it.name + ' – ' + (ep.title || ''), ep.container_extension || 'mp4', p > 30 ? p : 0, null, { series_id: sid, name: it.name, cover: it.cover || it.img || '' });
       };
       if (seasons.length) { var first = $('seas').querySelector('.btn'); S.acts.season(first, seasons[0]); focused = null; focus(first); }
     });
@@ -857,10 +1011,12 @@
 
   /* ---------------- player de filme / episódio ---------------- */
   var PL = { video: null, type: '', id: '', saveT: null };
-  function playVod(type, id, title, ext, startAt, item) {
+  function playVod(type, id, title, ext, startAt, item, series) {
     var u = S.login.user_info;
     var url = S.base + '/' + type + '/' + encodeURIComponent(u.username) + '/' + encodeURIComponent(u.password) + '/' + id + '.' + (ext || 'mp4');
     if (type === 'movie' && item) cwAdd('movie', { id: id, stream_id: id, name: item.name, stream_icon: item.stream_icon || item.img || '', container_extension: ext });
+    if (type === 'movie') setLastPlay({ kind: 'movie', id: id, name: item ? item.name : title, ext: ext || 'mp4', icon: item ? (item.stream_icon || item.img || '') : '' });
+    else setLastPlay({ kind: 'series', id: id, title: title, ext: ext || 'mp4', series: series || null });
     var back = S.back;
     var p = document.createElement('div'); p.className = 'player'; p.id = 'player';
     p.innerHTML = '<video id="pvid" autoplay></video><div class="msg hide" id="pmsg"></div><div class="bar" id="pbar"><div class="ttl">' + esc(title) + '</div><div class="track"><i id="ptr"></i></div><div class="tm" id="ptm"></div></div>';
@@ -937,6 +1093,6 @@
 
   /* ---------------- início ---------------- */
   // Samsung: registra as teclas de mídia e números do controle
-  try { if (window.tizen && tizen.tvinputdevice) { ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'ChannelUp', 'ChannelDown', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(function (k) { try { tizen.tvinputdevice.registerKey(k); } catch (e) {} }); } } catch (e) {}
+  try { if (window.tizen && tizen.tvinputdevice) { ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'ChannelUp', 'ChannelDown', 'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue', 'Info', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(function (k) { try { tizen.tvinputdevice.registerKey(k); } catch (e) {} }); } } catch (e) {}
   boot();
 })();
