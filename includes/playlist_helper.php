@@ -6,6 +6,8 @@
 
 define('PLAYLIST_PROBE_TIMEOUT', 8);
 
+require_once(__DIR__.'/dns_stats_helper.php'); // histórico de quedas e ranking dos servidores
+
 function playlists_migrate($mysqli){
     static $done = false;
     if ($done) return;
@@ -487,11 +489,13 @@ function dns_health_check_all($mysqli, $timeout = 5, $only_reseller = null){
 
     $now = time();
     $out = array();
+    $checks = array();
     foreach ($handles as $id => $ch) {
         $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $ms = (int)round(curl_getinfo($ch, CURLINFO_TOTAL_TIME) * 1000);
         $online = $code > 0 && $code < 500;
         $out[$id] = $online ? 'online' : 'offline';
+        $checks[$id] = array('online' => $online, 'ms' => $ms);
         $health = $out[$id];
         $latency = $online ? $ms : 0;
         // offline_since: marca o início da queda; volta a 0 quando o servidor responde
@@ -505,6 +509,8 @@ function dns_health_check_all($mysqli, $timeout = 5, $only_reseller = null){
         curl_close($ch);
     }
     curl_multi_close($mh);
+    // histórico: quedas, tempo no ar e latência (ranking dos servidores)
+    try { dns_stats_record($mysqli, $checks); } catch (\Throwable $e) { error_log('[dns-stats] '.$e->getMessage()); }
     return $out;
 }
 
@@ -532,6 +538,8 @@ function playlist_set_dns_state($mysqli, $id, $base, $online, $server = null){
  */
 function playlist_monitor_run($mysqli){
     playlists_migrate($mysqli);
+    // quem usa cada servidor AGORA (antes da troca automática): o aviso de queda vai para todas essas revendas
+    try { dns_usage_snapshot($mysqli); } catch (\Throwable $e) { error_log('[dns-usage] '.$e->getMessage()); }
     $health = dns_health_check_all($mysqli);
     dns_catch_all_refresh($mysqli);
     $stats = array('checked' => 0, 'online' => 0, 'switched' => 0, 'offline' => 0,

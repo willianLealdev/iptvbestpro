@@ -231,16 +231,19 @@ $mysqli->set_charset("utf8mb4");
                         <?php } ?>
                     
                         <li class="nsofts-sidebar-nav__item nsofts-has-menu">
-                            <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_dns.php" or $currentFile == "create_dns.php" or $currentFile == "settings_xui.php" or $currentFile == "manage_dns_resellers.php") { ?>open active<?php } ?>">
+                            <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_dns.php" or $currentFile == "create_dns.php" or $currentFile == "settings_xui.php" or $currentFile == "manage_dns_resellers.php" or $currentFile == "manage_dns_ranking.php") { ?>open active<?php } ?>">
                                 <i class="ri-server-line nsofts-sidebar-nav__icon"></i>
                                 <span class="nsofts-sidebar-nav__text">Servidores DNS</span>
                             </a>
-                            <ul class="nsofts-submenu <?php if ($currentFile == "manage_dns.php" or $currentFile == "create_dns.php" or $currentFile == "settings_xui.php" or $currentFile == "manage_dns_resellers.php") { ?>show<?php } ?>">
+                            <ul class="nsofts-submenu <?php if ($currentFile == "manage_dns.php" or $currentFile == "create_dns.php" or $currentFile == "settings_xui.php" or $currentFile == "manage_dns_resellers.php" or $currentFile == "manage_dns_ranking.php") { ?>show<?php } ?>">
                                 <li>
                                     <a href="manage_dns.php" class="nsofts-submenu__link <?php if ($currentFile == "create_dns.php" or $currentFile == "manage_dns.php") { ?>active<?php } ?>">DNS</a>
                                 </li>
                                 <li>
                                     <a href="manage_dns_resellers.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_dns_resellers.php") { ?>active<?php } ?>">DNS das Revendas</a>
+                                </li>
+                                <li>
+                                    <a href="manage_dns_ranking.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_dns_ranking.php") { ?>active<?php } ?>">Ranking dos Servidores</a>
                                 </li>
                                 <li>
                                     <a href="settings_xui.php" class="nsofts-submenu__link <?php if ($currentFile == "settings_xui.php") { ?>active<?php } ?>">Configurações</a>

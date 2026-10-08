@@ -3,6 +3,8 @@
  * Alertas por e-mail quando um servidor DNS cai (e quando volta).
  *  - DNS do admin (reseller_id = 0): e-mail para o Super Admin (+ e-mails extras configurados).
  *  - DNS de revendedor: e-mail para o revendedor dono e uma cópia para o admin (se ligado).
+ *  - Todas as revendas que usam o servidor também recebem: as que compartilham o DNS e as que tinham
+ *    clientes nele nos últimos dias (inclusive em DNS do admin) — ver dns_users_resellers().
  *  - Clientes finais não recebem.
  * Para evitar alarme falso, só avisa depois de DNS_ALERT_MINUTES offline seguidos (o monitor roda a cada 5 min).
  * Cada queda gera 1 e-mail de "offline" e 1 de "voltou"; os e-mails de um ciclo são agrupados por destinatário.
@@ -98,7 +100,10 @@ function dns_alert_send($to, $down, $up, $is_admin_copy = false){
         $paras = array(htmlspecialchars(dns_alert_fmt(dns_alert_t($lang, 'hello'), array($to['name']))), htmlspecialchars(dns_alert_t($lang, $kind.'_intro')), $items);
         if ($kind == 'down') {
             $paras[] = htmlspecialchars(dns_alert_t($lang, 'down_tip'));
-            if ($is_admin_copy || $to['type'] == 'reseller') $paras[] = htmlspecialchars(dns_alert_fmt(dns_alert_t($lang, 'down_delete'), array(DNS_OFFLINE_DELETE_DAYS)));
+            // aviso de exclusão automática: só vale para servidores de revenda (os do admin nunca são excluídos)
+            $has_reseller_dns = false;
+            foreach ($list as $it) if (!empty($it['owner'])) $has_reseller_dns = true;
+            if ($has_reseller_dns && ($is_admin_copy || $to['type'] == 'reseller')) $paras[] = htmlspecialchars(dns_alert_fmt(dns_alert_t($lang, 'down_delete'), array(DNS_OFFLINE_DELETE_DAYS)));
         }
         $note = ($is_admin_copy ? htmlspecialchars(dns_alert_t($lang, 'admin_copy')).'<br>' : '').htmlspecialchars(dns_alert_t($lang, 'footer'));
         $html = acc_email_html(dns_alert_t($lang, $kind.'_title'), $paras, dns_alert_t($lang, 'button'), $to['link'], $note);
@@ -139,15 +144,18 @@ function dns_alerts_run($mysqli){
     $down = array(); $up = array(); $ids_down = array(); $ids_up = array();
     $res = mysqli_query($mysqli, "SELECT d.*, r.name AS reseller_name FROM tbl_xui_dns d LEFT JOIN tbl_resellers r ON r.id = d.reseller_id WHERE d.status = '1'");
     while ($res && $d = mysqli_fetch_assoc($res)) {
-        $item = array('title' => $d['dns_title'], 'base' => rtrim(html_entity_decode($d['dns_base'], ENT_QUOTES, 'UTF-8'), '/'),
+        $item = array('id' => (int)$d['id'], 'owner' => (int)$d['reseller_id'], 'title' => $d['dns_title'], 'base' => rtrim(html_entity_decode($d['dns_base'], ENT_QUOTES, 'UTF-8'), '/'),
                       'offline_since' => (int)$d['offline_since'], 'reseller' => (int)$d['reseller_id'] > 0 ? (string)$d['reseller_name'] : '');
         $scope = (int)$d['reseller_id'];
-        // DNS compartilhado: as revendas que usam o mesmo servidor também recebem o aviso
+        // Todos que usam o servidor recebem o aviso (1 e-mail por pessoa, mesmo que use de vários jeitos):
+        //  - o dono (admin ou revenda) e as revendas que compartilham o mesmo DNS;
+        //  - as revendas com clientes nesse servidor nos últimos dias (inclusive em DNS do admin).
+        //    A lista é guardada antes da troca automática, então quem foi trocado para outro servidor também recebe.
         $scopes_of = array($scope);
-        if ($scope > 0) {
-            $sh = mysqli_query($mysqli, "SELECT reseller_id FROM tbl_dns_share WHERE dns_id = ".(int)$d['id']);
-            while ($sh && $x = mysqli_fetch_assoc($sh)) $scopes_of[] = (int)$x['reseller_id'];
-        }
+        $sh = mysqli_query($mysqli, "SELECT reseller_id FROM tbl_dns_share WHERE dns_id = ".(int)$d['id']);
+        while ($sh && $x = mysqli_fetch_assoc($sh)) $scopes_of[] = (int)$x['reseller_id'];
+        if (function_exists('dns_users_resellers')) $scopes_of = array_merge($scopes_of, dns_users_resellers($mysqli, $d['id']));
+        $scopes_of = array_values(array_unique(array_map('intval', $scopes_of)));
         if ($d['health'] == 'offline' && (int)$d['offline_since'] > 0 && $now - (int)$d['offline_since'] >= $wait && $d['alert_state'] != 'offline') {
             foreach ($scopes_of as $sc) $down[$sc][] = $item;
             $ids_down[] = (int)$d['id'];
@@ -178,9 +186,12 @@ function dns_alerts_run($mysqli){
         if ($r && (int)$r['status'] == 1 && (!isset($r['email_verified']) || (int)$r['email_verified'] == 1) && (int)$r['dns_alerts'] == 1 && filter_var($r['email'], FILTER_VALIDATE_EMAIL)) {
             $sent += dns_alert_send(array('type' => 'reseller', 'email' => $r['email'], 'name' => $r['name'], 'lang' => isset($r['lang']) && $r['lang'] != '' ? $r['lang'] : 'pt', 'link' => $base.'/revenda/dns.php'), $d, $u);
         }
-        $copy_down = array_merge($copy_down, $d);
-        $copy_up = array_merge($copy_up, $u);
+        // cópia para o admin: só servidores das revendas (os do admin ele já recebeu direto), sem repetir
+        foreach ($d as $it) if ($it['owner'] > 0) $copy_down[$it['id']] = $it;
+        foreach ($u as $it) if ($it['owner'] > 0) $copy_up[$it['id']] = $it;
     }
+    $copy_down = array_values($copy_down);
+    $copy_up = array_values($copy_up);
     if ($cfg['copy'] && ($copy_down || $copy_up)) {
         foreach ($admins as $a) {
             $a['link'] = $base.'/manage_dns_resellers.php';
