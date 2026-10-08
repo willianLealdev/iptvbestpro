@@ -49,7 +49,7 @@ foreach (array('user_id', 'ads_id', 'dns_id', 'sidebar_id', 'report_id', 'page',
 if (!empty($_SESSION['admin_last_seen']) && time() - (int)$_SESSION['admin_last_seen'] > 8 * 3600) {
     session_unset();
     session_destroy();
-    header("Location: gerencia.php");
+    header("Location: gerencia.php?login=expired");
     exit;
 }
 $_SESSION['admin_last_seen'] = time();

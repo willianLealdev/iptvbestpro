@@ -6,14 +6,29 @@
 include("includes/db_helper.php");
 require_once("includes/account_pages.php");
 
-function adm_back($msg, $type = 'err'){
-    $_SESSION['auth_msg'] = $msg;
-    $_SESSION['auth_type'] = $type;
-    header("Location:gerencia.php");
+// Bloqueado por tentativas erradas: responde 429 (Too Many Requests) com Retry-After e uma página curta
+// que leva de volta ao login (navegador vê a mensagem; robôs recebem o código certo e param).
+function adm_locked($until){
+    $wait = max(60, (int)$until - time());
+    $_SESSION['auth_msg'] = acc_lock_message($until);
+    $_SESSION['auth_type'] = 'err';
+    http_response_code(429);
+    header('Retry-After: '.$wait);
+    header('Cache-Control: no-store');
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=gerencia.php?login=locked"><title>429</title></head><body>'
+        .'<p><a href="gerencia.php?login=locked">'.htmlspecialchars(acc_lock_message($until)).'</a></p></body></html>';
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] != 'POST') { header("Location:gerencia.php"); exit; }
+function adm_back($msg, $type = 'err'){
+    $_SESSION['auth_msg'] = $msg;
+    $_SESSION['auth_type'] = $type;
+    header("Location: gerencia.php?login=failed");
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] != 'POST') { header("Location: gerencia.php?login=required"); exit; }
 
 $login = mb_substr(trim(isset($_POST['user_login']) ? (string)$_POST['user_login'] : ''), 0, 191);
 $password = isset($_POST['nsofts_password_input']) ? (string)$_POST['nsofts_password_input'] : '';
@@ -21,7 +36,7 @@ $key = mb_strtolower($login);
 
 if (!accp_csrf_ok()) adm_back(__('Sessão expirada. Tente novamente.'));
 $locked = acc_locked_until($mysqli, 'adm', $key);
-if ($locked) adm_back(acc_lock_message($locked));
+if ($locked) adm_locked($locked);
 if ($login === '' || $password === '') adm_back(__('Informe usuário e senha.'));
 
 $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_admin WHERE (username = ? OR email = ?) AND id <> 0 LIMIT 1");
@@ -40,7 +55,7 @@ if ($row) {
 if (!$ok) {
     acc_register_fail($mysqli, 'adm', $key);
     $left = acc_attempts_left($mysqli, 'adm', $key);
-    if ($left <= 0) adm_back(acc_lock_message(acc_locked_until($mysqli, 'adm', $key)));
+    if ($left <= 0) adm_locked(acc_locked_until($mysqli, 'adm', $key));
     adm_back(__('Usuário ou senha incorretos.').' '.__('Restam {0} tentativa(s) antes do bloqueio de 1 hora.', $left));
 }
 

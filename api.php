@@ -6,7 +6,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 // antes de abrir o banco (outros métodos, corpo binário/serializado, JSON inválido).
 if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405); header('Allow: POST'); header('Content-Type: application/json; charset=utf-8');
-    echo '{"NEMOSOFTS_APP":[{"success":"0","MSG":"Method not allowed"}]}'; exit;
+    echo '{"error":"method_not_allowed"}'; exit;
 }
 $__raw = isset($_POST['data']) && is_string($_POST['data']) ? $_POST['data'] : '';
 // mesma leitura do get_api_data() (os apps já publicados mandam assim); só valida que é um JSON de verdade
@@ -14,7 +14,7 @@ $__dec = ($__raw !== '' && strlen($__raw) <= 65536) ? base64_decode($__raw) : fa
 $__json = $__dec !== false ? json_decode(urldecode($__dec), true) : null;
 if (!is_array($__json) || empty($__json['helper_name'])) {
     http_response_code(400); header('Content-Type: application/json; charset=utf-8');
-    echo '{"NEMOSOFTS_APP":[{"success":"0","MSG":"Invalid request"}]}'; exit;
+    echo '{"error":"invalid_request"}'; exit;
 }
 unset($__raw, $__dec, $__json);
 include("includes/db_helper.php");

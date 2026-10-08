@@ -1,0 +1,32 @@
+# Confere se a imagem do painel monta e se a configuração do Apache e do PHP é válida
+# (assim um erro de configuração aparece aqui, antes do Deploy no Easypanel).
+name: config-check
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build da imagem
+        run: docker build -t painel-check .
+      - name: Apache configtest
+        run: docker run --rm --entrypoint apache2ctl painel-check -t
+      - name: PHP lint
+        run: docker run --rm --entrypoint sh painel-check -c 'cd /var/www/html && find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l | grep -v "^No syntax errors" || true'
+      - name: Teste de requisições
+        run: |
+          docker run -d --name p --entrypoint apache2-foreground -p 8080:80 painel-check
+          sleep 5
+          code() { curl -s -o /dev/null -w "%{http_code}" "$@"; }
+          echo "PUT /api.php -> $(code -X PUT http://localhost:8080/api.php)"
+          echo "/.env -> $(code http://localhost:8080/.env)"
+          echo "/install/ -> $(code http://localhost:8080/install/)"
+          echo "/.well-known/security.txt -> $(code http://localhost:8080/.well-known/security.txt)"
+          curl -sI http://localhost:8080/robots.txt | grep -i "cache-control\|cross-origin\|content-security" || true
+          curl -sI http://localhost:8080/nao-existe | grep -i "^HTTP\|cache-control" || true
+          test "$(code -X PUT http://localhost:8080/api.php)" = "405"
+          test "$(code http://localhost:8080/.env)" = "404"
+          test "$(code http://localhost:8080/.well-known/security.txt)" = "200"
