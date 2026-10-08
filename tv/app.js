@@ -386,6 +386,7 @@
     var css = '#stage:before{background:rgba(5,8,20,' + Math.max(0, Math.min(95, o)) / 100 + ')}';
     // Cores escolhidas no tema (Personalizar tema): tudo o que muda no painel muda aqui
     var ms = tc.customized === '1' && tc.model_settings ? tc.model_settings : (tc.model_defaults || {}); // tema sem personalizar: cores originais do modelo
+    TH.id = String(tc.theme_id || ''); TH.ms = ms || {};
     function pick(keys) { for (var i = 0; i < keys.length; i++) { var v = hexRgb(ms[keys[i]]); if (v) return v; } return ''; }
     var acc = pick(['theme_primary', 'accent', 'accent_start', 'buttons', 'live_color']);
     if (acc) {
@@ -589,6 +590,116 @@
       (wa ? qrHtml(wa) : '') + '<div class="btn f" data-a="_close">' + esc(t('close')) + '</div>');
   }
 
+  /* ---------------- modelos de tela inicial (os mesmos 8 temas do app Android e da Roku) ----------------
+   * 1 OneUI · 2 Glossy · 3 Black Panther · 4 MovieUI · 5 VUI · 6 Natal · 7 Halloween · 8 BestPro (padrão)
+   * Posições em pixels da tela de 1920x1080 (a tela inteira é escalada para a TV). Cores vêm do painel. */
+  var TH = { id: '', ms: {} };
+  var ICN = { tv: 'tv', movie: 'movie', series: 'series', star: 'star', playlist: 'list', settings: 'gear', search: 'search', play: 'play', refresh: 'sync', support: 'chat' };
+  function thc(k, d) { var v = TH.ms ? TH.ms[k] : ''; v = String(v || ''); if (/^[0-9a-f]{6}$/i.test(v)) v = '#' + v; return /^#[0-9a-f]{6}$/i.test(v) ? v : d; }
+  function thOn(k) { return !TH.ms || String(TH.ms[k]) !== '0'; }
+  function hexA(h, a) { var r = hexRgb(h); return r ? 'rgba(' + r + ',' + (a === undefined ? 1 : a) + ')' : h; }
+  function mixc(h, k) { // k > 0 clareia, k < 0 escurece
+    var r = hexRgb(h); if (!r) return h; r = r.split(',');
+    for (var i = 0; i < 3; i++) { var v = +r[i]; r[i] = Math.round(k >= 0 ? v + (255 - v) * k : v * (1 + k)); }
+    return 'rgb(' + r.join(',') + ')';
+  }
+  function svgc(path, size, color) { return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="' + (color || '#fff') + '">' + path + '</svg>'; }
+  var thCss = '', thN = 0;
+  function ht(x, y, w, h, act, c) {
+    var id = 'th' + (thN++), st = c.style || 'card';
+    var css = 'left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;';
+    if (st === 'grad' || (c.c2 && st !== 'wide')) css += 'background:' + c.c1 + ';background:-webkit-linear-gradient(315deg,' + c.c2 + ',' + c.c1 + ');background:linear-gradient(135deg,' + c.c2 + ',' + c.c1 + ');';
+    else css += 'background:' + (c.alpha ? hexA(c.c1, c.alpha) : c.c1) + ';';
+    if (st === 'round') css += 'border-radius:50%;';
+    if (c.ring) css += 'border:' + (st === 'wide' ? 5 : 2) + 'px solid ' + c.ring + ';';
+    if (c.bar) css += 'border-left:12px solid ' + c.bar + ';';
+    if (c.focus) thCss += '#' + id + '.on{box-shadow:0 0 0 6px ' + c.focus + ',0 12px 34px rgba(0,0,0,.55)}';
+    var s = c.iconSize || 90, ic = c.icon ? svgc(IC[ICN[c.icon]] || IC.info, s, c.iconColor) : '';
+    if (c.img) ic = '<img src="' + SRV + '/tv/img/' + c.img + '.png" style="width:' + s + 'px;height:' + s + 'px">';
+    if (c.iconCircle) ic = '<div class="tcirc" style="background:' + c.iconCircle + ';width:' + Math.round(s * 1.75) + 'px;height:' + Math.round(s * 1.75) + 'px">' + ic + '</div>';
+    // nome cabe no cartão: diminui a letra quando o texto é comprido (ex.: CONFIGURAÇÕES num botão estreito)
+    var fs = c.labelSize || 40;
+    if (c.label) {
+      var room = st === 'btn' ? w - (c.icon || c.img ? s + 24 : 0) - (c.bar ? 92 : 80) : (st === 'wide' ? w - s - 140 : w - 30);
+      var need = c.label.length * fs * 0.72;
+      if (need > room) fs = Math.max(16, Math.floor(room / (c.label.length * 0.72)));
+    }
+    var lb = c.label ? '<div class="tlb" style="font-size:' + fs + 'px">' + esc(c.label) + '</div>' : '';
+    var inner = st === 'btn' ? '<div class="trow">' + ic + lb + '</div>'
+      : (st === 'wide' ? '<div class="trow wide">' + lb + ic + '</div>'
+      : (st === 'round' ? ic : '<div class="tcol">' + ic + lb + '</div>'));
+    if (c.pattern) inner = '<div class="tpat"></div>' + inner;
+    if (c.decor) inner += '<img class="tdecor" src="' + SRV + '/tv/img/' + c.decor + '.png" style="left:' + c.dx + 'px;top:' + c.dy + 'px;width:' + c.dw + 'px;height:' + c.dh + 'px">';
+    return '<div id="' + id + '" class="tt' + (st === 'round' ? ' round' : '') + (act ? ' f' : '') + '"' + (act ? ' data-a="' + act + '"' : '') + ' style="' + css + '">' + inner + '</div>';
+  }
+  function themeHome() {
+    var id = TH.id, L = [];
+    thCss = ''; thN = 0;
+    if (id === '1') {
+      // OneUI: TV ao vivo grande à esquerda, Filmes e Séries ao lado, botões embaixo
+      var pat = thOn('show_pattern');
+      L.push(ht(60, 160, 640, 760, 'live', { style: 'grad', c1: thc('live_bottom', '#3C56DE'), c2: thc('live_top', '#36D29B'), pattern: pat, icon: 'tv', iconSize: 170, label: t('live'), labelSize: 58 }));
+      L.push(ht(730, 160, 555, 560, 'movies', { style: 'grad', c1: thc('movies_bottom', '#F69D3F'), c2: thc('movies_top', '#DB2E54'), pattern: pat, icon: 'movie', iconSize: 130, label: t('movies'), labelSize: 48 }));
+      L.push(ht(1305, 160, 555, 560, 'series', { style: 'grad', c1: thc('series_bottom', '#5396DC'), c2: thc('series_top', '#9C3CB3'), pattern: pat, icon: 'series', iconSize: 130, label: t('series'), labelSize: 48 }));
+      var b = thc('buttons', '#4DB6AC'), bx = [730, 1017, 1304, 1591];
+      var acts = [['cont', 'play', t('cont_tile')], ['fav', 'star', t('favorites')], ['playlist', 'playlist', t('playlist')], ['settings', 'settings', t('settings')]];
+      for (var i = 0; i < 4; i++) L.push(ht(bx[i], 750, 269, 170, acts[i][0], { style: 'card', c1: b, icon: acts[i][1], iconSize: 50, label: acts[i][2], labelSize: 26 }));
+    } else if (id === '2') {
+      // Glossy: botões redondos à esquerda, menu no meio, TV/Filmes/Séries com borda colorida à direita
+      var a1 = thc('accent_start', '#FD4C3A'), a2 = thc('accent_end', '#FF7439'), p1 = thc('panel_top', '#233245'), p2 = thc('panel_bottom', '#141A26');
+      var rb = [['settings', 'settings'], ['playlist', 'playlist'], ['refresh', 'refresh'], ['support', 'support']];
+      for (var r = 0; r < 4; r++) L.push(ht(60, 170 + r * 160, 120, 120, rb[r][0], { style: 'round', c1: a1, c2: a2, icon: rb[r][1], iconSize: 56, focus: '#fff' }));
+      L.push(ht(230, 160, 560, 760, '', { style: 'card', c1: p2, c2: p1 }));
+      var mid = [['fav', 'star', t('favorites')], ['search', 'search', t('search')], ['cont', 'play', t('continue')]];
+      for (var q = 0; q < 3; q++) L.push(ht(260, 190 + q * 240, 500, 220, mid[q][0], { style: 'btn', c1: mixc(p2, 0.06), icon: mid[q][1], iconSize: 60, label: mid[q][2], labelSize: 32, focus: a2 }));
+      var big = [['live', 'tv', t('live')], ['movies', 'movie', t('movies')], ['series', 'series', t('series')]];
+      for (var g = 0; g < 3; g++) L.push(ht(830, 160 + g * 265, 1030, 230, big[g][0], { style: 'wide', c1: p2, ring: a1, focus: a2, icon: big[g][1], iconSize: 110, label: big[g][2], labelSize: 52 }));
+    } else if (id === '3') {
+      // Black Panther: cartões cinza com ícone no círculo e botões com faixa
+      var ac = thc('accent', '#E22F4D'), cd = thc('card', '#404040');
+      var big3 = [['live', 'tv', t('live')], ['movies', 'movie', t('movies')], ['series', 'series', t('series')]];
+      var small = [['cont', 'play', t('cont_tile')], ['fav', 'star', t('favorites')], ['playlist', 'playlist', t('playlist')], ['settings', 'settings', t('settings')]];
+      for (var b3 = 0; b3 < 3; b3++) L.push(ht(100 + b3 * 600, 170, 520, 440, big3[b3][0], { style: 'card', c1: cd, ring: 'rgba(255,255,255,.19)', iconCircle: ac, icon: big3[b3][1], iconSize: 90, label: big3[b3][2], labelSize: 44 }));
+      for (var s3 = 0; s3 < 4; s3++) L.push(ht(100 + s3 * 440, 680, 400, 130, small[s3][0], { style: 'btn', c1: cd, bar: ac, icon: small[s3][1], iconSize: 52, label: small[s3][2], labelSize: 30 }));
+    } else if (id === '4') {
+      // MovieUI: pôster em tela cheia e a fila de cartões embaixo
+      var tcol = TH.ms && String(TH.ms.tile_auto) === '0' ? thc('tile_color', '#3A0A10') : '#3A0A10';
+      var row = [['live', 'tv', t('live')], ['movies', 'movie', t('movies')], ['series', 'series', t('series')], ['cont', 'play', t('cont_tile')], ['fav', 'star', t('favorites')], ['playlist', 'playlist', t('playlist')], ['settings', 'settings', t('settings')]];
+      for (var m4 = 0; m4 < 7; m4++) L.push(ht(70 + m4 * 255, 760, 240, 200, row[m4][0], { style: 'card', c1: tcol, alpha: 0.92, icon: row[m4][1], iconSize: 68, label: row[m4][2], labelSize: 25 }));
+    } else if (id === '5' || id === '6' || id === '7') {
+      // VUI, Natal e Halloween: 3 cartões altos e botões à direita
+      var cols = id === '7' ? [thc('live_color', '#FF811D'), thc('movies_color', '#7761D5'), thc('series_color', '#00C853')]
+        : [thc('live_color', '#E62E2F'), thc('movies_color', '#00E676'), thc('series_color', '#FF9100')];
+      var top = thc('bg_top', thc('bg', '#070923')), cd5 = mixc(top, 0.07), pat5 = thOn('show_pattern'), decor = thOn('show_decor');
+      var big5 = [['live', 'tv', t('live')], ['movies', 'movie', t('movies')], ['series', 'series', t('series')]];
+      var imgs = ['hw_pumpkin', 'hw_bat', 'hw_cauldron'];
+      var xm = [{ decor: 'xmas_santa', dx: -20, dy: 520, dw: 230, dh: 230 }, { decor: 'xmas_balls', dx: 45, dy: -10, dw: 300, dh: 300 }, { decor: 'xmas_snowman', dx: 190, dy: 540, dw: 210, dh: 210 }];
+      for (var v = 0; v < 3; v++) {
+        var cfg = { style: 'card', c1: cd5, ring: 'rgba(255,255,255,.08)', pattern: pat5, icon: big5[v][1], iconColor: cols[v], iconSize: 170, label: big5[v][2], labelSize: 54, focus: cols[v] };
+        if (id === '7' && decor) { cfg.img = imgs[v]; cfg.iconSize = 270; }
+        if (id === '6' && decor) { cfg.decor = xm[v].decor; cfg.dx = xm[v].dx; cfg.dy = xm[v].dy; cfg.dw = xm[v].dw; cfg.dh = xm[v].dh; }
+        L.push(ht(60 + v * 420, 160, 390, 760, big5[v][0], cfg));
+      }
+      var side = [['cont', 'play', t('continue')], ['fav', 'star', t('favorites')], ['playlist', 'playlist', t('playlist')], ['settings', 'settings', t('settings')]];
+      var hwi = [null, 'hw_ghost', 'hw_candy', 'hw_candycorn'];
+      for (var sd = 0; sd < 4; sd++) {
+        var c5 = { style: 'btn', c1: cd5, ring: 'rgba(255,255,255,.08)', icon: side[sd][1], iconSize: 56, label: side[sd][2], labelSize: 32 };
+        if (id === '7' && decor && hwi[sd]) c5.img = hwi[sd];
+        L.push(ht(1320, 160 + sd * 195, 540, 175, side[sd][0], c5));
+      }
+      if (id === '7' && decor) L.push('<img class="tdeco" src="' + SRV + '/tv/img/hw_web.png" style="left:1560px;top:860px;width:300px;height:300px;opacity:.18"><img class="tdeco" src="' + SRV + '/tv/img/hw_spider.png" style="left:1225px;top:130px;width:110px;height:110px;opacity:.55">');
+      if (id === '6' && thOn('show_snow')) {
+        var sn = '';
+        for (var f = 0; f < 28; f++) {
+          var sz = 6 + Math.floor(Math.random() * 10), dur = 9 + Math.floor(Math.random() * 10), dl = -Math.floor(Math.random() * dur);
+          sn += '<i style="left:' + Math.floor(Math.random() * 1900) + 'px;width:' + sz + 'px;height:' + sz + 'px;opacity:' + (0.35 + Math.random() * 0.5).toFixed(2) + ';-webkit-animation-duration:' + dur + 's;animation-duration:' + dur + 's;-webkit-animation-delay:' + dl + 's;animation-delay:' + dl + 's"></i>';
+        }
+        L.push('<div class="snow">' + sn + '</div>');
+      }
+    } else return '';
+    return '<style>' + thCss + '</style><div class="thome">' + L.join('') + '</div>';
+  }
+
   /* ---------------- tela inicial ---------------- */
   // Licença: confere ao voltar para a tela inicial (no máximo 1 vez por minuto) e a cada 10 minutos.
   // Aparelho excluído/resetado no painel perde o acesso na hora, sem precisar fechar o app.
@@ -615,7 +726,9 @@
     var h = '', m = '';
     for (var i = 0; i < tiles.length; i++) h += '<div class="tile f" data-a="' + tiles[i][0] + '"><div class="ic">' + svg(tiles[i][1]) + '</div><div class="lb">' + esc(t(tiles[i][2])) + '</div></div>';
     for (var j = 0; j < mini.length; j++) m += '<div class="tile mini f" data-a="' + mini[j][0] + '"><div class="ic">' + svg(mini[j][1], 54) + '</div><div class="lb">' + esc(t(mini[j][2])) + '</div></div>';
-    show(header('') + '<div class="hero"><img src="' + esc(S.brand.banner || S.brand.logo) + '" onerror="this.style.display=\'none\'"></div><div class="tiles big">' + h + '</div><div class="tiles minis">' + m + '</div>', {
+    var themed = themeHome();
+    var body = themed || ('<div class="hero"><img src="' + esc(S.brand.banner || S.brand.logo) + '" onerror="this.style.display=\'none\'"></div><div class="tiles big">' + h + '</div><div class="tiles minis">' + m + '</div>');
+    show(header('') + body, {
       focus: '[data-a=' + (LS.get('bp_home', 'live')) + ']',
       back: confirmExit,
       acts: {
@@ -626,6 +739,8 @@
         cont: function () { LS.set('bp_home', 'cont'); continueLast(); },
         search: function () { LS.set('bp_home', 'search'); searchScreen(); },
         fav: function () { LS.set('bp_home', 'fav'); favoritesMenu(); },
+        refresh: function () { toast(t('loading')); try { sessionStorage.setItem('bp_fresh', '1'); } catch (e) {} setTimeout(function () { location.reload(); }, 300); },
+        support: function () { support(); },
         settings: function () { LS.set('bp_home', 'settings'); settings(); }
       }
     });
@@ -644,6 +759,7 @@
       acts: {
         cat: function (el, i) { openCat(+i); },
         favcat: function () { openChans(favList('live'), undefined, '_fav'); },
+        srch: function () { stopPreview(); searchScreen(); },
         ch: function (el, i) { i = +i; if (L.chans[i] && L.playIdx >= 0 && L.playList[L.playIdx] && L.playList[L.playIdx].stream_id == L.chans[i].stream_id) setFull(true); else playChan(i); }
       }
     });
@@ -663,6 +779,7 @@
   function renderCats() {
     L.mode = 'cats';
     var h = '';
+    h += '<div class="row f" data-a="srch"><span>' + esc(t('search_go')) + '</span></div>';
     if (favList('live').length) h += '<div class="row f" data-a="favcat"><span>★ ' + esc(t('favorites')) + ' (' + favList('live').length + ')</span></div>';
     for (var i = 0; i < L.cats.length; i++) h += '<div class="row f' + (i === L.catIdx && L.curCat !== '_fav' ? ' sel' : '') + '" data-a="cat" data-i="' + i + '"><span>' + esc(L.cats[i].category_name) + '</span></div>';
     $('lst').innerHTML = h || '<div class="empty">' + esc(t('empty')) + '</div>';
@@ -904,19 +1021,19 @@
       '<div class="right" style="left:630px"><div class="scroll" id="grid"><div class="grid" id="gridin"></div></div></div>', {
       back: function () { if (focused && focused.classList.contains('poster')) { var c = $('lst').querySelector('.sel'); focus(c || $('lst').querySelector('.f')); } else home(); },
       acts: {
-        cat: function (el, i) { loadVodCat(type, +i); },
+        cat: function (el, i) { if (st.cats[+i] && st.cats[+i].category_id === '_search') return searchScreen(); loadVodCat(type, +i); },
         item: function (el, i) { var it = st.items[+i]; if (type === 'movie') movieDetails(it); else seriesDetails(it); }
       }
     });
     S.screen = type; clock(); every(clock, 20000);
     var act = type === 'movie' ? 'get_vod_categories' : 'get_series_categories';
-    if (st.cats) { if (st.want === '_fav') { st.want = ''; st.catIdx = 1; } return renderVodCats(type); }
+    if (st.cats) { if (st.want === '_fav') { st.want = ''; st.catIdx = 2; } return renderVodCats(type); }
     $('lst').innerHTML = '<div class="empty">' + esc(t('loading')) + '</div>';
     xt(act, {}, function (err, j) {
       if (err || !j) { $('lst').innerHTML = '<div class="empty">' + esc(t('list_err')) + '</div>'; return; }
-      st.cats = [{ category_id: '_cw', category_name: t('continue') }, { category_id: '_fav', category_name: '★ ' + t('favorites') }].concat(j.filter(function (c) { return !ADULT.test(c.category_name || ''); }));
-      st.catIdx = cwList(type).length ? 0 : (st.cats.length > 2 ? 2 : 0);
-      if (st.want === '_fav') { st.want = ''; st.catIdx = 1; }
+      st.cats = [{ category_id: '_search', category_name: t('search_go') }, { category_id: '_cw', category_name: t('continue') }, { category_id: '_fav', category_name: '★ ' + t('favorites') }].concat(j.filter(function (c) { return !ADULT.test(c.category_name || ''); }));
+      st.catIdx = cwList(type).length ? 1 : (st.cats.length > 3 ? 3 : 1);
+      if (st.want === '_fav') { st.want = ''; st.catIdx = 2; }
       renderVodCats(type);
     });
   }
@@ -932,6 +1049,7 @@
     var rows = $('lst').querySelectorAll('.row'); for (var r = 0; r < rows.length; r++) rows[r].classList.toggle('sel', r === i);
     var c = st.cats[i];
     $('gridin').innerHTML = '<div class="empty">' + esc(t('loading')) + '</div>';
+    if (c.category_id === '_search') { st.items = []; $('gridin').innerHTML = '<div class="empty">' + esc(t('search_hint')) + '</div>'; return; }
     if (c.category_id === '_cw') { st.items = cwList(type); return renderGrid(type); }
     if (c.category_id === '_fav') { st.items = favList(type); return renderGrid(type); }
     xt(type === 'movie' ? 'get_vod_streams' : 'get_series', { category_id: c.category_id }, function (err, j) {
