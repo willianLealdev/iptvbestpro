@@ -18,7 +18,7 @@ jobs:
         run: docker run --rm --entrypoint sh painel-check -c 'cd /var/www/html && find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l | grep -v "^No syntax errors" || true'
       - name: Teste de requisições
         run: |
-          docker run -d --name p --entrypoint apache2-foreground -p 8080:80 painel-check
+          docker run -d --name painel --entrypoint apache2-foreground -p 8080:80 painel-check
           sleep 5
           code() { curl -s -o /dev/null -w "%{http_code}" "$@"; }
           echo "PUT /api.php -> $(code -X PUT http://localhost:8080/api.php)"
