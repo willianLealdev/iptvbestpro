@@ -282,4 +282,11 @@ function acc_mail_rate_ok($mysqli, $scope, $max = 5){
     return true;
 }
 
-function acc_valid_password($p){ return is_string($p) && strlen($p) >= ACC_MIN_PASSWORD && strlen($p) <= 200; }
+function acc_valid_password($p){
+    if (!is_string($p) || strlen($p) < ACC_MIN_PASSWORD || strlen($p) > 200) return false;
+    // senhas óbvias (as primeiras que um robô testa) não são aceitas, mesmo com 8+ caracteres
+    $l = strtolower($p);
+    if (in_array($l, array('12345678', '123456789', '1234567890', '87654321', '11111111', '00000000', 'password', 'password1', 'senha123', 'senha1234', 'admin123', 'admin1234', 'qwerty123', 'iptvbestpro', 'abc12345'), true)) return false;
+    if (preg_match('/^(.)\1+$/', $p)) return false; // aaaaaaaa, 11111111...
+    return true;
+}

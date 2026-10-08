@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT username FROM tbl_admin WHERE id = ".(int)$_SESSION['id']));
     $weak = array('admin', 'admin123', 'password', '12345678', '123456789', 'senha123');
     if (!accp_csrf_ok()) $errors[] = 'Sessão expirada. Tente novamente.';
-    if (!acc_valid_password($p1)) $errors[] = __('A senha precisa ter pelo menos {0} caracteres.', ACC_MIN_PASSWORD);
+    if (!acc_valid_password($p1)) $errors[] = __('A senha precisa ter pelo menos {0} caracteres e não pode ser uma senha óbvia (como 12345678).', ACC_MIN_PASSWORD);
     if (in_array(strtolower($p1), $weak, true) || ($row && strtolower($p1) === strtolower($row['username']))) $errors[] = 'Escolha uma senha mais forte (não use a senha padrão nem o nome de usuário).';
     if ($p1 !== $p2) $errors[] = 'As senhas não conferem.';
     if (!$errors) {

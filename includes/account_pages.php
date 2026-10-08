@@ -123,7 +123,7 @@ function accp_reset_page($mysqli, $cfg){
         $p1 = isset($_POST['password']) ? (string)$_POST['password'] : '';
         $p2 = isset($_POST['password_confirm']) ? (string)$_POST['password_confirm'] : '';
         if (!accp_csrf_ok()) $errors[] = 'Sessão expirada. Tente novamente.';
-        if (!acc_valid_password($p1)) $errors[] = __('A senha precisa ter pelo menos {0} caracteres.', ACC_MIN_PASSWORD);
+        if (!acc_valid_password($p1)) $errors[] = __('A senha precisa ter pelo menos {0} caracteres e não pode ser uma senha óbvia (como 12345678).', ACC_MIN_PASSWORD);
         if ($p1 !== $p2) $errors[] = 'As senhas não conferem.';
         if (!$errors && acc_token_check($mysqli, $cfg['type'], 'reset', $token, true) === $id) {
             $table = acc_table($cfg['type']);

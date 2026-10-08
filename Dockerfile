@@ -41,6 +41,7 @@ RUN { \
       echo "session.use_strict_mode=1"; \
       echo "session.use_only_cookies=1"; \
       echo "session.sid_length=48"; \
+      echo "session.sid_bits_per_character=6"; \
       echo "allow_url_include=Off"; \
     } > /usr/local/etc/php/conf.d/painel.ini
 

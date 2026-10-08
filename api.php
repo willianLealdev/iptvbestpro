@@ -1,7 +1,22 @@
 <?php 
 // Apps de TV (LG / Samsung) chamam a API a partir do próprio app instalado (sem origem web)
 header('Access-Control-Allow-Origin: *');
-if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') { header('Access-Control-Allow-Methods: POST, GET'); header('Access-Control-Allow-Headers: Content-Type'); exit; }
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') { header('Access-Control-Allow-Methods: POST'); header('Access-Control-Allow-Headers: Content-Type'); exit; }
+// Segurança: os apps só usam POST com o campo "data" (JSON em base64). Qualquer outra coisa é recusada
+// antes de abrir o banco (outros métodos, corpo binário/serializado, JSON inválido).
+if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405); header('Allow: POST'); header('Content-Type: application/json; charset=utf-8');
+    echo '{"NEMOSOFTS_APP":[{"success":"0","MSG":"Method not allowed"}]}'; exit;
+}
+$__raw = isset($_POST['data']) && is_string($_POST['data']) ? $_POST['data'] : '';
+// mesma leitura do get_api_data() (os apps já publicados mandam assim); só valida que é um JSON de verdade
+$__dec = ($__raw !== '' && strlen($__raw) <= 65536) ? base64_decode($__raw) : false;
+$__json = $__dec !== false ? json_decode(urldecode($__dec), true) : null;
+if (!is_array($__json) || empty($__json['helper_name'])) {
+    http_response_code(400); header('Content-Type: application/json; charset=utf-8');
+    echo '{"NEMOSOFTS_APP":[{"success":"0","MSG":"Invalid request"}]}'; exit;
+}
+unset($__raw, $__dec, $__json);
 include("includes/db_helper.php");
 include("includes/lb_helper.php"); 
 include("language/api_language.php"); 

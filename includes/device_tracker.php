@@ -37,20 +37,54 @@ function devices_migrate($mysqli){
     mysqli_query($mysqli, $sql);
 }
 
-// IP real do cliente (o Easypanel/Traefik repassa em X-Forwarded-For)
+/**
+ * IP real do cliente, sem confiar em cabeçalho que o próprio cliente pode inventar.
+ * Caminho: cliente -> Cloudflare -> Traefik (Easypanel) -> Apache.
+ *  - "quem conectou" = REMOTE_ADDR; se for o proxy interno (IP privado), é o último IP do X-Forwarded-For,
+ *    que é o IP que o Traefik viu (ele acrescenta no fim; o que vem antes pode ter sido inventado).
+ *  - se quem conectou é um servidor da Cloudflare, vale o CF-Connecting-IP (a Cloudflare sobrescreve esse cabeçalho);
+ *    se não é (alguém acessando o servidor direto), vale o IP de quem conectou — e o CF-Connecting-IP é ignorado.
+ * Usado no bloqueio de tentativas de login, no limite de códigos de ativação e no país do aparelho.
+ */
 function devices_client_ip(){
-    $candidates = array();
-    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) $candidates[] = $_SERVER['HTTP_CF_CONNECTING_IP'];
-    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        foreach (explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']) as $ip) $candidates[] = trim($ip);
+    $pub = function ($ip) { return (bool)filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE); };
+    $peer = isset($_SERVER['REMOTE_ADDR']) ? trim($_SERVER['REMOTE_ADDR']) : '';
+    if (!$pub($peer) && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $chain = array_values(array_filter(array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])), function ($x) { return filter_var($x, FILTER_VALIDATE_IP); }));
+        // do fim para o começo: o primeiro IP público é quem conectou no proxy
+        for ($i = count($chain) - 1; $i >= 0; $i--) {
+            if ($pub($chain[$i])) { $peer = $chain[$i]; break; }
+        }
     }
-    if (!empty($_SERVER['HTTP_X_REAL_IP'])) $candidates[] = $_SERVER['HTTP_X_REAL_IP'];
-    if (!empty($_SERVER['REMOTE_ADDR'])) $candidates[] = $_SERVER['REMOTE_ADDR'];
+    if ($peer !== '' && devices_is_cloudflare($peer) && !empty($_SERVER['HTTP_CF_CONNECTING_IP']) && filter_var(trim($_SERVER['HTTP_CF_CONNECTING_IP']), FILTER_VALIDATE_IP)) {
+        return trim($_SERVER['HTTP_CF_CONNECTING_IP']);
+    }
+    return $peer;
+}
 
-    foreach ($candidates as $ip) {
-        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) return $ip;
+// Faixas de IP da Cloudflare (https://www.cloudflare.com/ips/)
+function devices_is_cloudflare($ip){
+    static $ranges = array(
+        '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18', '108.162.192.0/18',
+        '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+        '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+        '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+    );
+    $bin = @inet_pton($ip);
+    if ($bin === false) return false;
+    foreach ($ranges as $r) {
+        list($net, $bits) = explode('/', $r);
+        $nb = @inet_pton($net);
+        if ($nb === false || strlen($nb) != strlen($bin)) continue;
+        $bits = (int)$bits;
+        $bytes = intdiv($bits, 8);
+        if (substr($bin, 0, $bytes) !== substr($nb, 0, $bytes)) continue;
+        $rem = $bits % 8;
+        if ($rem == 0) return true;
+        $mask = (0xFF << (8 - $rem)) & 0xFF;
+        if ((ord($bin[$bytes]) & $mask) === (ord($nb[$bytes]) & $mask)) return true;
     }
-    return isset($candidates[0]) ? $candidates[0] : '';
+    return false;
 }
 
 // Retorna array('code' => 'BR', 'name' => 'Brazil') ou códigos vazios

@@ -1624,4 +1624,6 @@ return array(
   'Nenhuma queda registrada.' => array('pt' => 'Nenhuma queda registrada.', 'en' => 'No drops recorded.', 'es' => 'Ninguna caída registrada.'),
   'Nenhum servidor cadastrado.' => array('pt' => 'Nenhum servidor cadastrado.', 'en' => 'No servers registered.', 'es' => 'Ningún servidor registrado.'),
   'listas' => array('pt' => 'listas', 'en' => 'playlists', 'es' => 'listas'),
+  'Esta senha é a senha padrão e foi bloqueada por segurança. Clique em "Esqueceu a senha?" para criar uma senha nova.' => array('pt' => 'Esta senha é a senha padrão e foi bloqueada por segurança. Clique em "Esqueceu a senha?" para criar uma senha nova.', 'en' => 'This is the default password and it was blocked for security. Click "Forgot password?" to create a new password.', 'es' => 'Esta es la contraseña predeterminada y fue bloqueada por seguridad. Haz clic en "¿Olvidaste la contraseña?" para crear una nueva.'),
+  'A senha precisa ter pelo menos {} caracteres e não pode ser uma senha óbvia (como 12345678).' => array('pt' => 'A senha precisa ter pelo menos {0} caracteres e não pode ser uma senha óbvia (como 12345678).', 'en' => 'The password must have at least {0} characters and cannot be an obvious password (like 12345678).', 'es' => 'La contraseña debe tener al menos {0} caracteres y no puede ser una contraseña obvia (como 12345678).'),
 );

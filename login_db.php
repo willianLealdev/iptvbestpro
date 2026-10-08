@@ -46,6 +46,14 @@ if (!$ok) {
 
 if ((int)$row['status'] == 0) adm_back(__('Sua conta está bloqueada. Fale com o administrador.'));
 
+// Senha padrão de instalação (admin, 123456...) ou igual ao usuário: NUNCA entra, nem uma vez.
+// Conta como tentativa errada (bloqueio de 1 hora) e pede para criar uma senha nova pelo "Esqueci minha senha".
+$__default_pw = array('admin', 'admin123', 'admin1234', 'administrator', 'password', 'senha', 'senha123', '123456', '1234567', '12345678', '123456789', '1234567890', 'qwerty', 'iptv', 'nemosofts');
+if (in_array(strtolower($password), $__default_pw, true) || strtolower($password) === strtolower((string)$row['username'])) {
+    acc_register_fail($mysqli, 'adm', $key);
+    adm_back(__('Esta senha é a senha padrão e foi bloqueada por segurança. Clique em "Esqueceu a senha?" para criar uma senha nova.'));
+}
+
 acc_clear_fails($mysqli, 'adm', $key);
 // senha antiga em md5: atualiza para password_hash (mais forte) agora que sabemos a senha
 if (strpos((string)$row['password'], '$2y$') !== 0 && strpos((string)$row['password'], '$argon') !== 0) {
@@ -58,7 +66,7 @@ if (strpos((string)$row['password'], '$2y$') !== 0 && strpos((string)$row['passw
 }
 session_regenerate_id(true);
 // senha padrão ou fraca: obriga a trocar antes de usar o painel (includes/admin_guard.php)
-$weak = strlen($password) < 8 || in_array(strtolower($password), array('admin', 'admin123', 'password', '12345678', '123456789', 'senha123'), true) || strtolower($password) === strtolower((string)$row['username']);
+$weak = strlen($password) < 8;
 if ($weak) $_SESSION['admin_must_change_pw'] = 1; else unset($_SESSION['admin_must_change_pw']);
 $_SESSION['id'] = $row['id'];
 $_SESSION['admin_name'] = $row['username'];

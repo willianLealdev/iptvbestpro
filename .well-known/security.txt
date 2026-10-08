@@ -1,0 +1,5 @@
+Contact: https://iptvbestpro.com/
+Expires: 2027-10-08T00:00:00.000Z
+Preferred-Languages: pt, en, es
+Canonical: https://iptvbestpro.com/.well-known/security.txt
+Policy: https://iptvbestpro.com/privacy_policy

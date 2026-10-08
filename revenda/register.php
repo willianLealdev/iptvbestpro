@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (!rv_csrf_ok()) $errors[] = 'Sessão expirada. Tente novamente.';
     if ($form['name'] == '') $errors[] = 'Informe seu nome.';
     if (!filter_var($form['email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'Informe um e-mail válido.';
-    if (!acc_valid_password($password)) $errors[] = __('A senha precisa ter pelo menos {0} caracteres.', ACC_MIN_PASSWORD);
+    if (!acc_valid_password($password)) $errors[] = __('A senha precisa ter pelo menos {0} caracteres e não pode ser uma senha óbvia (como 12345678).', ACC_MIN_PASSWORD);
     if ($password !== $confirm) $errors[] = 'As senhas não conferem.';
     if (!$errors && !acc_mail_rate_ok($mysqli, 'rv-signup', 5)) $errors[] = 'Muitos cadastros a partir desta rede. Tente mais tarde.';
 
