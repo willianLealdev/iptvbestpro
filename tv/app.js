@@ -231,6 +231,16 @@
     if (c >= 96 && c <= 105) return 'n' + (c - 96);
     return '';
   }
+  // Multitarefa (Samsung/LG): app escondido (Home, outra fonte) pausa o vídeo; ao voltar, continua de onde estava
+  document.addEventListener('visibilitychange', function () {
+    [L.video, PL.video].forEach(function (v) {
+      if (!v) return;
+      try {
+        if (document.hidden) { v._bgPaused = !v.paused; if (!v.paused) v.pause(); }
+        else if (v._bgPaused) { v._bgPaused = false; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+      } catch (e) {}
+    });
+  });
   document.addEventListener('keydown', function (e) {
     var k = keyName(e);
     if (!k) return;
