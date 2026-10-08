@@ -75,6 +75,31 @@ function privacy_default_html($app, $site){
 <h4>Uso y compartición</h4>
 <p>Solo para activar y operar el servicio, dar soporte y mejorar la estabilidad. No vendemos datos personales ni mostramos anuncios. Para solicitar la eliminación de tus datos, contacta al soporte desde la app o en <?php echo $s; ?>.</p>
 </section>
+
+<section id="ko" lang="ko">
+<h4>한국어 (개인정보 처리방침)</h4>
+<p><?php echo $a; ?>(이하 "앱")는 사용자가 이미 자신의 서비스 제공업체와 이용 중인 IPTV 구독을 재생하기 위한 미디어 플레이어입니다. 앱은 채널, 영화, 시리즈 또는 재생 목록을 제공, 호스팅 또는 판매하지 않습니다.</p>
+<h4>수집하는 정보</h4>
+<ul>
+<li><b>기기 식별자:</b> 앱이 생성한 임의의 ID와 기기 모델 및 운영체제 버전. 활성화 코드로 기기를 활성화하고, 기기를 활성화한 제공업체 또는 리셀러에게 기기를 표시하는 용도로만 사용됩니다.</li>
+<li><b>IP 주소 및 국가:</b> 앱이 연결될 때 서버는 기기의 IP 주소와 대략적인 국가를 기록합니다. 보안(악용 방지) 및 제공업체에 기기 활성화 위치를 표시하는 용도로 사용됩니다. 정확한 위치(GPS)는 사용하지 않습니다.</li>
+<li><b>재생 목록 접속 정보:</b> 제공업체가 기기에 연결한 재생 목록의 사용자 이름/비밀번호는 해당 제공업체 서버에 앱을 연결하는 용도로만 사용됩니다.</li>
+<li><b>오류 보고서:</b> 앱에 오류가 발생하면 문제 해결을 위해 기술 정보(기기 모델, 운영체제 버전, 앱 버전, 오류 내용)가 전송될 수 있습니다.</li>
+<li><b>알림:</b> 서비스 알림 전송을 위해 OneSignal을 사용하며, OneSignal은 기기의 푸시 토큰을 받습니다.</li>
+<li><b>고객 지원 메시지:</b> 사용자가 설정 → 지원을 통해 보낸 메시지와 기기 식별자.</li>
+<li><b>웹사이트 계정:</b> <?php echo $s; ?>에서 계정을 만든 고객 및 리셀러는 이름, 이메일, 비밀번호(암호화 저장)를 제공합니다. 결제는 Stripe 또는 Mercado Pago에서 처리되며 카드 번호는 저장하지 않습니다.</li>
+</ul>
+<h4>이용 목적</h4>
+<p>서비스 활성화 및 운영, 고객 지원, 서비스 알림 전송, 안정성 개선의 목적으로만 사용합니다. 개인정보를 판매하지 않으며 광고에 사용하지 않습니다. 앱에는 광고가 없습니다.</p>
+<h4>제3자 제공</h4>
+<p>서비스 운영에 필요한 업체(Google Firebase, OneSignal, Stripe, Mercado Pago, 호스팅)와 기기를 활성화한 리셀러에게만, 기기 및 활성화 상태에 한하여 제공됩니다.</p>
+<h4>보관 및 삭제</h4>
+<p>기기 정보는 기기가 활성 상태인 동안 보관됩니다. 확인되지 않은 웹사이트 계정은 5일 후 삭제됩니다. 개인정보 삭제를 원하시면 앱(설정 → 지원) 또는 <?php echo $s; ?>을 통해 문의해 주십시오.</p>
+<h4>아동</h4>
+<p>앱은 만 13세 미만 아동을 대상으로 하지 않습니다. 성인 카테고리는 비밀번호로 잠글 수 있습니다.</p>
+<h4>문의</h4>
+<p>운영자: NEWCERT HOLDING LLC (Orlando, FL, USA) · <?php echo $s; ?></p>
+</section>
 </div>
 <?php return ob_get_clean();
 }
