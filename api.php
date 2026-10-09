@@ -504,12 +504,19 @@ else if($get_helper['helper_name']=="get_device_user"){
         $row['user_name'] = $data['user_name'];
         $row['user_password'] = $data['user_password'];
         // Failover: devolve o servidor DNS que aceita este usuário agora (queda ou migração de servidor)
-        $row['dns_base'] = playlist_current_dns($mysqli, $data, $fresh);
+        $row['dns_base'] = playlist_current_dns($mysqli, $data, $fresh, $dns_status);
+        // online | offline (nenhum servidor aceita este usuário: o app passa para outra lista do aparelho) | '' (lista por URL)
+        $row['dns_status'] = $dns_status;
         $row['device_id'] = $data['device_id'];
         $row['playlist_name'] = isset($data['playlist_name']) ? $data['playlist_name'] : '';
         array_push($jsonObj,$row);
     }
     mysqli_stmt_close($stmt);
+    // Troca automática de usuário (feita só pelo painel, vale para todos os apps já instalados):
+    // usuário sem nenhum servidor que aceite (conta caiu) some da lista enquanto houver outro funcionando.
+    // O app percebe que a lista em uso saiu e entra sozinho pela outra; quando ele volta a funcionar, reaparece.
+    $working = array_filter($jsonObj, function ($r) { return $r['dns_status'] != 'offline'; });
+    if ($working && count($working) < count($jsonObj)) $jsonObj = array_values($working);
     $set[$API_NAME] = $jsonObj;
     header( 'Content-Type: application/json; charset=utf-8' );
     echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));

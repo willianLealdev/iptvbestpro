@@ -52,7 +52,8 @@ function dns_list_active($mysqli, $scope = 0){
     dns_health_migrate($mysqli);
     $list = array();
     $scope = (int)$scope;
-    $where = $scope > 0 ? "(reseller_id = 0 OR reseller_id = $scope OR id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = $scope))" : "reseller_id = 0";
+    // Lista de revenda: só os DNS que a revenda cadastrou ou aos quais está vinculada (nunca os do admin ou de outras revendas)
+    $where = $scope > 0 ? "(reseller_id = $scope OR id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = $scope))" : "reseller_id = 0";
     $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base, catch_all FROM tbl_xui_dns WHERE status = '1' AND $where ORDER BY (reseller_id = 0) ASC, id ASC");
     while ($res && $r = mysqli_fetch_assoc($res)) {
         $base = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/'); // a página de DNS grava com htmlentities
@@ -231,9 +232,10 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
  * Failover para o app: devolve o DNS que funciona AGORA para esta playlist.
  * Usa cache curto; se o último servidor parar de aceitar (queda ou migração), procura em todos e atualiza.
  */
-function playlist_current_dns($mysqli, $row, $fresh = false){
+function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
+    $status = isset($row['dns_status']) ? (string)$row['dns_status'] : '';
     // Playlist cadastrada por URL: o servidor é o da própria URL, sem troca automática
-    if (isset($row['source']) && $row['source'] != 'account') return $row['dns_base'];
+    if (isset($row['source']) && $row['source'] != 'account') { $status = ''; return $row['dns_base']; }
     // O monitor (a cada 5 min) mantém dns_base atualizado. Só testa aqui se a verificação estiver atrasada
     // ou se o cliente apertou "Atualizar" no app ($fresh: procura em todos os servidores agora).
     $stale_after = 600;
@@ -244,6 +246,7 @@ function playlist_current_dns($mysqli, $row, $fresh = false){
     $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], $pin != '' ? $pin : dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '');
     $base = $find['ok'] ? $find['dns']['base'] : $row['dns_base'];
     playlist_set_dns_state($mysqli, $row['id'], $base, $find['ok'], $find['ok'] && isset($find['probe']['server']) ? $find['probe']['server'] : null);
+    $status = $find['ok'] ? 'online' : 'offline';
     return $base;
 }
 
