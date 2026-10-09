@@ -49,7 +49,12 @@
             'dns_title'  =>  cleanInput($_POST['dns_title']),
             'dns_base'  =>  $base_url
         );
+        // endereço antigo (para levar junto as listas dos clientes que estão nele)
+        $__old = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT dns_base FROM tbl_xui_dns WHERE id = ".(int)$_POST['dns_id']));
         $category_edit=Update('tbl_xui_dns', $data, "WHERE id = '".$_POST['dns_id']."'");
+        // Trocou o endereço do servidor: todas as listas que usavam o endereço antigo passam para o novo na hora
+        // (o app do cliente pega o novo ao abrir, ao voltar para a tela inicial e a cada 10 minutos)
+        if ($__old) dns_rebase_playlists($mysqli, html_entity_decode($__old['dns_base'], ENT_QUOTES, 'UTF-8'), trim($_POST['dns_base']));
         
         $_SESSION['msg']="11";
         $_SESSION['class']='success';

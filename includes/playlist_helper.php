@@ -514,6 +514,34 @@ function dns_health_check_all($mysqli, $timeout = 5, $only_reseller = null){
     return $out;
 }
 
+/**
+ * O endereço de um servidor DNS foi trocado no painel: as listas que estavam no endereço antigo
+ * (inclusive as presas nele com "Usar este") passam para o novo e são conferidas de novo.
+ * Retorna quantas listas mudaram.
+ */
+function dns_rebase_playlists($mysqli, $old_base, $new_base){
+    playlists_migrate($mysqli);
+    $old = dns_normalize($old_base);
+    $new = dns_normalize($new_base);
+    if ($old === '' || $new === '' || $old === $new) return 0;
+    $n = 0;
+    $res = mysqli_query($mysqli, "SELECT id, dns_base, dns_pin FROM tbl_users");
+    while ($res && $r = mysqli_fetch_assoc($res)) {
+        $on_base = dns_normalize($r['dns_base']) === $old;
+        $on_pin = (string)$r['dns_pin'] === $old;
+        if (!$on_base && !$on_pin) continue;
+        $id = (int)$r['id'];
+        $base = $on_base ? $new : (string)$r['dns_base'];
+        $pin = $on_pin ? $new : (string)$r['dns_pin'];
+        $stmt = mysqli_prepare($mysqli, "UPDATE tbl_users SET dns_base = ?, dns_pin = ?, dns_checked_at = 0, dns_server = '' WHERE id = ?");
+        mysqli_stmt_bind_param($stmt, 'ssi', $base, $pin, $id);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        $n++;
+    }
+    return $n;
+}
+
 function playlist_set_dns_state($mysqli, $id, $base, $online, $server = null){
     $now = time();
     $status = $online ? 'online' : 'offline';

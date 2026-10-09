@@ -351,9 +351,17 @@
     if (/\.m3u8(\?|$)/i.test(url) && (!NATIVE_HLS || forceHls)) {
       loadHls(function () {
         if (window.Hls && Hls.isSupported()) {
-          var h = new Hls({ maxBufferLength: 30, backBufferLength: 30 });
+          var h = new Hls({ maxBufferLength: 40, maxMaxBufferLength: 90, backBufferLength: 30, liveSyncDurationCount: 5, liveMaxLatencyDurationCount: 12, manifestLoadingMaxRetry: 6, levelLoadingMaxRetry: 6, fragLoadingMaxRetry: 6, nudgeMaxRetry: 8 });
           v._hls = h;
-          h.on(Hls.Events.ERROR, function (ev, d) { if (d && d.fatal && onFatal) onFatal(); });
+          // queda de rede ou falha de vídeo: tenta se recuperar sozinho (sem recarregar o canal) antes de desistir
+          var rec = { net: 0, media: 0 };
+          h.on(Hls.Events.ERROR, function (ev, d) {
+            if (!d || !d.fatal) return;
+            if (d.type === Hls.ErrorTypes.NETWORK_ERROR && rec.net < 3) { rec.net++; try { h.startLoad(); } catch (e) {} return; }
+            if (d.type === Hls.ErrorTypes.MEDIA_ERROR && rec.media < 2) { rec.media++; try { h.recoverMediaError(); } catch (e) {} return; }
+            if (onFatal) onFatal();
+          });
+          h.on(Hls.Events.FRAG_LOADED, function () { rec.net = 0; });
           h.on(Hls.Events.MANIFEST_PARSED, function () { try { v.play(); } catch (e) {} });
           h.loadSource(url); h.attachMedia(v);
         } else { v.src = url; try { v.play(); } catch (e) {} }
@@ -714,11 +722,41 @@
       if (o.status && o.status !== 'active') {
         stopPreview(); var pl = $('player'); if (pl) pl.parentNode.removeChild(pl);
         activation(o.status, '');
+        return;
       }
+      serverCheck();
     });
+  }
+  // Servidor da lista: se o painel trocou (migração, queda, "Usar este", endereço do DNS editado),
+  // o app entra de novo na lista pelo servidor novo. Na tela inicial troca na hora; assistindo, troca ao voltar.
+  function normDns(u) {
+    u = String(u || '').toLowerCase().replace(/\/+$/, '');
+    if (u && !/^https?:\/\//.test(u)) u = 'http://' + u;
+    return u.replace(/^(http:\/\/[^\/]+):80$/, '$1').replace(/^(https:\/\/[^\/]+):443$/, '$1');
+  }
+  function serverCheck() {
+    if (!S.pl || !S.login) return;
+    api('get_device_user', {}, function (err, arr) {
+      if (err || !arr || !S.pl) return;
+      var cur = null;
+      for (var i = 0; i < arr.length; i++) if (arr[i] && String(arr[i].id) === String(S.pl.id)) cur = arr[i];
+      if (!cur) { S.pls = arr; S.pendingPl = 'gone'; }
+      else if (normDns(cur.dns_base) !== normDns(S.pl.dns_base) || cur.user_name !== S.pl.user_name || cur.user_password !== S.pl.user_password) S.pendingPl = cur;
+      else return;
+      if (S.screen === 'home') applyPendingPl();
+    });
+  }
+  function applyPendingPl() {
+    var np = S.pendingPl; S.pendingPl = null;
+    if (!np) return false;
+    if (np === 'gone') { loadPlaylists(false); return true; } // a lista saiu do aparelho: carrega as listas de novo
+    L.cats = null; L.chans = []; L.playList = []; L.playIdx = -1; V.movie.cats = null; V.series.cats = null;
+    S.pl = null; splash(); login(np);
+    return true;
   }
   setInterval(function () { licenseCheck(true); }, 10 * 60000);
   function home() {
+    if (S.pendingPl && applyPendingPl()) return; // servidor da lista mudou no painel: entra de novo pelo novo
     stopPreview();
     setTimeout(function () { licenseCheck(false); }, 1500);
     var tiles = [['live', IC.tv, 'live'], ['movies', IC.movie, 'movies'], ['series', IC.series, 'series']];
