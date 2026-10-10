@@ -91,6 +91,16 @@ function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = '', $ac
                 <label>DNS (Host)</label>
                 <input type="text" name="dns" maxlength="255" required placeholder="http://servidor.com:8080">
             </div>
+        <?php } else if ($dns_list) { ?>
+            <div class="pl-field">
+                <label>DNS</label>
+                <select name="dns_id" class="form-select">
+                    <?php foreach ($dns_list as $d) { ?>
+                        <option value="<?php echo (int)$d['id']; ?>"><?php echo htmlspecialchars($d['title']); ?></option>
+                    <?php } ?>
+                    <option value="0">Automático (procurar em todas)</option>
+                </select>
+            </div>
         <?php } ?>
         <div class="pl-field">
             <label>Username</label>
@@ -105,13 +115,13 @@ function playlist_form_render($hidden_html, $dns_list, $dns_manage_url = '', $ac
             <div class="pl-hint">Informe o DNS (endereço do servidor), o usuário e a senha que você recebeu do seu provedor de IPTV.</div>
             <button type="submit" class="pl-submit">Upload Now</button>
         <?php } else { ?>
-        <div class="pl-hint">O sistema procura sozinho qual servidor DNS aceita este usuário. Se o servidor cair ou você migrar o usuário, o app passa a usar o outro automaticamente.</div>
+        <div class="pl-hint">O painel confere o usuário só na DNS escolhida. Se ela cair ou você migrar o usuário de servidor, ele procura nas outras DNS e o app passa a usar a nova automaticamente.</div>
         <button type="submit" class="pl-submit" <?php if (!$dns_list) { echo 'disabled'; } ?>>Upload Now</button>
         <?php } ?>
 
         <?php if ($account_dns) { ?>
         <?php } else if ($dns_list) { ?>
-            <div class="pl-dns"><?php echo count($dns_list); ?> servidor(es) DNS ativo(s) para a busca automática.</div>
+            <div class="pl-dns"><?php echo count($dns_list); ?> servidor(es) DNS ativo(s) para a troca automática.</div>
         <?php } else { ?>
             <div class="pl-dns pl-dns--warn">
                 Nenhum servidor DNS ativo. Para usar usuário e senha, cadastre pelo menos um servidor

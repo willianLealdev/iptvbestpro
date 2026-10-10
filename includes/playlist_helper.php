@@ -835,12 +835,23 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
         return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada.'.($probe[0]['result'] == 'unreachable' ? ' Atenção: o servidor não respondeu agora; confira o DNS se a lista não abrir.' : ''));
     }
 
-    // Account: procura sozinho qual DNS cadastrado aceita este usuário
+    // Account: DNS escolhida pela revenda (confere só nela) ou automático (procura qual DNS aceita este usuário)
     $username = trim(isset($post['username']) ? $post['username'] : '');
     $password = trim(isset($post['password']) ? $post['password'] : '');
     if ($username == '' || $password == '') return array('ok' => false, 'msg' => 'Informe usuário e senha.');
-    $find = playlist_find_dns($mysqli, $username, $password, '', PLAYLIST_PROBE_TIMEOUT, playlist_dns_scope($mysqli, $device_id));
-    if (!$find['ok']) return array('ok' => false, 'msg' => $find['msg']);
+    $dns_id = isset($post['dns_id']) ? (int)$post['dns_id'] : 0;
+    if ($dns_id > 0) {
+        $chosen = null;
+        foreach (dns_list_active($mysqli, playlist_dns_scope($mysqli, $device_id)) as $d) if ((int)$d['id'] == $dns_id) $chosen = $d;
+        if (!$chosen) return array('ok' => false, 'msg' => 'DNS não encontrada. Escolha outra.');
+        $probe = playlist_probe_parallel(array($chosen), $username, $password, 6);
+        if ($probe[0]['result'] == 'auth_fail') return array('ok' => false, 'msg' => 'A DNS "'.$chosen['title'].'" recusou este usuário e senha. Confira os dados ou escolha outra DNS.');
+        if ($probe[0]['result'] != 'ok') return array('ok' => false, 'msg' => 'A DNS "'.$chosen['title'].'" não respondeu agora. Escolha outra DNS ou "Automático".');
+        $find = array('ok' => true, 'dns' => $chosen, 'probe' => $probe[0]);
+    } else {
+        $find = playlist_find_dns($mysqli, $username, $password, '', PLAYLIST_PROBE_TIMEOUT, playlist_dns_scope($mysqli, $device_id));
+        if (!$find['ok']) return array('ok' => false, 'msg' => $find['msg']);
+    }
 
     if (!playlist_save($mysqli, $device_id, $name, $username, $password, $find['dns']['base'], $created_by, 'account')) {
         return array('ok' => false, 'msg' => 'Erro ao salvar a playlist.');
@@ -853,7 +864,7 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
     }
-    return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada. Servidor encontrado automaticamente.');
+    return array('ok' => true, 'msg' => 'Playlist "'.$name.'" adicionada'.($dns_id > 0 ? ' na DNS "'.$find['dns']['title'].'".' : '. Servidor encontrado automaticamente.'));
 }
 
 /* ---------- "Servidores" da playlist: testa o login em todos os DNS e permite escolher um ---------- */
