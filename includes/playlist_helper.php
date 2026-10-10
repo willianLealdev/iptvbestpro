@@ -337,6 +337,27 @@ function playlist_apply_fallback($mysqli, $device_id, $rows){
     return $rows;
 }
 
+/**
+ * IP de saída do painel: o endereço que os servidores IPTV enxergam quando o painel testa um DNS.
+ * (O site passa pela Cloudflare, então o IP que aparece por fora não é este.) Guardado por 1 hora.
+ */
+function panel_outbound_ip($mysqli, $refresh = false){
+    require_once(__DIR__."/reseller_helper.php");
+    $cached = panel_config_get($mysqli, 'outbound_ip', '');
+    $at = (int)panel_config_get($mysqli, 'outbound_ip_at', '0');
+    if (!$refresh && $cached !== '' && time() - $at < 3600) return $cached;
+    $ip = '';
+    foreach (array('https://api.ipify.org', 'https://ifconfig.me/ip', 'https://icanhazip.com') as $u) {
+        $ch = curl_init($u);
+        curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 5, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_USERAGENT => 'curl'));
+        $r = trim((string)curl_exec($ch));
+        curl_close($ch);
+        if (filter_var($r, FILTER_VALIDATE_IP)) { $ip = $r; break; }
+    }
+    if ($ip !== '') { panel_config_set($mysqli, 'outbound_ip', $ip); panel_config_set($mysqli, 'outbound_ip_at', (string)time()); return $ip; }
+    return $cached;
+}
+
 /* ---------- Saúde dos servidores DNS (bolinha online/offline) ---------- */
 
 function dns_health_migrate($mysqli){
