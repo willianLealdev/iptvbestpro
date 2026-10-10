@@ -83,6 +83,25 @@
         exit;
     }
 
+    // Aba "Dispositivos dev": separa aparelhos de teste da lista de clientes reais
+    if(isset($_POST['dev_toggle'])){
+        $to = $_POST['dev_toggle'] == '1' ? 1 : 2;
+        $pk = (int)$_POST['device_pk'];
+        mysqli_query($mysqli, "UPDATE tbl_devices SET is_dev = $to WHERE id = $pk");
+        dev_flash(true, $to == 1 ? 'Dispositivo movido para Dispositivos dev.' : 'Dispositivo movido para a lista de dispositivos reais.');
+        header("Location:".$back_url);
+        exit;
+    }
+    // Detecção automática (só nos ainda não classificados; marcar à mão sempre vale):
+    // emuladores, aparelhos ativados com o código de teste das lojas e clientes com nome de teste
+    $store_test = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id FROM tbl_customers WHERE email = 'teste-lojas@iptvbestpro.com'"));
+    $store_test_id = $store_test ? (int)$store_test['id'] : -1;
+    mysqli_query($mysqli, "UPDATE tbl_devices SET is_dev = 1 WHERE is_dev = 0 AND (
+        (owner = 'customer' AND customer_id = $store_test_id)
+        OR LOWER(device_model) REGEXP 'sdk_gphone|sdk_google|android sdk built|emulator|emulador|generic_x86|genymotion|headlesschrome|simulator'
+        OR LOWER(customer_name) REGEXP '(^|[^a-z])(teste?|testing|dev|demo|emulador|emulator)([^a-z]|$)'
+    )");
+
     // Desativar
     if(isset($_POST['deactivate_submit'])){
         devices_deactivate($mysqli, $_POST['device_pk']);
@@ -117,8 +136,11 @@
     $sort = (isset($_GET['sort']) && isset($sortable[$_GET['sort']])) ? $_GET['sort'] : 'seen';
     $dir = (isset($_GET['dir']) && strtolower($_GET['dir']) == 'asc') ? 'ASC' : 'DESC';
 
+    $tab = (isset($_GET['tab']) && $_GET['tab'] == 'dev') ? 'dev' : '';
     $now = time();
-    $where = array();
+    $where = array($tab == 'dev' ? "d.is_dev = 1" : "d.is_dev <> 1");
+    $dev_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices WHERE is_dev = 1"))['n'];
+    $real_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices WHERE is_dev <> 1"))['n'];
     if($keyword != ''){
         $kw = mysqli_real_escape_string($mysqli, $keyword);
         $where[] = "(d.customer_name LIKE '%$kw%' OR d.device_id LIKE '%$kw%' OR d.activated_by LIKE '%$kw%' OR d.device_model LIKE '%$kw%' OR d.ip_address LIKE '%$kw%')";
@@ -221,6 +243,10 @@
             .dv-empty { padding: 50px 10px; text-align: center; color: #9ca3af; }
             .dv-empty i { font-size: 46px; display: block; margin-bottom: 6px; color: #d1d5db; }
             .dv-footer { background: #fafbfc; border-top: 1px solid #eef0f4; padding: 14px 16px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+            .dv-tabs { display: flex; gap: 6px; border-bottom: 1px solid #eef0f4; margin-bottom: 18px; flex-wrap: wrap; }
+            .dv-tabs a { padding: 10px 16px; color: #6b7280; text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; }
+            .dv-tabs a.active { color: #3b6cf6; border-bottom-color: #3b6cf6; }
+            .dv-tabs .dv-count { background: #eef2ff; color: #3b6cf6; border-radius: 10px; padding: 0 8px; font-size: 12px; }
             .dv-dots { border: 0; background: transparent; font-size: 20px; line-height: 1; color: #374151; padding: 2px 8px; }
         </style>
 
@@ -244,8 +270,16 @@
 
         <div class="card dv-card">
             <div class="card-body p-4">
+                <div class="dv-tabs">
+                    <a href="manage_devices.php" class="<?php echo $tab == '' ? 'active' : ''; ?>"><i class="ri-device-line"></i>Dispositivos <span class="dv-count"><?php echo thousandsNumberFormat($real_count); ?></span></a>
+                    <a href="manage_devices.php?tab=dev" class="<?php echo $tab == 'dev' ? 'active' : ''; ?>"><i class="ri-bug-line"></i>Dispositivos dev <span class="dv-count"><?php echo thousandsNumberFormat($dev_count); ?></span></a>
+                </div>
+                <?php if($tab == 'dev'){ ?>
+                    <p class="text-muted small mb-3">Aparelhos de teste (emuladores, revisão das lojas e os que você marcar). Ficam fora da lista de dispositivos reais.</p>
+                <?php } ?>
                 <div class="dv-toolbar">
                     <form method="get" action="manage_devices.php" class="d-flex flex-wrap gap-2">
+                        <?php if($tab == 'dev'){ ?><input type="hidden" name="tab" value="dev"><?php } ?>
                         <div class="dv-search">
                             <i class="ri-search-line"></i>
                             <input type="text" name="keyword" class="form-control" placeholder="Buscar cliente, MAC, e-mail ou IP" value="<?php echo htmlspecialchars($keyword); ?>">
@@ -283,7 +317,7 @@
                             <?php } ?>
                         </select>
                         <?php if($keyword != '' || $app_filter != '' || $pkg_filter != '' || $status_filter != '' || $owner_filter != ''){ ?>
-                            <a href="manage_devices.php" class="btn btn-outline-secondary d-inline-flex align-items-center">Limpar</a>
+                            <a href="manage_devices.php<?php echo $tab == 'dev' ? '?tab=dev' : ''; ?>" class="btn btn-outline-secondary d-inline-flex align-items-center">Limpar</a>
                         <?php } ?>
                     </form>
                     <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center js-devices-refresh" title="Atualiza sozinho a cada 10 segundos"><i class="ri-refresh-line"></i><span class="ps-1">Atualizar</span></button>
@@ -373,6 +407,16 @@
                                                             </form>
                                                         </li>
                                                     <?php } ?>
+                                                    <li>
+                                                        <form method="post">
+                                                            <input type="hidden" name="device_pk" value="<?php echo $row['id']; ?>">
+                                                            <?php if((int)$row['is_dev'] == 1){ ?>
+                                                                <button type="submit" name="dev_toggle" value="2" class="dropdown-item"><i class="ri-user-line me-1"></i>Mover para dispositivos reais</button>
+                                                            <?php } else { ?>
+                                                                <button type="submit" name="dev_toggle" value="1" class="dropdown-item"><i class="ri-bug-line me-1"></i>Mover para Dispositivos dev</button>
+                                                            <?php } ?>
+                                                        </form>
+                                                    </li>
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li><a class="dropdown-item text-danger btn_delete" href="javascript:void(0)" data-id="<?php echo $row['id']; ?>" data-table="tbl_devices"><i class="ri-delete-bin-line me-1"></i>Excluir</a></li>
                                                 </ul>

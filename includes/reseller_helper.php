@@ -122,6 +122,7 @@ function resellers_migrate($mysqli){
         'used_credits'  => "INT(11) NOT NULL DEFAULT 0",
         'activated_at'  => "INT(11) NOT NULL DEFAULT 0",
         'expires_at'    => "INT(11) NOT NULL DEFAULT 0",
+        'is_dev'        => "TINYINT(1) NOT NULL DEFAULT 0",       // 0 = ainda não classificado | 1 = aparelho de teste (aba Dispositivos dev) | 2 = real (marcado à mão)
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_devices` LIKE '$name'");
