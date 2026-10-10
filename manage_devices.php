@@ -92,6 +92,26 @@
         header("Location:".$back_url);
         exit;
     }
+    // Ações em massa (caixinhas da lista): mover para dev / reais, desativar ou excluir vários de uma vez
+    if(isset($_POST['bulk_action'])){
+        $ids = isset($_POST['ids']) ? implode(',', array_filter(array_map('intval', explode(',', (string)$_POST['ids'])))) : '';
+        $n = $ids != '' ? count(explode(',', $ids)) : 0;
+        $act = (string)$_POST['bulk_action'];
+        if($n == 0){
+            dev_flash(false, 'Nenhum dispositivo selecionado.');
+        } else if($act == 'dev' || $act == 'real'){
+            mysqli_query($mysqli, "UPDATE tbl_devices SET is_dev = ".($act == 'dev' ? 1 : 2)." WHERE id IN ($ids)");
+            dev_flash(true, $act == 'dev' ? $n.' dispositivo(s) movido(s) para Dispositivos dev.' : $n.' dispositivo(s) movido(s) para a lista de dispositivos reais.');
+        } else if($act == 'deactivate'){
+            mysqli_query($mysqli, "UPDATE tbl_devices SET package = '', expires_at = 0 WHERE id IN ($ids)");
+            dev_flash(true, $n.' dispositivo(s) desativado(s).');
+        } else if($act == 'delete'){
+            devices_purge($mysqli, $ids); // apaga os aparelhos e todas as listas deles
+            dev_flash(true, $n.' dispositivo(s) excluído(s).');
+        }
+        header("Location:".$back_url);
+        exit;
+    }
     // Detecção automática (só nos ainda não classificados; marcar à mão sempre vale):
     // emuladores, aparelhos ativados com o código de teste das lojas e clientes com nome de teste
     $store_test = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id FROM tbl_customers WHERE email = 'teste-lojas@iptvbestpro.com'"));
@@ -247,6 +267,11 @@
             .dv-tabs a { padding: 10px 16px; color: #6b7280; text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; }
             .dv-tabs a.active { color: #3b6cf6; border-bottom-color: #3b6cf6; }
             .dv-tabs .dv-count { background: #eef2ff; color: #3b6cf6; border-radius: 10px; padding: 0 8px; font-size: 12px; }
+            .dv-check { width: 18px; height: 18px; cursor: pointer; vertical-align: middle; }
+            .dv-bulk { display: none; align-items: center; gap: 8px; flex-wrap: wrap; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; }
+            .dv-bulk.show { display: flex; }
+            .dv-bulk b { color: #3b6cf6; margin-right: 6px; }
+            tr.dv-selected td { background: #f5f8ff; }
             .dv-dots { border: 0; background: transparent; font-size: 20px; line-height: 1; color: #374151; padding: 2px 8px; }
         </style>
 
@@ -326,11 +351,24 @@
                     </a>
                 </div>
 
+                <form method="post" id="dvBulkForm" class="dv-bulk">
+                    <input type="hidden" name="ids" id="dvBulkIds">
+                    <b><span id="dvBulkCount">0</span> selecionado(s)</b>
+                    <?php if($tab == 'dev'){ ?>
+                        <button type="submit" name="bulk_action" value="real" class="btn btn-sm btn-outline-primary"><i class="ri-user-line"></i> Mover para dispositivos reais</button>
+                    <?php } else { ?>
+                        <button type="submit" name="bulk_action" value="dev" class="btn btn-sm btn-outline-primary"><i class="ri-bug-line"></i> Mover para Dispositivos dev</button>
+                    <?php } ?>
+                    <button type="submit" name="bulk_action" value="deactivate" class="btn btn-sm btn-outline-secondary" data-confirm="Desativar os dispositivos selecionados? Os créditos usados não são devolvidos."><i class="ri-forbid-line"></i> Desativar</button>
+                    <button type="submit" name="bulk_action" value="delete" class="btn btn-sm btn-outline-danger" data-confirm="Excluir os dispositivos selecionados e todas as listas deles? Não dá para desfazer."><i class="ri-delete-bin-line"></i> Excluir</button>
+                    <button type="button" class="btn btn-sm btn-link text-muted" id="dvBulkClear">Limpar seleção</button>
+                </form>
                 <div class="dv-table-wrap">
                     <div class="table-responsive">
                         <table class="table dv-table">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" class="dv-check" id="dvCheckAll" title="Selecionar todos desta página"></th>
                                     <th>#</th>
                                     <th>Cliente</th>
                                     <th>Mac</th>
@@ -349,6 +387,7 @@
                                     $status = devices_activation_status($row);
                                     $pkg = devices_package_info($row['package']); $owner_label = devices_owner_label($mysqli, $row); ?>
                                     <tr>
+                                        <td><input type="checkbox" class="dv-check dv-row-check" value="<?php echo (int)$row['id']; ?>"></td>
                                         <td><?php echo $start + $i; ?></td>
                                         <td class="fw-semibold text-start text-nowrap">
                                             <span translate="no"><?php echo $row['customer_name'] != '' ? htmlspecialchars($row['customer_name']) : '<span class="dv-muted fw-normal">—</span>'; ?></span>
@@ -425,7 +464,7 @@
                                     </tr>
                                 <?php } ?>
                             <?php } else { ?>
-                                <tr><td colspan="10"><div class="dv-empty"><i class="ri-inbox-line"></i>Nenhum dispositivo encontrado</div></td></tr>
+                                <tr><td colspan="11"><div class="dv-empty"><i class="ri-inbox-line"></i>Nenhum dispositivo encontrado</div></td></tr>
                             <?php } ?>
                             </tbody>
                         </table>
@@ -448,6 +487,28 @@
     </div>
 </main>
 <!-- End: main -->
+<script>
+(function () {
+    var form = document.getElementById('dvBulkForm'), all = document.getElementById('dvCheckAll');
+    if (!form || !all) return;
+    var boxes = function () { return Array.prototype.slice.call(document.querySelectorAll('.dv-row-check')); };
+    function sync() {
+        var sel = boxes().filter(function (b) { return b.checked; });
+        boxes().forEach(function (b) { b.closest('tr').classList.toggle('dv-selected', b.checked); });
+        document.getElementById('dvBulkCount').textContent = sel.length;
+        document.getElementById('dvBulkIds').value = sel.map(function (b) { return b.value; }).join(',');
+        form.classList.toggle('show', sel.length > 0);
+        all.checked = sel.length > 0 && sel.length === boxes().length;
+        all.indeterminate = sel.length > 0 && sel.length < boxes().length;
+    }
+    all.addEventListener('change', function () { boxes().forEach(function (b) { b.checked = all.checked; }); sync(); });
+    document.addEventListener('change', function (e) { if (e.target.classList && e.target.classList.contains('dv-row-check')) sync(); });
+    document.getElementById('dvBulkClear').addEventListener('click', function () { boxes().forEach(function (b) { b.checked = false; }); sync(); });
+    form.querySelectorAll('button[data-confirm]').forEach(function (b) {
+        b.addEventListener('click', function (e) { if (!confirm(b.getAttribute('data-confirm'))) e.preventDefault(); });
+    });
+})();
+</script>
 
 <?php
     // Campos compartilhados pelos dois modais
