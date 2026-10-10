@@ -86,6 +86,16 @@
             </ol>
         </nav>
             
+        <?php $bp_out_ip = panel_outbound_ip($mysqli); if ($bp_out_ip !== '') { ?>
+        <div class="alert alert-info d-flex flex-wrap align-items-center gap-2 mb-3" style="border-radius:12px;">
+            <i class="ri-global-line fs-5"></i>
+            <span>IP do painel (o que os servidores IPTV enxergam):</span>
+            <b translate="no" style="font-family:'Courier New',monospace;font-size:18px;"><?php echo htmlspecialchars($bp_out_ip); ?></b>
+            <i class="ri-file-copy-line" style="cursor:pointer;color:#3b6cf6;" title="Copiar" onclick="navigator.clipboard&&navigator.clipboard.writeText('<?php echo htmlspecialchars($bp_out_ip); ?>')"></i>
+            <small class="text-muted w-100">Se um servidor aparecer fora do ar aqui, mas funcionar no seu aparelho, peça para liberarem este IP (ele pode ter sido bloqueado por tentativas de login).</small>
+        </div>
+        <?php } ?>
+
         <div class="card h-100">
             <div class="card-header d-md-inline-flex align-items-center justify-content-between py-3 px-4">
                 <a href="<?php echo (isset($_SERVER['HTTP_REFERER'])) ? htmlspecialchars($_SERVER['HTTP_REFERER'], ENT_QUOTES, 'UTF-8') : "dashboard.php" ?>" class="d-inline-flex align-items-center text-decoration-none fw-semibold nsofts-link">
