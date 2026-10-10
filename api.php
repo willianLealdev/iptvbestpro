@@ -75,11 +75,18 @@ if($get_helper['helper_name']=="device_reset"){
 // Ativação por código de revendedor
 // device_link:   { device_id, code, platform?, device_model?, ... } -> vincula o aparelho ao dono do código
 // device_status: { device_id } -> status: unlinked | pending | active | expired
-if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="device_status"){
+if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="device_status" || $get_helper['helper_name']=="apple_iap"){
     require_once("includes/reseller_helper.php");
     resellers_migrate($mysqli);
 
-    if($get_helper['helper_name']=="device_link"){
+    if($get_helper['helper_name']=="apple_iap"){
+        // App iPhone/iPad/Apple TV: compra (ou restauração) pela Apple ativa o aparelho como cliente direto
+        require_once("includes/apple_iap_helper.php");
+        $link = apple_claim($mysqli, $get_helper);
+        $device = $link['device'];
+        $success = $link['ok'] ? '1' : '0';
+        $msg = $link['msg'];
+    } else if($get_helper['helper_name']=="device_link"){
         $link = devices_link($mysqli, $get_helper);
         $device = $link['device'];
         $success = $link['ok'] ? '1' : '0';

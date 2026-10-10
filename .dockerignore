@@ -3,3 +3,4 @@
 .dockerignore
 includes/.lic
 *.zip
+tests
