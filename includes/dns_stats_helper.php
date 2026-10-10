@@ -127,7 +127,7 @@ function dns_ranking($mysqli, $days, $scope = null){
     $now = time();
     $start = $now - (int)$days * 86400;
     $day_start = date('Y-m-d', $start);
-    $where = $scope === null ? '' : " WHERE (d.reseller_id = ".(int)$scope." OR d.id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = ".(int)$scope."))";
+    $where = $scope === null ? '' : " WHERE (d.reseller_id = ".(int)$scope." OR d.reseller_id = 0 OR d.id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = ".(int)$scope."))";
     $rows = array();
     $res = mysqli_query($mysqli, "SELECT d.id, d.dns_title, d.dns_base, d.health, d.status, d.reseller_id, d.latency_ms, d.created_at, COALESCE(r.name, '') AS reseller_name
                                   FROM tbl_xui_dns d LEFT JOIN tbl_resellers r ON r.id = d.reseller_id".$where);
@@ -198,7 +198,7 @@ function dns_rank_grade($r){
 // Últimas quedas (para a lista "Histórico de quedas")
 function dns_recent_drops($mysqli, $limit = 30, $scope = null){
     dns_stats_migrate($mysqli);
-    $where = $scope === null ? '' : " AND (d.reseller_id = ".(int)$scope." OR d.id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = ".(int)$scope."))";
+    $where = $scope === null ? '' : " AND (d.reseller_id = ".(int)$scope." OR d.reseller_id = 0 OR d.id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = ".(int)$scope."))";
     $out = array();
     $res = mysqli_query($mysqli, "SELECT e.down_at, e.up_at, d.dns_title, d.dns_base FROM tbl_dns_events e JOIN tbl_xui_dns d ON d.id = e.dns_id
                                   WHERE 1 $where ORDER BY e.down_at DESC LIMIT ".(int)$limit);

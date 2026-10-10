@@ -52,8 +52,7 @@ function dns_list_active($mysqli, $scope = 0){
     dns_health_migrate($mysqli);
     $list = array();
     $scope = (int)$scope;
-    // Lista de revenda: só os DNS que a revenda cadastrou ou aos quais está vinculada (nunca os do admin ou de outras revendas)
-    $where = $scope > 0 ? "(reseller_id = $scope OR id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = $scope))" : "reseller_id = 0";
+    $where = $scope > 0 ? "(reseller_id = 0 OR reseller_id = $scope OR id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = $scope))" : "reseller_id = 0";
     $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base, catch_all FROM tbl_xui_dns WHERE status = '1' AND $where ORDER BY (reseller_id = 0) ASC, id ASC");
     while ($res && $r = mysqli_fetch_assoc($res)) {
         $base = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/'); // a página de DNS grava com htmlentities
