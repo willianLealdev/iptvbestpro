@@ -519,11 +519,6 @@ else if($get_helper['helper_name']=="get_device_user"){
         array_push($jsonObj,$row);
     }
     mysqli_stmt_close($stmt);
-    // Troca automática de usuário (feita só pelo painel, vale para todos os apps já instalados):
-    // usuário sem nenhum servidor que aceite (conta caiu) some da lista enquanto houver outro funcionando.
-    // O app percebe que a lista em uso saiu e entra sozinho pela outra; quando ele volta a funcionar, reaparece.
-    $working = array_filter($jsonObj, function ($r) { return $r['dns_status'] != 'offline'; });
-    if ($working && count($working) < count($jsonObj)) $jsonObj = array_values($working);
     $set[$API_NAME] = $jsonObj;
     header( 'Content-Type: application/json; charset=utf-8' );
     echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
