@@ -22,6 +22,7 @@ function playlists_migrate($mysqli){
         'dns_server'    => "VARCHAR(191) NOT NULL DEFAULT ''",  // servidor de verdade informado pelo painel IPTV (o DNS pode ser só uma porta)
         'dns_full_at'   => "INT(11) NOT NULL DEFAULT 0",       // última busca completa (lista numa porta: procura o servidor de verdade a cada 6 h)
         'dns_pin'       => "VARCHAR(191) NOT NULL DEFAULT ''",  // DNS escolhido no painel ("Usar este"): sempre volta para ele quando estiver no ar
+        'dns_search_at' => "INT(11) NOT NULL DEFAULT 0",       // última busca em todos os DNS de uma lista caída (no máximo a cada 10 min)
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_users` LIKE '$name'");
@@ -176,7 +177,8 @@ function playlist_probe_result($body, $code){
         }
         return array('result' => 'ok', 'exp_date' => $exp, 'status' => $status, 'server' => $server);
     }
-    if (is_array($json) || $code == 401 || $code == 403 || $code == 200) return array('result' => 'auth_fail', 'exp_date' => null, 'status' => '');
+    // o servidor respondeu e recusou o usuário (o XUI devolve 404 para usuário que não existe nele)
+    if (is_array($json) || ($code >= 200 && $code < 500)) return array('result' => 'auth_fail', 'exp_date' => null, 'status' => '');
     return array('result' => 'unreachable', 'exp_date' => null, 'status' => '');
 }
 
@@ -664,7 +666,7 @@ function playlist_monitor_run($mysqli){
 
     // Playlists por usuário/senha + revendedor dono do aparelho (define quais DNS valem para ela)
     $rows = array();
-    $res = mysqli_query($mysqli, "SELECT u.id, u.user_name, u.user_password, u.dns_base, u.dns_server, u.dns_full_at, u.dns_pin, u.device_id,
+    $res = mysqli_query($mysqli, "SELECT u.id, u.user_name, u.user_password, u.dns_base, u.dns_server, u.dns_full_at, u.dns_pin, u.device_id, u.dns_status, u.dns_search_at,
                                          COALESCE((SELECT d.reseller_id FROM tbl_devices d WHERE d.device_id = u.device_id AND d.owner = 'reseller' ORDER BY d.id DESC LIMIT 1), 0) AS scope
                                   FROM tbl_users u WHERE u.status = '1' AND u.source = 'account'");
     while ($res && $r = mysqli_fetch_assoc($res)) $rows[$r['id']] = $r;
@@ -721,9 +723,12 @@ function playlist_monitor_run($mysqli){
         }
     }
 
-    // 2) Falhou: procura em todos os DNS cadastrados
+    // 2) Falhou: procura em todos os DNS cadastrados (lista que já estava caída: no máximo a cada 10 minutos,
+    //    para não errar login demais — os servidores IPTV bloqueiam o IP que erra muito)
     foreach ($failed as $id => $r) {
         if (!$scopes[(int)$r['scope']]) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
+        if ($r['dns_status'] == 'offline' && time() - (int)$r['dns_search_at'] < 600) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
+        mysqli_query($mysqli, "UPDATE tbl_users SET dns_search_at = ".time()." WHERE id = ".(int)$id);
         $pin = !empty($r['dns_pin']) ? $r['dns_pin'] : '';
         $find = playlist_find_dns($mysqli, $r['user_name'], $r['user_password'], $pin != '' ? $pin : dns_normalize($r['dns_base']), 5, (int)$r['scope'], $pin != '');
         if ($find['ok']) {
