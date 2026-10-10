@@ -549,7 +549,7 @@
       if (chooser) return playlists();
       var saved = LS.get('bp_pl', ''), pick = null;
       for (var i = 0; i < S.pls.length; i++) if (String(S.pls[i].id) === saved) pick = S.pls[i];
-      if (!pick && saved) clearLocal(); // a lista salva não é mais deste aparelho: apaga tudo
+      if (!pick && saved) { var keep = S.pls; clearLocal(); S.pls = keep; } // a lista salva não é mais deste aparelho: apaga os dados dela (e mantém as listas que chegaram)
       login(pick || S.pls[0]);
     });
   }
