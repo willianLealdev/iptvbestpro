@@ -519,6 +519,8 @@ else if($get_helper['helper_name']=="get_device_user"){
         array_push($jsonObj,$row);
     }
     mysqli_stmt_close($stmt);
+    // Usuário que não conecta em nenhum DNS: a lista dele entrega o usuário que está conectando (mesmo número de lista)
+    $jsonObj = playlist_apply_fallback($mysqli, $device_id, $jsonObj);
     $set[$API_NAME] = $jsonObj;
     header( 'Content-Type: application/json; charset=utf-8' );
     echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));

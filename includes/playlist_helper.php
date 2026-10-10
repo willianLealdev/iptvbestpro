@@ -52,7 +52,8 @@ function dns_list_active($mysqli, $scope = 0){
     dns_health_migrate($mysqli);
     $list = array();
     $scope = (int)$scope;
-    $where = $scope > 0 ? "(reseller_id = 0 OR reseller_id = $scope OR id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = $scope))" : "reseller_id = 0";
+    // Lista de revenda: só os DNS que a revenda cadastrou ou aos quais está vinculada
+    $where = $scope > 0 ? "(reseller_id = $scope OR id IN (SELECT dns_id FROM tbl_dns_share WHERE reseller_id = $scope))" : "reseller_id = 0";
     $res = mysqli_query($mysqli, "SELECT id, dns_title, dns_base, catch_all FROM tbl_xui_dns WHERE status = '1' AND $where ORDER BY (reseller_id = 0) ASC, id ASC");
     while ($res && $r = mysqli_fetch_assoc($res)) {
         $base = rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/'); // a página de DNS grava com htmlentities
@@ -242,11 +243,96 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
     if (!$fresh && !empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < $stale_after) return $row['dns_base'];
 
     $pin = isset($row['dns_pin']) ? (string)$row['dns_pin'] : '';
+    // o DNS em uso ainda conecta: continua nele (rápido, sem testar todos)
+    $catch = dns_list_catch_all_norms($mysqli);
+    if ($pin == '' && trim((string)$row['dns_base']) != '' && empty($catch[dns_normalize($row['dns_base'])])) {
+        $cur = playlist_probe_parallel(array(array('base' => rtrim(trim((string)$row['dns_base']), '/'))), $row['user_name'], $row['user_password'], 4);
+        if ($cur[0]['result'] == 'ok') {
+            playlist_set_dns_state($mysqli, $row['id'], $row['dns_base'], true, isset($cur[0]['server']) ? $cur[0]['server'] : null);
+            $status = 'online';
+            return $row['dns_base'];
+        }
+    }
     $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], $pin != '' ? $pin : dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '');
     $base = $find['ok'] ? $find['dns']['base'] : $row['dns_base'];
     playlist_set_dns_state($mysqli, $row['id'], $base, $find['ok'], $find['ok'] && isset($find['probe']['server']) ? $find['probe']['server'] : null);
     $status = $find['ok'] ? 'online' : 'offline';
     return $base;
+}
+
+// DNS que aceitam qualquer usuário (não servem para dizer que a lista conecta)
+function dns_list_catch_all_norms($mysqli){
+    static $cache = null;
+    if ($cache !== null) return $cache;
+    $cache = array();
+    $res = mysqli_query($mysqli, "SELECT dns_base FROM tbl_xui_dns WHERE catch_all = 1");
+    while ($res && $r = mysqli_fetch_assoc($res)) $cache[dns_normalize(rtrim(trim(html_entity_decode($r['dns_base'], ENT_QUOTES, 'UTF-8')), '/'))] = true;
+    return $cache;
+}
+
+/**
+ * Regra da troca de usuário (sem banco, testada em tests/fallback_test.php).
+ * $rows: listas do aparelho (id, dns_status). $map: reservas em uso {lista caída: lista que entrega}.
+ * Devolve o novo mapa: lista que não conecta usa o reserva que já usava (se ele ainda conecta) ou a primeira que conecta;
+ * lista que voltou a conectar continua no reserva enquanto ele conectar; nenhuma conecta = sem reserva.
+ */
+function playlist_fallback_map($rows, $map){
+    $byId = array();
+    foreach ($rows as $r) $byId[(int)$r['id']] = $r;
+    $up = function ($r) { return isset($r['dns_status']) && $r['dns_status'] != 'offline'; };
+    $online = array_values(array_filter($rows, $up));
+    $new = array();
+    if (!$online || count($online) == count($rows)) {
+        // todas conectam: mantém só os reservas que continuam conectando; nenhuma conecta: entrega como está
+        if ($online) foreach ((array)$map as $from => $to) { if (isset($byId[(int)$from], $byId[(int)$to]) && $up($byId[(int)$to])) $new[(int)$from] = (int)$to; }
+        ksort($new);
+        return $new;
+    }
+    foreach ($rows as $r) {
+        $id = (int)$r['id'];
+        if ($up($r)) continue;
+        $prev = isset($map[$id]) ? (int)$map[$id] : 0;
+        $new[$id] = ($prev && isset($byId[$prev]) && $up($byId[$prev])) ? $prev : (int)$online[0]['id'];
+    }
+    foreach ((array)$map as $from => $to) {
+        $from = (int)$from; $to = (int)$to;
+        if (!isset($new[$from]) && isset($byId[$from], $byId[$to]) && $up($byId[$to])) $new[$from] = $to;
+    }
+    ksort($new);
+    return $new;
+}
+
+/**
+ * Usuário reserva da playlist (troca automática de usuário, feita só pelo painel).
+ * O aparelho tem vários usuários (ex.: Willian e Tina); cada usuário usa o mesmo usuário/senha em todos os DNS.
+ * Quando um usuário não conecta em nenhum DNS (o painel já testou todos os DNS da revenda), a lista dele passa
+ * a entregar ao app o usuário que está conectando — com o MESMO número de lista, assim os apps já instalados
+ * trocam sozinhos. Fica no reserva até ele cair (aí testa de novo os outros, inclusive o original) ou até o
+ * cliente trocar a lista no app. Se nenhum conectar, entrega as listas como estão (o monitor testa tudo de novo).
+ * $rows: listas do aparelho como vão para o app (com dns_status). Devolve as listas para mandar ao app.
+ */
+function playlist_apply_fallback($mysqli, $device_id, $rows){
+    if (count($rows) < 2) return $rows;
+    $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_devices` LIKE 'pl_redirect'");
+    if ($col && mysqli_num_rows($col) == 0) mysqli_query($mysqli, "ALTER TABLE `tbl_devices` ADD `pl_redirect` TEXT NULL");
+    $did = mysqli_real_escape_string($mysqli, $device_id);
+    $dev = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT id, pl_redirect FROM tbl_devices WHERE device_id = '$did' ORDER BY id DESC LIMIT 1"));
+    $map = $dev && !empty($dev['pl_redirect']) ? json_decode($dev['pl_redirect'], true) : array();
+    if (!is_array($map)) $map = array();
+    $new = playlist_fallback_map($rows, $map);
+    $byId = array();
+    foreach ($rows as $r) $byId[(int)$r['id']] = $r;
+    if ($dev && json_encode($new) !== json_encode($map)) {
+        $js = $new ? "'".mysqli_real_escape_string($mysqli, json_encode($new))."'" : "NULL";
+        mysqli_query($mysqli, "UPDATE tbl_devices SET pl_redirect = $js WHERE id = ".(int)$dev['id']);
+    }
+    foreach ($rows as $k => $r) {
+        $id = (int)$r['id'];
+        if (!isset($new[$id])) continue;
+        $t = $byId[$new[$id]];
+        foreach (array('user_type', 'user_name', 'user_password', 'dns_base', 'dns_status', 'playlist_name') as $f) $rows[$k][$f] = $t[$f];
+    }
+    return $rows;
 }
 
 /* ---------- Saúde dos servidores DNS (bolinha online/offline) ---------- */
@@ -602,10 +688,12 @@ function playlist_monitor_run($mysqli){
         $allowed = $scopes[(int)$r['scope']];
         // DNS escolhido no painel: é ele que se testa (se caiu e a lista foi para outro, volta quando ele voltar)
         if (!empty($r['dns_pin']) && isset($allowed[$r['dns_pin']])) $norm = $r['dns_pin'];
-        if (!isset($allowed[$norm])) { $failed[$id] = $r; continue; } // DNS removido, desligado ou de outro dono
         // servidor atual aceita qualquer usuário: procura de novo o servidor certo da lista
-        if (!empty($allowed[$norm]['catch_all'])) { $failed[$id] = $r; continue; }
-        $tasks[$id] = array('base' => $allowed[$norm]['base'], 'username' => $r['user_name'], 'password' => $r['user_password']);
+        if (isset($allowed[$norm]) && !empty($allowed[$norm]['catch_all'])) { $failed[$id] = $r; continue; }
+        // o DNS em uso é sempre testado (mesmo fora da lista da revenda): lista que conecta nunca é dada como caída
+        $cur = isset($allowed[$norm]) ? $allowed[$norm]['base'] : rtrim(trim((string)$r['dns_base']), '/');
+        if ($cur == '') { $failed[$id] = $r; continue; }
+        $tasks[$id] = array('base' => $cur, 'username' => $r['user_name'], 'password' => $r['user_password']);
     }
     $results = playlist_probe_tasks($tasks, 5, 20);
     foreach ($results as $id => $probe) {

@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Teste da compra pela Apple
         run: php tests/apple_jws_test.php
+      - name: Teste da troca de usuário
+        run: php tests/fallback_test.php
       - name: Build da imagem
         run: docker build -t painel-check .
       - name: Apache configtest
