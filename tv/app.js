@@ -330,13 +330,27 @@
   function header(title) {
     return '<div class="top"><img class="logo" src="' + esc(S.brand.logo) + '" onerror="this.style.visibility=\'hidden\'">' +
       (title ? '<div class="title">' + esc(title) + '</div>' : (S.brand.showName === false ? '' : '<div class="brand">' + esc(S.brand.name) + '</div>')) +
-      // tela inicial: botão Atualizar ao lado do relógio (recarrega o app inteiro sem sair)
-      '<div class="right">' + (title ? '' : '<div class="reload f" data-a="_reload">' + svg(IC.sync, 40) + '</div>') + '<span id="clock"></span></div></div>';
+      // tela inicial: dia da semana e data, hora grande e o botão Atualizar na ponta direita (recarrega o app inteiro sem sair)
+      '<div class="right">' + (title ? '' : '<div class="hdate"><b id="hday"></b><span id="hdt"></span></div>') + '<span id="clock"></span>' +
+      (title ? '' : '<div class="reload f" data-a="_reload">' + svg(IC.sync, 44) + '</div>') + '</div></div>';
   }
   var timers = [];
   function every(fn, ms) { timers.push(setInterval(fn, ms)); }
   function stopTimers() { for (var i = 0; i < timers.length; i++) clearInterval(timers[i]); timers = []; }
-  function clock() { var c = $('clock'); if (c) { var d = new Date(); c.textContent = d.toLocaleDateString(LANG === 'en' ? 'en-US' : (LANG === 'es' ? 'es-ES' : 'pt-BR')) + '  ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); } }
+  var WDAYS = { pt: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'],
+    en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    es: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] };
+  var MONTHS = { pt: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] };
+  function clock() {
+    var c = $('clock'); if (!c) return;
+    var d = new Date(), lg = WDAYS[LANG] ? LANG : 'pt';
+    c.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    var wd = $('hday'), dt = $('hdt');
+    if (wd) wd.textContent = WDAYS[lg][d.getDay()];
+    if (dt) dt.textContent = lg === 'en' ? MONTHS.en[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() : d.getDate() + ' ' + MONTHS[lg][d.getMonth()] + ' ' + d.getFullYear();
+  }
   function qrHtml(text) {
     try { var q = qrcode(0, 'M'); q.addData(text); q.make(); return '<div class="qr">' + q.createImgTag(8, 0) + '</div>'; } catch (e) { return ''; }
   }

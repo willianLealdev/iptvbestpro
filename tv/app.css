@@ -18,9 +18,18 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050814; c
 .top img.logo { width: 76px; height: 76px; border-radius: 16px; object-fit: contain; }
 .top .brand { font-size: 40px; font-weight: 700; margin-left: 22px; }
 .top .title { font-size: 34px; font-weight: 600; margin-left: 22px; color: #e9edf7; }
-.top .right { margin-left: auto; font-size: 30px; color: #c8d0e4; display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
-.top .reload { width: 72px; height: 72px; border-radius: 50%; margin-right: 26px; background: rgba(255,255,255,.1); display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center; }
-.top .reload svg { width: 40px; height: 40px; fill: #fff; }
+/* canto direito do topo: data, hora e (na tela inicial) o botão Atualizar na ponta.
+   position: static porque a regra .right da TV ao vivo jogava este bloco para fora da tela */
+.top .right { position: static; left: auto; right: auto; top: auto; bottom: auto; overflow: visible; margin-left: auto; color: #fff; display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+.top .hdate { text-align: right; margin-right: 24px; line-height: 1.2; }
+.top .hdate b { display: block; font-size: 28px; font-weight: 700; color: #c8d0e4; text-transform: capitalize; }
+.top .hdate span { display: block; font-size: 26px; color: #c8d0e4; }
+.top #clock { font-size: 64px; font-weight: 800; letter-spacing: -1px; }
+.top .title + .right #clock, .top .right.small #clock { font-size: 44px; }
+.top .reload { width: 84px; height: 84px; border-radius: 50%; margin-left: 30px; background: rgba(255,255,255,.12); display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center; -webkit-flex: none; flex: none; }
+.top .reload svg { width: 44px; height: 44px; fill: #fff; }
+.top .reload.on { background: #f5b82e; }
+.top .reload.on svg { fill: #1b1300; }
 
 /* abertura */
 .splash { display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
