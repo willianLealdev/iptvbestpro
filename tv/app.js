@@ -44,6 +44,10 @@
   /* ---------------- idiomas ---------------- */
   var T = {
     pt: {
+      buf: 'Buffer', buf_n: 'Normal', buf_h: 'Alto', buf_m: 'Máximo',
+      buf_msg: 'Buffer maior trava menos em internet fraca, mas o ao vivo fica alguns segundos mais atrasado.',
+      player: 'Player', pl_auto: 'Automático', pl_native: 'Player da TV', pl_hls: 'Player compatível',
+      player_msg: 'Se algum canal travar ou não abrir, troque o player.',
       lic_reset: 'Resetar licença', lic_reset_msg: 'Isso desvincula este aparelho da revenda atual e apaga as listas. Depois você digita um novo código. Deseja continuar?', lic_yes: 'Sim, resetar', lic_cancel: 'Cancelar', lic_done: 'Licença resetada. Digite o novo código.',
       act_title: 'Ative este aparelho', act_msg: 'Digite o código da sua revenda (6 letras) ou da sua assinatura (8 números).',
       act_dev: 'ID do aparelho', act_btn: 'Ativar', act_check: 'Checar agora', act_wait: 'Aguarde o revendedor liberar',
@@ -70,6 +74,10 @@
       ch_title: 'Canais', mv_title: 'Filmes', sr_title: 'Séries'
     },
     en: {
+      buf: 'Buffer', buf_n: 'Normal', buf_h: 'High', buf_m: 'Maximum',
+      buf_msg: 'A bigger buffer freezes less on weak internet, but live TV runs a few seconds behind.',
+      player: 'Player', pl_auto: 'Automatic', pl_native: 'TV player', pl_hls: 'Compatible player',
+      player_msg: 'If a channel freezes or does not open, change the player.',
       lic_reset: 'Reset license', lic_reset_msg: 'This unlinks this device from the current reseller and erases the lists. Then you can enter a new code. Continue?', lic_yes: 'Yes, reset', lic_cancel: 'Cancel', lic_done: 'License reset. Enter the new code.',
       act_title: 'Activate this device', act_msg: 'Enter your reseller code (6 letters) or your subscription code (8 numbers).',
       act_dev: 'Device ID', act_btn: 'Activate', act_check: 'Check now', act_wait: 'Waiting for your reseller',
@@ -96,6 +104,10 @@
       ch_title: 'Channels', mv_title: 'Movies', sr_title: 'Series'
     },
     es: {
+      buf: 'Buffer', buf_n: 'Normal', buf_h: 'Alto', buf_m: 'Máximo',
+      buf_msg: 'Un buffer mayor se traba menos con internet débil, pero el en vivo queda unos segundos más atrasado.',
+      player: 'Reproductor', pl_auto: 'Automático', pl_native: 'Reproductor de la TV', pl_hls: 'Reproductor compatible',
+      player_msg: 'Si algún canal se traba o no abre, cambia el reproductor.',
       lic_reset: 'Restablecer licencia', lic_reset_msg: 'Esto desvincula este dispositivo del revendedor actual y borra las listas. Luego escribes un nuevo código. ¿Deseas continuar?', lic_yes: 'Sí, restablecer', lic_cancel: 'Cancelar', lic_done: 'Licencia restablecida. Escribe el nuevo código.',
       act_title: 'Activa este dispositivo', act_msg: 'Escribe el código de tu revendedor (6 letras) o de tu suscripción (8 números).',
       act_dev: 'ID del dispositivo', act_btn: 'Activar', act_check: 'Verificar ahora', act_wait: 'Espera que tu revendedor lo libere',
@@ -141,7 +153,8 @@
     info: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>',
     search: '<path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>',
     star: '<path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>',
-    play: '<path d="M8 5v14l11-7z"/>'
+    play: '<path d="M8 5v14l11-7z"/>',
+    gauge: '<path d="M12 4a9 9 0 0 0-7.8 13.5l1.7-1A7 7 0 1 1 19 12h2a9 9 0 0 0-9-8zm4.2 3.4l-5 5.6a1.5 1.5 0 1 0 2.1 2.1l5.6-5-2.7-2.7zM3 19h18v2H3z"/>'
   };
 
   /* ---------------- estado ---------------- */
@@ -360,14 +373,54 @@
     if (window.Hls) return cb();
     var sc = document.createElement('script'); sc.src = SRV + '/tv/hls.light.min.js'; sc.onload = cb; sc.onerror = cb; document.body.appendChild(sc);
   }
-  function unsetSrc(v) { if (v && v._hls) { try { v._hls.destroy(); } catch (e) {} v._hls = null; } }
+  // Configurações > Buffer (só vale no player compatível; o player da TV controla o próprio buffer)
+  var BUFS = {
+    n: { maxBufferLength: 40, maxMaxBufferLength: 90, liveSyncDurationCount: 5, liveMaxLatencyDurationCount: 12, maxBufferSize: 60 * 1000 * 1000, stall: 10 },
+    h: { maxBufferLength: 60, maxMaxBufferLength: 180, liveSyncDurationCount: 7, liveMaxLatencyDurationCount: 16, maxBufferSize: 80 * 1000 * 1000, stall: 12 },
+    m: { maxBufferLength: 90, maxMaxBufferLength: 300, liveSyncDurationCount: 10, liveMaxLatencyDurationCount: 20, maxBufferSize: 100 * 1000 * 1000, stall: 15 }
+  };
+  function bufPref() { var b = LS.get('bp_buf', 'n'); return BUFS[b] ? b : 'n'; }
+  function playerPref() { var p = LS.get('bp_player', 'auto'); return p === 'native' || p === 'hls' ? p : 'auto'; }
+  function unsetSrc(v) {
+    if (!v) return;
+    if (v._stallT) { clearInterval(v._stallT); v._stallT = null; }
+    if (v._hls) { try { v._hls.destroy(); } catch (e) {} v._hls = null; }
+  }
+  // Retomada: o vídeo já tocava e ficou parado carregando por alguns segundos -> reconecta sozinho
+  // (filme e série voltam do mesmo ponto). Mais de 3 vezes em 2 minutos: deixa o aviso de erro da tela agir.
+  function watchStall(v, url, onFatal, useHls) {
+    var lastT = -1, still = 0, limit = BUFS[bufPref()].stall;
+    v._played = false;
+    v.addEventListener('playing', function () { v._played = true; });
+    v._stallT = setInterval(function () {
+      if (!v._played || v.paused || document.hidden) { still = 0; lastT = v.currentTime; return; }
+      if (v.currentTime !== lastT) { lastT = v.currentTime; still = 0; return; }
+      still += 2;
+      if (still < limit) return;
+      var now = Date.now();
+      v._stalls = (v._stalls || []).filter(function (x) { return now - x < 120000; });
+      if (v._stalls.length >= 3) { clearInterval(v._stallT); v._stallT = null; if (onFatal) onFatal(); return; }
+      v._stalls.push(now);
+      var pos = v.currentTime, vod = isFinite(v.duration) && v.duration > 0;
+      setSrc(v, url, onFatal, useHls);
+      if (vod && pos > 1) {
+        var seek = function () { v.removeEventListener('loadedmetadata', seek); try { v.currentTime = pos; } catch (e) {} };
+        v.addEventListener('loadedmetadata', seek);
+      }
+    }, 2000);
+  }
   function setSrc(v, url, onFatal, forceHls) {
     unsetSrc(v);
     v._url = url;
-    if (/\.m3u8(\?|$)/i.test(url) && (!NATIVE_HLS || forceHls)) {
+    var pref = playerPref(), isHls = /\.m3u8(\?|$)/i.test(url);
+    // Player da TV escolhido: não troca para o compatível; Player compatível: usa sempre o hls.js
+    var useHls = isHls && (!NATIVE_HLS || pref === 'hls' || (forceHls && pref !== 'native'));
+    watchStall(v, url, onFatal, useHls);
+    if (useHls) {
       loadHls(function () {
         if (window.Hls && Hls.isSupported()) {
-          var h = new Hls({ maxBufferLength: 40, maxMaxBufferLength: 90, backBufferLength: 30, liveSyncDurationCount: 5, liveMaxLatencyDurationCount: 12, manifestLoadingMaxRetry: 6, levelLoadingMaxRetry: 6, fragLoadingMaxRetry: 6, nudgeMaxRetry: 8 });
+          var bc = BUFS[bufPref()];
+          var h = new Hls({ maxBufferLength: bc.maxBufferLength, maxMaxBufferLength: bc.maxMaxBufferLength, maxBufferSize: bc.maxBufferSize, backBufferLength: 30, liveSyncDurationCount: bc.liveSyncDurationCount, liveMaxLatencyDurationCount: bc.liveMaxLatencyDurationCount, manifestLoadingMaxRetry: 6, levelLoadingMaxRetry: 6, fragLoadingMaxRetry: 6, nudgeMaxRetry: 8 });
           v._hls = h;
           // queda de rede ou falha de vídeo: tenta se recuperar sozinho (sem recarregar o canal) antes de desistir
           var rec = { net: 0, media: 0 };
@@ -492,7 +545,7 @@
   }
 
   function clearLocal() {
-    var keep = { bp_did: 1, bp_lang: 1 };
+    var keep = { bp_did: 1, bp_lang: 1, bp_buf: 1, bp_player: 1 }; // preferências do aparelho ficam
     try {
       var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i));
       for (var j = 0; j < ks.length; j++) if (!keep[ks[j]] && ks[j].indexOf('bp_') === 0) localStorage.removeItem(ks[j]);
@@ -897,7 +950,7 @@
   }
   function onLiveError() {
     var m = $('pvmsg'); if (!m) return;
-    if (L.video && !L.video._hls && !L.video._triedHls && /\.m3u8(\?|$)/i.test(L.video._url || '')) {
+    if (L.video && !L.video._hls && !L.video._triedHls && playerPref() === 'auto' && /\.m3u8(\?|$)/i.test(L.video._url || '')) {
       L.video._triedHls = true; setSrc(L.video, L.video._url, onLiveError, true); return;
     }
     L.err++;
@@ -1202,7 +1255,7 @@
     PL.video.addEventListener('playing', function () { $('pmsg').classList.add('hide'); });
     function verr() {
       var m0 = $('pmsg'); if (!m0) return;
-      if (PL.video && !PL.video._hls && !PL.video._triedHls && /\.m3u8(\?|$)/i.test(url)) { PL.video._triedHls = true; setSrc(PL.video, url, verr, true); return; }
+      if (PL.video && !PL.video._hls && !PL.video._triedHls && playerPref() === 'auto' && /\.m3u8(\?|$)/i.test(url)) { PL.video._triedHls = true; setSrc(PL.video, url, verr, true); return; }
       errs++; var m = m0; if (errs <= 1) { m.textContent = t('reconnect'); m.classList.remove('hide'); setTimeout(function () { if (PL.video) setSrc(PL.video, url, verr); }, 2500); } else { m.textContent = t('play_err'); m.classList.remove('hide'); } }
     PL.video.addEventListener('error', verr);
     setSrc(PL.video, url, verr);
@@ -1224,7 +1277,9 @@
   function settings() {
     var langName = { pt: 'Português', en: 'English', es: 'Español' };
     var items = [['lang', IC.globe, t('language'), langName[LANG]], ['dev', IC.id, t('device'), DID], ['sup', IC.chat, t('support'), ''],
-      ['ref', IC.sync, t('refresh'), ''], ['pl', IC.list, t('playlist'), S.pl ? (S.pl.playlist_name || S.pl.user_name) : ''], ['about', IC.info, t('about'), 'v' + VER], ['reset', IC.sync, t('lic_reset'), '']];
+      ['ref', IC.sync, t('refresh'), ''], ['pl', IC.list, t('playlist'), S.pl ? (S.pl.playlist_name || S.pl.user_name) : ''],
+      ['buf', IC.gauge, t('buf'), t('buf_' + bufPref())], ['player', IC.play, t('player'), t('pl_' + playerPref())],
+      ['about', IC.info, t('about'), 'v' + VER], ['reset', IC.sync, t('lic_reset'), '']];
     var h = '';
     for (var i = 0; i < items.length; i++) h += '<div class="set f" data-a="' + items[i][0] + '"><div class="ic">' + svg(items[i][1], 64) + '</div><div class="lb">' + esc(items[i][2]) + '</div><div class="sub">' + esc(items[i][3]) + '</div></div>';
     show(header(t('settings')) + '<div class="sets">' + h + '</div>', {
@@ -1235,6 +1290,16 @@
             { L: function (el, l) { LANG = l; LS.set('bp_lang', l); closeModal(true); settings(); } });
         },
         dev: function () { modal('<h2>' + esc(t('device')) + '</h2><div class="devid"><b>' + esc(DID) + '</b></div><div class="btn f" data-a="_close">' + esc(t('close')) + '</div>'); },
+        buf: function () {
+          var cur = bufPref();
+          modal('<h2>' + esc(t('buf')) + '</h2><p>' + esc(t('buf_msg')) + '</p>' + ['n', 'h', 'm'].map(function (b) { return '<div class="btn f' + (b === cur ? ' gold' : '') + '" data-a="B" data-i="' + b + '">' + esc(t('buf_' + b)) + '</div>'; }).join(''),
+            { B: function (el, b) { LS.set('bp_buf', b); closeModal(true); settings(); focus(document.querySelector('[data-a=buf]')); } });
+        },
+        player: function () {
+          var cur = playerPref();
+          modal('<h2>' + esc(t('player')) + '</h2><p>' + esc(t('player_msg')) + '</p>' + ['auto', 'native', 'hls'].map(function (p) { return '<div class="btn f' + (p === cur ? ' gold' : '') + '" data-a="P" data-i="' + p + '">' + esc(t('pl_' + p)) + '</div>'; }).join(''),
+            { P: function (el, p) { LS.set('bp_player', p); closeModal(true); settings(); focus(document.querySelector('[data-a=player]')); } });
+        },
         sup: support,
         ref: function () { L.cats = null; V.movie.cats = null; V.series.cats = null; toast(t('refresh_ok')); },
         pl: function () { loadPlaylists(true); },
