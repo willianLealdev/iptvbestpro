@@ -20,7 +20,6 @@ $plans = sub_plans_list($mysqli);
 // Menor preço entre os planos (para o "a partir de") e preço do crédito da revenda na mesma moeda
 $from_price = 0;
 foreach ($plans as $p) { $v = plan_price($p, $currency); if ($v > 0 && ($from_price == 0 || $v < $from_price)) $from_price = $v; }
-$credit_unit = credit_price($mysqli, $currency);
 $year = date('Y');
 
 // Aparelhos na página inicial: 'live' = já disponível, 'soon' = enviado para a loja, em análise.
@@ -242,6 +241,9 @@ section{padding:90px 0}
 .rv-callout__txt b{display:block;font-size:18px}
 .rv-callout__txt span{color:#cdd5ea;font-size:15px}
 .rv-callout__txt span b{display:inline;font-size:inherit;color:var(--gold2)}
+.rv-callout__txt .rv-tag{display:inline-flex;align-items:center;gap:6px;margin-bottom:6px;padding:3px 10px;border-radius:999px;background:rgba(245,184,46,.18);border:1px solid rgba(245,184,46,.5);color:var(--gold2);font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.rv-pulse{animation:rvPulse 2.2s ease-in-out infinite}
+@keyframes rvPulse{0%,100%{box-shadow:0 8px 24px rgba(245,184,46,.25),0 0 0 0 rgba(245,184,46,.55)}50%{box-shadow:0 8px 24px rgba(245,184,46,.35),0 0 0 12px rgba(245,184,46,0)}}
 .excl{display:flex;width:fit-content;align-items:center;gap:8px;margin:0 0 16px;padding:8px 14px;border-radius:12px;background:rgba(245,184,46,.14);border:1px solid rgba(245,184,46,.4);color:var(--gold2);font-weight:600;font-size:14.5px}
 .excl b{color:#fff}
 
@@ -284,7 +286,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
 /* animação de entrada */
 .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1;transform:none}
-@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}html{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){.rv-pulse{animation:none}.reveal{opacity:1;transform:none;transition:none}html{scroll-behavior:auto}}
 
 @media (max-width:1020px){
     .menu,.nav-cta{display:none}
@@ -465,13 +467,14 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
                     <div class="plan reveal"><h3>Planos em breve</h3><p class="per">Crie a sua conta para ser avisado.</p><a href="cliente/register.php" class="btn btn-gold" style="margin-top:22px">Criar conta</a></div>
                 <?php } ?>
             </div>
-            <a href="#revenda" class="rv-callout reveal">
+            <a href="revenda/register.php" class="rv-callout reveal">
                 <span class="rv-callout__ico"><i class="ri-vip-crown-fill"></i></span>
                 <span class="rv-callout__txt">
-                    <b>É revendedor? Você tem preço exclusivo.</b>
-                    <span><?php if ($credit_unit > 0) { ?>Ative aparelhos dos seus clientes por <b><?php echo money_format_currency($credit_unit, $currency); ?></b> por ano, com créditos. Venda pelo preço que quiser.<?php } else { ?>Compre créditos com desconto de revenda e venda pelo preço que quiser.<?php } ?></span>
+                    <span class="rv-tag"><i class="ri-fire-fill"></i> Exclusivo para revendedores</span>
+                    <b>É revendedor? Tem um preço especial esperando por você.</b>
+                    <span>Crie a sua conta grátis e veja o <b>seu preço exclusivo</b> no painel. Ative os aparelhos dos seus clientes e venda pelo preço que quiser.</span>
                 </span>
-                <span class="btn btn-gold">Ver condições <i class="ri-arrow-right-line"></i></span>
+                <span class="btn btn-gold rv-pulse">Quero ser revendedor <i class="ri-arrow-right-line"></i></span>
             </a>
             <p class="note center">Preços em <?php echo $currency == 'USD' ? 'dólar (US$)' : 'real (R$)'; ?>. Não é cobrado nenhum valor pelo conteúdo da sua playlist.</p>
         </div>
@@ -482,7 +485,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
             <div class="reseller reveal">
                 <div>
                     <span class="eyebrow">Programa de revenda</span>
-                    <div class="excl"><i class="ri-price-tag-3-fill"></i> Preço exclusivo para revendedores<?php if ($credit_unit > 0) { ?>: <b><?php echo money_format_currency($credit_unit, $currency); ?></b> por aparelho/ano<?php } ?></div>
+                    <div class="excl"><i class="ri-lock-unlock-fill"></i> Preço exclusivo para revendedores: <b>veja o seu ao criar a conta</b></div>
                     <h2 class="h2">Revenda o <?php echo lp_e($name); ?> com a sua marca</h2>
                     <p class="sub">Compre créditos, ative os aparelhos dos seus clientes e gerencie tudo em um painel próprio. Cada crédito ativa 1 aparelho por 1 ano.</p>
                     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:28px">
