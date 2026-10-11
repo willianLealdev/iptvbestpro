@@ -54,7 +54,7 @@
       act_wait_msg: 'Seu código foi enviado. Esta tela verifica sozinha a cada 5 segundos.', act_other: 'Usar outro código',
       act_expired: 'Sua ativação venceu', act_expired_msg: 'Fale com a sua revenda para renovar.', act_invalid: 'Código inválido. Use 6 letras ou 8 números.',
       act_help: 'Peça o seu código de ativação ao seu fornecedor ou revenda.',
-      buy_title: 'Não tem um código?', buy_msg: 'Aponte a câmera do celular para o QR code e compre a sua licença no site. Você recebe o código na hora.', buy_or: 'ou acesse',
+      buy_title: 'Conheça a IPTV Best Pro', buy_msg: 'Aponte a câmera do celular para o QR code e conheça o nosso site.', buy_or: 'ou acesse',
       no_net: 'Sem conexão com a internet. Verifique e tente de novo.', server_err: 'Não foi possível falar com o servidor. Tente de novo.',
       no_list: 'Nenhuma lista neste aparelho', no_list_msg: 'Peça para a sua revenda adicionar a sua lista no painel.', retry: 'Tentar de novo',
       list_err: 'Não foi possível carregar esta lista. Fale com a sua revenda.',
@@ -85,7 +85,7 @@
       act_wait_msg: 'Your code was sent. This screen checks automatically every 5 seconds.', act_other: 'Use another code',
       act_expired: 'Your activation has expired', act_expired_msg: 'Contact your reseller to renew.', act_invalid: 'Invalid code. Use 6 letters or 8 numbers.',
       act_help: 'Ask your provider or reseller for your activation code.',
-      buy_title: "Don't have a code?", buy_msg: 'Point your phone camera at the QR code and buy your license on the website. You get the code right away.', buy_or: 'or visit',
+      buy_title: 'Discover IPTV Best Pro', buy_msg: 'Point your phone camera at the QR code to visit our website.', buy_or: 'or visit',
       no_net: 'No internet connection. Check it and try again.', server_err: 'Could not reach the server. Try again.',
       no_list: 'No playlist on this device', no_list_msg: 'Ask your reseller to add your list in the panel.', retry: 'Try again',
       list_err: 'Could not load this list. Contact your reseller.',
@@ -116,7 +116,7 @@
       act_wait_msg: 'Tu código fue enviado. Esta pantalla verifica sola cada 5 segundos.', act_other: 'Usar otro código',
       act_expired: 'Tu activación venció', act_expired_msg: 'Habla con tu revendedor para renovar.', act_invalid: 'Código inválido. Usa 6 letras u 8 números.',
       act_help: 'Pide tu código de activación a tu proveedor o revendedor.',
-      buy_title: '¿No tienes un código?', buy_msg: 'Apunta la cámara del celular al código QR y compra tu licencia en el sitio. Recibes el código al instante.', buy_or: 'o entra a',
+      buy_title: 'Conoce IPTV Best Pro', buy_msg: 'Apunta la cámara del celular al código QR y conoce nuestro sitio.', buy_or: 'o entra a',
       no_net: 'Sin conexión a internet. Revisa e intenta de nuevo.', server_err: 'No fue posible conectar con el servidor. Intenta de nuevo.',
       no_list: 'Ninguna lista en este dispositivo', no_list_msg: 'Pide a tu revendedor que agregue tu lista en el panel.', retry: 'Intentar de nuevo',
       list_err: 'No fue posible cargar esta lista. Habla con tu revendedor.',
@@ -568,10 +568,10 @@
       (waiting ? '' : '<div class="btn gold f" data-a="link">' + esc(t('act_btn')) + '</div>') +
       '<div class="btn f" data-a="check">' + esc(t('act_check')) + '</div>' +
       (waiting ? '<div class="btn f" data-a="other">' + esc(t('act_other')) + '</div>' : '<p>' + esc(t('act_help')) + '</p>') + '</div>';
-    // Sem revenda: QR code para comprar a licença no site (aparelho de revenda vencido renova com a revenda)
+    // QR code que apresenta a IPTV Best Pro (abre a página inicial do site); aparelho de revenda não mostra
     var st = S.status || {};
     if (!waiting && st.owner !== 'reseller') {
-      var buy = SRV + '/cliente/register?ref=tv&device=' + encodeURIComponent(DID);
+      var buy = SRV + '/?ref=tv';
       html = html.replace('<div class="card">', '<div class="card withqr">') +
         '<div class="buyqr"><h2>' + esc(t('buy_title')) + '</h2>' + qrHtml(buy) + '<p>' + esc(t('buy_msg')) + '</p>' +
         '<p class="buyurl">' + esc(t('buy_or')) + ' <b>' + esc(SRV.replace(/^https?:\/\//, '')) + '</b></p></div>';
