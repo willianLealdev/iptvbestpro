@@ -43,6 +43,7 @@ function resellers_migrate($mysqli){
         'currency_locked' => "TINYINT(1) NOT NULL DEFAULT 0",
         'country_code'    => "CHAR(2) NOT NULL DEFAULT ''",
         'last_ip'         => "VARCHAR(45) NOT NULL DEFAULT ''",
+        'training_seen'   => "TINYINT(1) NOT NULL DEFAULT 0", // já abriu o Treinamento (some a janela de boas-vindas)
     );
     foreach ($extra as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_resellers` LIKE '$name'");

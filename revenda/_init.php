@@ -83,7 +83,7 @@ function rv_head($title, $switcher = true){ ?>
         .rv-side__tg { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: #229ED9; color: #fff; text-decoration: none; font-weight: 600; }
         .rv-side__tg:hover { color: #fff; filter: brightness(1.05); }
         .rv-body { margin-left: 282px; min-height: 100vh; padding: 16px 24px 0 0; }
-        .rv-top { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 16px; box-shadow: 0 4px 14px rgba(15,23,42,.06); padding: 10px 18px; margin-bottom: 22px; min-height: 64px; position: sticky; top: 16px; z-index: 1020; }
+        .rv-top { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 16px; box-shadow: 0 -24px 0 8px var(--rv-bg), 0 4px 14px rgba(15,23,42,.06); padding: 10px 18px; margin-bottom: 22px; min-height: 64px; position: sticky; top: 16px; z-index: 1020; }
         .rv-top__title { font-size: 19px; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .rv-top__right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
         .rv-burger { display: none; border: 0; background: #f4f6fb; width: 42px; height: 42px; border-radius: 10px; font-size: 22px; color: var(--rv-text); flex: none; }
@@ -131,6 +131,7 @@ function rv_head($title, $switcher = true){ ?>
 
 function rv_header($mysqli, $reseller, $title, $active){
     brand_remember_base_url($mysqli);
+    if (isset($_GET['training_later'])) $_SESSION['rv_training_later'] = 1; // "Depois": não mostra de novo nesta sessão
     rv_head($title, false); ?>
     <?php
     require_once(__DIR__."/../includes/support_helper.php");
@@ -139,6 +140,7 @@ function rv_header($mysqli, $reseller, $title, $active){
     $rv_tg = support_telegram_url($mysqli);
     $rv_menu = array(
         array('dashboard', 'dashboard.php', 'ri-home-4-line', 'Painel'),
+        array('training', 'training.php', 'ri-play-circle-line', 'Treinamento'),
         array('devices', 'devices.php', 'ri-device-line', 'Dispositivos'),
         array('credits', 'credits.php', 'ri-coin-line', 'Créditos'),
         array('dns', 'dns.php', 'ri-server-line', 'DNS'),
@@ -188,6 +190,25 @@ function rv_header($mysqli, $reseller, $title, $active){
             </div>
         </header>
     <main class="rv-main">
+        <?php if (empty($reseller['training_seen']) && $active != 'training' && empty($_SESSION['rv_training_later'])) { ?>
+            <!-- primeiro acesso: convida a assistir o treinamento (some depois que abrir o Treinamento) -->
+            <div class="modal fade" id="rvTrainModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content" style="border:0;border-radius:18px;overflow:hidden">
+                        <div style="background:linear-gradient(135deg,#0b1430,#1d3a8a);color:#fff;padding:28px 26px;text-align:center">
+                            <div style="width:68px;height:68px;border-radius:50%;background:#f5b82e;color:#1b1300;display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 14px"><i class="ri-play-circle-fill"></i></div>
+                            <h4 class="mb-1" style="font-weight:700">Bem-vindo ao seu portal!</h4>
+                            <p class="mb-0" style="color:#c8d0e4">Antes de começar, assista ao treinamento em vídeo. São vídeos curtos que mostram como comprar créditos, cadastrar DNS, colocar a sua marca no app, ativar aparelhos e publicar listas.</p>
+                        </div>
+                        <div class="p-3 d-flex gap-2">
+                            <a href="training.php" class="btn btn-primary flex-fill py-2" style="font-weight:600"><i class="ri-play-circle-line me-1"></i>Assistir agora</a>
+                            <a href="?training_later=1" class="btn btn-light flex-fill py-2">Depois</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>document.addEventListener('DOMContentLoaded', function () { try { new bootstrap.Modal(document.getElementById('rvTrainModal')).show(); } catch (e) {} });</script>
+        <?php } ?>
         <?php $f = rv_take_flash(); if ($f) { ?>
             <div class="alert alert-<?php echo $f['type'] == 'success' ? 'success' : 'danger'; ?> alert-dismissible fade show">
                 <?php echo rv_e($f['msg']); ?>

@@ -209,6 +209,13 @@ $mysqli->set_charset("utf8mb4");
                 <?php } ?>
 
                 <li class="nsofts-sidebar-nav__item">
+                    <a href="training.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "training.php") { ?>active<?php } ?>">
+                        <i class="ri-play-circle-line nsofts-sidebar-nav__icon"></i>
+                        <span class="nsofts-sidebar-nav__text">Treinamento</span>
+                    </a>
+                </li>
+
+                <li class="nsofts-sidebar-nav__item">
                     <a href="manage_notification.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_notification.php" or $currentFile == "notification_onesignal.php") { ?>active<?php } ?>">
                         <i class="ri-notification-2-line nsofts-sidebar-nav__icon"></i>
                         <span class="nsofts-sidebar-nav__text">Notification</span>
