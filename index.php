@@ -559,7 +559,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
                 <a href="privacy_policy.php">Política de privacidade</a>
             </div>
         </div>
-        <div class="copy"><span>© <?php echo $year; ?> <?php echo lp_e($name); ?>. Todos os direitos reservados.</span><span>Feito para a sua TV.</span></div>
+        <div class="copy"><span>© <?php echo $year; ?> <?php echo lp_e($name); ?>. Todos os direitos reservados.</span><span translate="no">NEWCERT HOLDING LLC · LAS VEGAS · NV · UNITED STATES</span></div>
     </div>
 </footer>
 
