@@ -23,14 +23,44 @@ foreach ($plans as $p) { $v = plan_price($p, $currency); if ($v > 0 && ($from_pr
 $credit_unit = credit_price($mysqli, $currency);
 $year = date('Y');
 
+// Aparelhos na página inicial: 'live' = já disponível, 'soon' = enviado para a loja, em análise.
+// Quando uma loja aprovar, troque 'soon' por 'live' (e coloque o link da loja, se quiser).
 $platforms = array(
-    array('ri-android-line', 'Android TV'),
-    array('ri-router-line', 'TV Box'),
-    array('ri-fire-line', 'Fire TV Stick'),
-    array('ri-google-line', 'Google TV'),
-    array('ri-smartphone-line', 'Celular Android'),
-    array('ri-tablet-line', 'Tablet Android'),
+    array('live', 'android', 'Celular e tablet Android', 'download'),
+    array('live', 'androidtv', 'Android TV', 'download'),
+    array('live', 'googletv', 'Google TV', 'download'),
+    array('live', 'tvbox', 'TV Box', 'download'),
+    array('live', 'firetv', 'Fire TV Stick', 'download'),
+    array('live', 'roku', 'Roku', ''),
+    array('soon', 'play', 'Google Play', ''),
+    array('soon', 'amazon', 'Amazon Appstore', ''),
+    array('soon', 'aptoide', 'Aptoide', ''),
+    array('soon', 'samsung', 'Samsung Smart TV', ''),
+    array('soon', 'lg', 'LG Smart TV', ''),
+    array('soon', 'whale', 'Whale TV', ''),
+    array('soon', 'apple', 'iPhone e iPad', ''),
+    array('soon', 'appletv', 'Apple TV', ''),
 );
+function lp_logo($k){
+    $l = array(
+        'android'   => array('#3ddc84', '<i class="ri-android-fill"></i>'),
+        'androidtv' => array('#073042', '<i class="ri-tv-2-fill" style="color:#3ddc84"></i>'),
+        'googletv'  => array('#4285f4', '<i class="ri-google-fill"></i>'),
+        'tvbox'     => array('#2f6bff', '<i class="ri-router-fill"></i>'),
+        'firetv'    => array('#232f3e', '<b style="color:#ff9900;font-size:10px">fire tv</b>'),
+        'roku'      => array('#6c1d9e', '<b style="font-size:11.5px">Roku</b>'),
+        'play'      => array('#01875f', '<i class="ri-google-play-fill"></i>'),
+        'amazon'    => array('#232f3e', '<i class="ri-amazon-fill" style="color:#ff9900"></i>'),
+        'aptoide'   => array('#fe6446', '<b style="font-size:19px">A</b>'),
+        'samsung'   => array('#1428a0', '<b style="font-size:6.6px;letter-spacing:.2px">SAMSUNG</b>'),
+        'lg'        => array('#a50034', '<b style="font-size:14px">LG</b>'),
+        'whale'     => array('#1d2a6e', '<b style="font-size:9.5px">whale</b>'),
+        'apple'     => array('#000', '<i class="ri-apple-fill"></i>'),
+        'appletv'   => array('#000', '<b style="font-size:12px;display:flex;align-items:center"><i class="ri-apple-fill" style="font-size:15px"></i>tv</b>'),
+    );
+    $x = isset($l[$k]) ? $l[$k] : array('#2f6bff', '<i class="ri-tv-2-line"></i>');
+    return '<span class="plat-logo" translate="no" style="background:'.$x[0].'">'.$x[1].'</span>';
+}
 
 $features = array(
     array('ri-play-list-2-line', 'Várias playlists', 'Adicione mais de uma lista no mesmo aparelho e troque entre elas quando quiser.'),
@@ -47,7 +77,7 @@ $faq = array(
     array('O '.$name.' fornece canais ou conteúdo?', 'Não. O '.$name.' é apenas um reprodutor de mídia. Nós não vendemos, hospedamos nem distribuímos canais, filmes ou listas. Você usa a sua própria playlist, contratada com quem você preferir.'),
     array('Como adiciono a minha playlist?', 'Entre na área do cliente, abra o aparelho ativado e escolha "Playlist". Você pode colar a URL da lista (M3U) ou informar servidor, usuário e senha da sua conta. A lista aparece no app em instantes.'),
     array('Como ativo o meu aparelho?', 'Instale o app, abra e anote o código exibido na tela. Depois assine um plano na área do cliente: você recebe um código de ativação para digitar no app. Se você comprou com um revendedor, ele ativa o aparelho para você.'),
-    array('Em quais aparelhos funciona?', 'Em aparelhos Android: Android TV, Google TV, TV Box, Fire TV Stick, celulares e tablets.'),
+    array('Em quais aparelhos funciona?', 'Já está disponível para celular e tablet Android, Android TV, Google TV, TV Box, Fire TV Stick e Roku. Em breve também na Google Play, Amazon Appstore, Aptoide, Samsung Smart TV, LG Smart TV, Whale TV, iPhone, iPad e Apple TV.'),
     array('Posso usar em mais de um aparelho?', 'Cada assinatura ativa 1 aparelho. Para usar em outro aparelho, faça uma nova assinatura.'),
     array('Como faço para ser revendedor?', 'Clique em "Revenda", crie a sua conta e compre créditos. Cada crédito ativa 1 aparelho por 1 ano. Você ganha um painel próprio para gerenciar seus clientes, servidores e a sua marca.'),
     array('Com quem falo sobre problemas na playlist?', 'Problemas com canais, quedas ou conteúdo da lista devem ser tratados com o fornecedor da sua playlist. Dúvidas sobre o app e a ativação são com a gente.'),
@@ -123,11 +153,18 @@ img{max-width:100%;display:block}
 .hero h1{font-size:clamp(36px,6vw,66px);line-height:1.06;font-weight:800;letter-spacing:-1.5px;max-width:900px;margin:0 auto}
 .hero p.lead{font-size:clamp(16px,2vw,19px);color:var(--muted);max-width:660px;margin:22px auto 34px}
 .hero .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.platforms{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:56px auto 0;max-width:980px}
-.plat{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(17,26,51,.75);border:1px solid var(--line);text-align:left}
-.plat i{font-size:24px;color:var(--gold)}
-.plat small{display:block;font-size:10.5px;color:var(--muted);line-height:1.2}
-.plat b{display:block;font-size:13.5px;font-weight:600;line-height:1.25}
+.plat-title{display:flex;align-items:center;justify-content:center;gap:10px;margin:52px auto 14px;font-size:12.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.plat-title:before,.plat-title:after{content:"";height:1px;width:60px;background:var(--line)}
+.plat-title.soon{margin-top:26px}
+.platforms{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:12px;margin:0 auto;max-width:1180px}
+.plat{position:relative;display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:12px;background:#fff;color:#141b2d;text-align:left;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:.2s;min-width:0}
+a.plat:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.plat-logo{flex:none;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:21px;line-height:1;font-weight:800;overflow:hidden}
+.plat-logo i{font-size:21px}
+.plat small{display:block;font-size:11px;color:#6b7489;line-height:1.2}
+.plat b.n{display:block;font-size:13.5px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis}
+.platforms.soon .plat{background:rgba(255,255,255,.88)}
+.plat .badge{position:absolute;top:-8px;right:8px;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1300;letter-spacing:.3px}
 .disclaimer{margin-top:26px;font-size:13px;color:var(--muted)}
 .disclaimer i{color:var(--gold)}
 
@@ -251,7 +288,6 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
     .menu,.nav-cta{display:none}
     .burger{display:block;margin-left:10px}
     .lang-m{display:block}
-    .platforms{grid-template-columns:repeat(3,1fr)}
     .grid4{grid-template-columns:repeat(2,1fr)}
     .about,.reseller{grid-template-columns:1fr}
     .reseller{padding:40px 28px}
@@ -261,7 +297,10 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
     .wrap{padding:0 16px}
     section{padding:64px 0}
     .hero{padding:64px 0 50px}
-    .platforms{grid-template-columns:repeat(2,1fr)}
+    .platforms{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .plat{padding:10px;gap:9px}
+    .plat-logo{width:34px;height:34px}
+    .plat b.n{font-size:12.5px}
     .grid4,.portals,.checks{grid-template-columns:1fr}
     .foot{grid-template-columns:1fr}
     .hero .ctas .btn{width:100%}
@@ -312,16 +351,19 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
         <div class="wrap">
             <div class="pill"><i class="ri-vip-crown-fill"></i> O player premium para a sua TV</div>
             <h1>Sua playlist, na sua TV.<br><span class="grad">Simples, rápido e estável.</span></h1>
-            <p class="lead">Você já tem o conteúdo. Faltava um player que não trava, não mostra anúncios e funciona em qualquer aparelho Android. O <?php echo lp_e($name); ?> foi feito para isso.</p>
+            <p class="lead">Você já tem o conteúdo. Faltava um player que não trava, não mostra anúncios e funciona na sua TV, TV Box e celular. O <?php echo lp_e($name); ?> foi feito para isso.</p>
             <div class="ctas">
                 <a href="cliente/register.php" class="btn btn-gold btn-lg"><i class="ri-flashlight-fill"></i> Ativar meu aparelho</a>
                 <a href="download" class="btn btn-ghost btn-lg"><i class="ri-download-2-line"></i> Baixar o app</a>
             </div>
-            <div class="platforms">
-                <?php foreach ($platforms as $p) { ?>
-                    <div class="plat"><i class="<?php echo $p[0]; ?>"></i><div><small>Disponível para</small><b><?php echo $p[1]; ?></b></div></div>
-                <?php } ?>
-            </div>
+            <?php foreach (array('live' => 'Disponível agora', 'soon' => 'Em breve') as $st => $label) { ?>
+                <div class="plat-title <?php echo $st; ?>"><?php echo $label; ?></div>
+                <div class="platforms <?php echo $st; ?>">
+                    <?php foreach ($platforms as $p) { if ($p[0] != $st) continue; $tag = $p[3] != '' ? 'a href="'.lp_e($p[3]).'"' : 'div'; ?>
+                        <<?php echo $tag; ?> class="plat"><?php echo lp_logo($p[1]); ?><div style="min-width:0"><small><?php echo $st == 'live' ? 'Disponível em' : 'Chegando em'; ?></small><b class="n"><?php echo lp_e($p[2]); ?></b></div><?php if ($st == 'soon') { ?><span class="badge">Em breve</span><?php } ?></<?php echo $p[3] != '' ? 'a' : 'div'; ?>>
+                    <?php } ?>
+                </div>
+            <?php } ?>
             <p class="disclaimer"><i class="ri-information-line"></i> O <?php echo lp_e($name); ?> não fornece canais, filmes ou playlists. Use a sua própria lista.</p>
         </div>
     </div>
