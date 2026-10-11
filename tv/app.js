@@ -29,9 +29,11 @@
 
   var UA = navigator.userAgent || '';
   // Whale TV (Philips, Sharp, Toshiba, JVC...): app aberto pelo endereço /tv/?p=whale ou navegador da Whale
-  var IS_WHALE = /[?&]p=whale/i.test(location.search) || /WhaleTV|Whale ?OS|Zeasn/i.test(UA);
-  var PLATFORM = IS_WHALE ? 'whale_tv' : (/Tizen/i.test(UA) ? 'samsung_tv' : 'lg_tv');
-  var PLATFORM_NAME = { whale_tv: 'Whale TV', samsung_tv: 'Samsung Tizen', lg_tv: 'LG webOS' }[PLATFORM];
+  var IS_WHALE = /[?&]p=whale\b/i.test(location.search) || /WhaleTV|Whale ?OS|Zeasn/i.test(UA);
+  // Titan OS (Philips e JVC desde 2023): app aberto pelo endereço /tv/?p=titan; o navegador traz "TitanOS/" no UA
+  var IS_TITAN = /[?&]p=titan\b/i.test(location.search) || /TitanOS\//i.test(UA);
+  var PLATFORM = IS_TITAN ? 'titan_os' : (IS_WHALE ? 'whale_tv' : (/Tizen/i.test(UA) ? 'samsung_tv' : 'lg_tv'));
+  var PLATFORM_NAME = { titan_os: 'Titan OS', whale_tv: 'Whale TV', samsung_tv: 'Samsung Tizen', lg_tv: 'LG webOS' }[PLATFORM];
   var DID = LS.get('bp_did', '');
   if (!DID) {
     DID = 'tv';
@@ -86,7 +88,7 @@
       sup_scan: 'Point your phone camera at the code to open WhatsApp', close: 'Close',
       exp_title: 'Your plan is about to expire', exp_days: 'Your plan expires in {0} day(s).', exp_today: 'Your plan expires today.',
       exp_reseller: 'Talk to your reseller to renew and keep watching.', exp_support: 'Contact support to renew and keep watching.',
-      exit_q: 'Exit the app?', yes: 'Yes', no: 'No',
+      exit_q: 'Do you want to exit?', yes: 'Yes', no: 'No',
       search: 'SEARCH', favorites: 'FAVORITES', cont_tile: 'CONTINUE', cw_empty: 'Nothing to continue yet. Watch a channel, movie or episode and it will show up here.',
       search_hint: 'Type the name of a channel, movie or series', search_go: 'Search', search_none: 'Nothing found.', searching: 'Searching…',
       fav_add: '★ Add to favorites', fav_del: '★ Remove from favorites', fav_added: 'Added to favorites.', fav_removed: 'Removed from favorites.',
@@ -172,7 +174,7 @@
   }
   function api(helper, extra, cb) {
     var o = { helper_name: helper, application_id: APP_ID, device_id: DID, platform: PLATFORM,
-      device_model: PLATFORM === 'lg_tv' ? 'LG webOS TV' : (PLATFORM === 'whale_tv' ? 'Whale TV' : 'Samsung Smart TV'), os_version: '', app_version: VER, app_name: 'IPTV Best Pro' };
+      device_model: { lg_tv: 'LG webOS TV', whale_tv: 'Whale TV', titan_os: 'Titan OS TV', samsung_tv: 'Samsung Smart TV' }[PLATFORM], os_version: '', app_version: VER, app_name: 'IPTV Best Pro' };
     for (var k in extra) if (extra.hasOwnProperty(k)) o[k] = extra[k];
     var fd = new FormData();
     fd.append('data', b64(JSON.stringify(o)));
@@ -531,7 +533,7 @@
   }
   function confirmExit() {
     modal('<h2>' + esc(t('exit_q')) + '</h2><div class="btn gold f" data-a="y">' + esc(t('yes')) + '</div><div class="btn f" data-a="_close">' + esc(t('no')) + '</div>',
-      { y: function () { try { if (window.webOS && webOS.platformBack) webOS.platformBack(); else if (window.tizen) tizen.application.getCurrentApplication().exit(); else window.close(); } catch (e) { window.close(); } } });
+      { y: function () { try { if (window.webOS && webOS.platformBack) webOS.platformBack(); else if (typeof SmartTvA_API !== 'undefined' && SmartTvA_API.exit) SmartTvA_API.exit(); else if (window.tizen) tizen.application.getCurrentApplication().exit(); else window.close(); } catch (e) { window.close(); } } });
   }
 
   /* ---------------- listas do aparelho ---------------- */

@@ -38,6 +38,7 @@ $platforms = array(
     array('soon', 'samsung', 'Samsung Smart TV', ''),
     array('soon', 'lg', 'LG Smart TV', ''),
     array('soon', 'whale', 'Whale TV', ''),
+    array('soon', 'titan', 'Titan OS', ''),
     array('soon', 'apple', 'iPhone e iPad', ''),
     array('soon', 'appletv', 'Apple TV', ''),
 );
@@ -55,6 +56,7 @@ function lp_logo($k){
         'samsung'   => array('#1428a0', '<b style="font-size:6.6px;letter-spacing:.2px">SAMSUNG</b>'),
         'lg'        => array('#a50034', '<b style="font-size:14px">LG</b>'),
         'whale'     => array('#1d2a6e', '<b style="font-size:9.5px">whale</b>'),
+        'titan'     => array('#e11d48', '<b style="font-size:9.5px">TITAN</b>'),
         'apple'     => array('#000', '<i class="ri-apple-fill"></i>'),
         'appletv'   => array('#000', '<b style="font-size:12px;display:flex;align-items:center"><i class="ri-apple-fill" style="font-size:15px"></i>tv</b>'),
     );
@@ -77,7 +79,7 @@ $faq = array(
     array('O '.$name.' fornece canais ou conteúdo?', 'Não. O '.$name.' é apenas um reprodutor de mídia. Nós não vendemos, hospedamos nem distribuímos canais, filmes ou listas. Você usa a sua própria playlist, contratada com quem você preferir.'),
     array('Como adiciono a minha playlist?', 'Entre na área do cliente, abra o aparelho ativado e escolha "Playlist". Você pode colar a URL da lista (M3U) ou informar servidor, usuário e senha da sua conta. A lista aparece no app em instantes.'),
     array('Como ativo o meu aparelho?', 'Instale o app, abra e anote o código exibido na tela. Depois assine um plano na área do cliente: você recebe um código de ativação para digitar no app. Se você comprou com um revendedor, ele ativa o aparelho para você.'),
-    array('Em quais aparelhos funciona?', 'Já está disponível para celular e tablet Android, Android TV, Google TV, TV Box, Fire TV Stick e Roku, e nas lojas Amazon Appstore e Aptoide. Em breve também na Google Play, Samsung Smart TV, LG Smart TV, Whale TV, iPhone, iPad e Apple TV.'),
+    array('Em quais aparelhos funciona?', 'Já está disponível para celular e tablet Android, Android TV, Google TV, TV Box, Fire TV Stick e Roku, e nas lojas Amazon Appstore e Aptoide. Em breve também na Google Play, Samsung Smart TV, LG Smart TV, Whale TV, Titan OS, iPhone, iPad e Apple TV.'),
     array('Posso usar em mais de um aparelho?', 'Cada assinatura ativa 1 aparelho. Para usar em outro aparelho, faça uma nova assinatura.'),
     array('Como faço para ser revendedor?', 'Clique em "Revenda", crie a sua conta e compre créditos. Cada crédito ativa 1 aparelho por 1 ano. Você ganha um painel próprio para gerenciar seus clientes, servidores e a sua marca.'),
     array('Com quem falo sobre problemas na playlist?', 'Problemas com canais, quedas ou conteúdo da lista devem ser tratados com o fornecedor da sua playlist. Dúvidas sobre o app e a ativação são com a gente.'),
