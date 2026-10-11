@@ -17,20 +17,46 @@ function training_videos(){
     );
 }
 
+// Idiomas com vídeo: assets/training/<idioma>/<arquivo>
+function training_langs(){
+    $out = array();
+    foreach (array('pt' => 'Português', 'en' => 'English', 'es' => 'Español') as $k => $n) {
+        if (is_dir(__DIR__.'/../assets/training/'.$k)) $out[$k] = $n;
+    }
+    return $out;
+}
+
+// Idioma dos vídeos: o escolhido na página (?vlang=), senão o do portal; sem vídeos nesse idioma, inglês e depois português
+function training_lang(){
+    $langs = training_langs();
+    $want = isset($_GET['vlang']) ? (string)$_GET['vlang'] : (function_exists('i18n_lang') ? i18n_lang() : 'pt');
+    if (isset($langs[$want])) return $want;
+    if (isset($langs['en']) && $want != 'pt') return 'en';
+    return isset($langs['pt']) ? 'pt' : (string)key($langs);
+}
+
 // Só os vídeos que já existem no servidor
-function training_available($prefix = ''){
+function training_available($lang){
     $out = array();
     foreach (training_videos() as $v) {
-        if (is_file(__DIR__.'/../assets/training/'.$v[0])) $out[] = $v;
+        if (is_file(__DIR__.'/../assets/training/'.$lang.'/'.$v[0])) $out[] = $v;
     }
     return $out;
 }
 
 function training_render($prefix = ''){
-    $list = training_available($prefix);
+    $lang = training_lang();
+    $list = training_available($lang);
     if (!$list) { echo '<div class="alert alert-info">Os vídeos de treinamento ainda estão sendo preparados.</div>'; return; }
-    $base = $prefix.'assets/training/';
-    ?>
+    $base = $prefix.'assets/training/'.$lang.'/';
+    $langs = training_langs();
+    if (count($langs) > 1) { ?>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3" translate="no">
+            <?php foreach ($langs as $k => $n) { ?>
+                <a href="?vlang=<?php echo $k; ?>" class="btn btn-sm <?php echo $k == $lang ? 'btn-primary' : 'btn-outline-secondary'; ?>"><?php echo $n; ?></a>
+            <?php } ?>
+        </div>
+    <?php } ?>
     <style>
         .tr-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
         .tr-player { background: #050814; border-radius: 14px; overflow: hidden; box-shadow: 0 6px 20px rgba(15,23,42,.12); }
