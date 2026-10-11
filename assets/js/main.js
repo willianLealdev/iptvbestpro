@@ -130,15 +130,31 @@ const Bundle = function() {
         const compact = 'nsofts-compact-sidebar';
         const compactSidebar = 'compact_sidebar';
 
-        if (localStorage.getItem(compactSidebar) === 'true') {
+        // Abaixo de 1200px (celular/tablet) a classe abre o menu por cima da página: ele começa fechado
+        // e fecha sozinho ao escolher um item ou tocar fora. No computador a classe só compacta o menu e fica salva.
+        const isMobile = function() { return window.innerWidth < 1200; };
+        const closeMobile = function() {
+            if (isMobile() && body.hasClass(compact)) {
+                body.removeClass(compact);
+                hamburger.removeClass(active);
+            }
+        };
+
+        if (!isMobile() && localStorage.getItem(compactSidebar) === 'true') {
             body.addClass(compact);
             hamburger.addClass(active);
         }
 
-        hamburger.on('click', function() {
+        hamburger.on('click', function(e) {
+            e.stopPropagation();
             $(this).toggleClass(active);
             body.toggleClass(compact);
-            body.hasClass(compact) ? localStorage.setItem(compactSidebar, true) : localStorage.removeItem(compactSidebar);
+            if (!isMobile()) body.hasClass(compact) ? localStorage.setItem(compactSidebar, true) : localStorage.removeItem(compactSidebar);
+        });
+
+        $('#nsofts_sidebar').on('click', 'a[href]:not([href^="javascript"])', closeMobile);
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#nsofts_sidebar, #nsofts_hamburger').length) closeMobile();
         });
 
         // Submenu

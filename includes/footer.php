@@ -11,7 +11,7 @@
     <script src="assets/vendors/chartjs/chart.min.js"></script>
 
     <!-- Main script -->
-    <script src="assets/js/main.js"></script>
+    <script src="assets/js/main.js?v=2"></script>
     
     <script type="text/javascript">
     

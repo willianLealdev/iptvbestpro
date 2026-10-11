@@ -152,6 +152,13 @@ function rv_footer($page_script = ''){ ?>
     </main>
     <script src="../assets/vendors/bootstrap/bootstrap.min.js"></script>
     <script>
+    // celular: o menu aberto fecha ao escolher um item ou tocar fora dele
+    document.addEventListener('click', function (e) {
+        var nav = document.getElementById('rvNav');
+        if (!nav || !nav.classList.contains('show') || e.target.closest('.navbar-toggler')) return;
+        if (e.target.closest('#rvNav') && !e.target.closest('a.nav-link')) return;
+        try { bootstrap.Collapse.getOrCreateInstance(nav).hide(); } catch (x) { nav.classList.remove('show'); }
+    });
     document.addEventListener('click', function (e) {
         var c = e.target.closest('[data-copy]');
         if (!c) return;
