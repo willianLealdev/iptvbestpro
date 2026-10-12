@@ -221,3 +221,12 @@ function devices_today_start(){
     $d = new DateTime('today', new DateTimeZone(DEVICES_TZ));
     return $d->getTimestamp();
 }
+
+// Bandeira e sigla do país de onde o aparelho se registrou (pelo IP). Vazio quando o país não é conhecido.
+function devices_flag($code, $name = ''){
+    $code = strtoupper(trim((string)$code));
+    if (!preg_match('/^[A-Z]{2}$/', $code) || $code == 'XX') return '';
+    $title = htmlspecialchars($name != '' ? $name.' ('.$code.')' : $code, ENT_QUOTES, 'UTF-8');
+    return '<span class="dv-flag" title="'.$title.'" translate="no" style="display:inline-flex;align-items:center;gap:4px;margin-left:6px;font-size:11px;font-weight:600;color:#6b7a99;vertical-align:middle">'
+        .'<img src="https://flagcdn.com/w20/'.strtolower($code).'.png" alt="" width="20" height="15" style="border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.08)" loading="lazy">'.$code.'</span>';
+}

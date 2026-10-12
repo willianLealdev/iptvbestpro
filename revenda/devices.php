@@ -118,7 +118,7 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
                     <td>
                         <?php echo rv_e($d['device_id']); ?>
                         <span class="rv-copy ms-1" data-copy="<?php echo rv_e($d['device_id']); ?>"><i class="ri-file-copy-line"></i></span>
-                        <?php if ($d['device_model'] != '') { ?><br><small class="rv-muted"><?php echo rv_e($d['device_model']); ?></small><?php } ?>
+                        <?php if ($d['device_model'] != '' || $d['country_code'] != '') { ?><br><small class="rv-muted"><?php echo rv_e($d['device_model']); ?></small><?php echo devices_flag($d['country_code'], $d['country_name']); ?><?php } ?>
                     </td>
                     <td><?php echo rv_e($d['app_label']); ?></td>
                     <td><?php echo (int)$d['used_credits']; ?></td>

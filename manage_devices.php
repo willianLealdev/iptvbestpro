@@ -396,7 +396,7 @@
                                         <td>
                                             <span><?php echo htmlspecialchars($row['device_id']); ?></span>
                                             <i class="ri-file-copy-line dv-copy" data-copy="<?php echo htmlspecialchars($row['device_id']); ?>" title="Copiar"></i>
-                                            <?php if($row['device_model'] != ''){ ?><br><small class="dv-muted"><?php echo htmlspecialchars($row['device_model']); ?></small><?php } ?>
+                                            <?php if($row['device_model'] != '' || $row['country_code'] != ''){ ?><br><small class="dv-muted"><?php echo htmlspecialchars($row['device_model']); ?></small><?php echo devices_flag($row['country_code'], $row['country_name']); ?><?php } ?>
                                         </td>
                                         <td>
                                             <?php $who = $owner_label != '' ? $owner_label : $row['activated_by']; ?>
