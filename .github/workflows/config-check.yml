@@ -22,7 +22,8 @@ jobs:
         # falha se algum arquivo PHP tiver erro de sintaxe (antes o passo sempre passava)
         run: docker run --rm --entrypoint sh painel-check -c 'cd /var/www/html && find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l > /tmp/lint.txt 2>&1; grep -v "^No syntax errors" /tmp/lint.txt; ! grep -qiE "parse error|fatal error" /tmp/lint.txt'
       - name: QR code (biblioteca do painel)
-        run: docker run --rm --entrypoint php painel-check -r 'require "/var/www/html/vendor/autoload.php"; $o = new chillerlan\QRCode\QROptions(); $o->outputType = chillerlan\QRCode\Output\QROutputInterface::GDIMAGE_PNG; $o->outputBase64 = false; $png = (new chillerlan\QRCode\QRCode($o))->render("https://iptvbestpro.com/lista?d=teste"); if (substr($png, 1, 3) !== "PNG") { fwrite(STDERR, "QR falhou"); exit(1); } echo "QR ok: ", strlen($png), " bytes";'
+        run: |
+          docker run --rm --entrypoint php painel-check -r 'require "/var/www/html/vendor/autoload.php"; $o = new chillerlan\QRCode\QROptions(); $o->outputType = chillerlan\QRCode\Output\QROutputInterface::GDIMAGE_PNG; $o->outputBase64 = false; $png = (new chillerlan\QRCode\QRCode($o))->render("https://iptvbestpro.com/lista?d=teste"); if (substr($png, 1, 3) !== "PNG") { fwrite(STDERR, "QR falhou"); exit(1); } echo "QR ok ", strlen($png), " bytes";'
       - name: Teste de requisições
         run: |
           docker run -d --name painel --entrypoint apache2-foreground -p 8080:80 painel-check
