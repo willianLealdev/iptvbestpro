@@ -325,6 +325,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
             <a href="#como-funciona">Como funciona</a>
             <a href="#planos">Planos</a>
             <a href="#revenda">Revenda</a>
+            <a href="#servidores">Servidores</a>
             <a href="#faq">Dúvidas</a>
             <a href="download">Baixar app</a>
         </nav>
@@ -341,6 +342,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
         <a href="#como-funciona">Como funciona</a>
         <a href="#planos">Planos</a>
         <a href="#revenda">Revenda</a>
+        <a href="#servidores">Servidores</a>
         <a href="#faq">Dúvidas</a>
         <a href="download">Baixar app</a>
         <div class="btns">
@@ -498,6 +500,29 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
                     <div class="rv-item"><i class="ri-dashboard-3-line"></i><div><b>Painel do revendedor</b><span>Veja seus aparelhos, validades e clientes em tempo real.</span></div></div>
                     <div class="rv-item"><i class="ri-palette-line"></i><div><b>Sua marca no app</b><span>Logo, cores e pôsteres próprios para os seus clientes.</span></div></div>
                     <div class="rv-item"><i class="ri-server-line"></i><div><b>Seus servidores</b><span>Cadastre os seus DNS e o app troca sozinho se um cair.</span></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="servidores" class="alt">
+        <div class="wrap">
+            <div class="reseller reveal">
+                <div>
+                    <span class="eyebrow">Para servidores IPTV</span>
+                    <div class="excl"><i class="ri-shake-hands-fill"></i> Programa de parceria para <b>servidores e provedores</b></div>
+                    <h2 class="h2">O seu servidor com app próprio, sem trabalho de ativação</h2>
+                    <p class="sub">Você compra pacotes de ativações e recebe um código. O cliente digita o código no <?php echo lp_e($name); ?> e o aparelho ativa na hora. Depois ele mesmo envia o usuário e a senha, e o app usa só os seus servidores.</p>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:28px">
+                        <a href="servidor/register.php" class="btn btn-gold btn-lg"><i class="ri-server-line"></i> Quero ser parceiro</a>
+                        <a href="servidor/" class="btn btn-ghost btn-lg">Já sou parceiro</a>
+                    </div>
+                </div>
+                <div class="rv-list">
+                    <div class="rv-item"><i class="ri-flashlight-line"></i><div><b>Ativação automática</b><span>O cliente digita o seu código e o aparelho ativa na hora, usando 1 crédito do seu pacote.</span></div></div>
+                    <div class="rv-item"><i class="ri-shield-check-line"></i><div><b>Só as suas DNS</b><span>As listas são conferidas só nos seus servidores. Ninguém usa o seu código com outra lista.</span></div></div>
+                    <div class="rv-item"><i class="ri-qr-code-line"></i><div><b>Lista enviada pelo cliente</b><span>O app mostra um QR code e o cliente envia usuário e senha pelo celular. Você não precisa cadastrar um por um.</span></div></div>
+                    <div class="rv-item"><i class="ri-palette-line"></i><div><b>Sua marca e seus pôsteres</b><span>Logo, cores e pôsteres do seu servidor em todos os aparelhos ativados com o seu código.</span></div></div>
                 </div>
             </div>
         </div>
