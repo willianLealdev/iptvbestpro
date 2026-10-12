@@ -122,11 +122,12 @@ img{max-width:100%;display:block}
 /* navegação */
 .nav{position:sticky;top:0;z-index:50;background:rgba(7,11,24,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 .nav .wrap{display:flex;align-items:center;gap:24px;height:72px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.2px;white-space:nowrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.2px;white-space:nowrap;flex:none}
 .brand img{width:42px;height:42px;border-radius:11px;object-fit:cover}
-.menu{display:flex;gap:26px;margin-left:12px;font-size:14.5px;font-weight:500;color:var(--muted)}
+.menu{display:flex;align-items:center;gap:16px;margin-left:20px;font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap;min-width:0}
+.menu a{white-space:nowrap}
 .menu a:hover{color:var(--text)}
-.nav-cta{margin-left:auto;display:flex;gap:10px}
+.nav-cta{margin-left:auto;display:flex;gap:10px;flex:none}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;border-radius:999px;font-weight:600;font-size:14.5px;border:1px solid transparent;transition:.2s;cursor:pointer;white-space:nowrap}
 .btn i{font-size:18px}
 .btn-gold{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1300;box-shadow:0 8px 24px rgba(245,184,46,.25)}
@@ -288,10 +289,12 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
 .reveal.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.rv-pulse{animation:none}.reveal{opacity:1;transform:none;transition:none}html{scroll-behavior:auto}}
 
-@media (max-width:1020px){
+@media (max-width:1180px){
     .menu,.nav-cta{display:none}
     .burger{display:block;margin-left:10px}
     .lang-m{display:block}
+}
+@media (max-width:1020px){
     .grid4{grid-template-columns:repeat(2,1fr)}
     .about,.reseller{grid-template-columns:1fr}
     .reseller{padding:40px 28px}
@@ -327,7 +330,6 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
             <a href="#revenda">Revenda</a>
             <a href="#servidores">Servidores</a>
             <a href="#faq">Dúvidas</a>
-            <a href="download">Baixar app</a>
         </nav>
         <div class="nav-cta">
             <?php echo i18n_switcher('dark'); ?>
