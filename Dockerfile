@@ -12,7 +12,7 @@ RUN composer require maxmind-db/reader:^1.11 --no-interaction --no-progress --no
 # Etapa 2: PHPMailer atualizado (substitui o vendor/ antigo do pacote original)
 FROM composer:2 AS mailer
 WORKDIR /mail
-RUN composer require phpmailer/phpmailer:^6.9 --no-interaction --no-progress --no-plugins --optimize-autoloader
+RUN composer require phpmailer/phpmailer:^6.9 chillerlan/php-qrcode:^5.0 --no-interaction --no-progress --no-plugins --optimize-autoloader --ignore-platform-req=ext-gd
 
 FROM php:8.2-apache
 

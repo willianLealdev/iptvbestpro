@@ -135,6 +135,8 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
     $srv = server_of_device($mysqli, $device);
     $set[$API_NAME][$last]['owner_kind'] = $srv ? 'server' : ($device ? (string)$device['owner'] : '');
     $set[$API_NAME][$last]['upload_url'] = $srv ? server_upload_url($device['device_id']) : '';
+    // imagem do QR code dessa página, para os apps que não geram QR code sozinhos (Roku)
+    $set[$API_NAME][$last]['upload_qr'] = $srv ? rtrim(brand_mail_base_url(), '/').'/qr?d='.rawurlencode($device['device_id']) : '';
     if ($srv && $status == 'expired') $set[$API_NAME][$last]['MSG'] = 'Sua ativação venceu. Digite o código do seu servidor de novo para renovar.';
     $set[$API_NAME][$last]['portal_url'] = $sp_base.'/cliente/';
     header( 'Content-Type: application/json; charset=utf-8' );
