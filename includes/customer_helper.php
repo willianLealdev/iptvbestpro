@@ -156,6 +156,8 @@ function subscription_code_generate($mysqli){
         mysqli_stmt_store_result($stmt);
         $exists = mysqli_stmt_num_rows($stmt) > 0;
         mysqli_stmt_close($stmt);
+        // também não pode ser o código de um servidor parceiro (mesmo formato de 8 números)
+        if (!$exists) { $r = mysqli_query($mysqli, "SELECT id FROM tbl_resellers WHERE code = '".$code."'"); $exists = $r && mysqli_num_rows($r) > 0; }
         if (!$exists) return $code;
     }
     return false;

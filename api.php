@@ -130,6 +130,12 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
     $set[$API_NAME][$last]['support_whatsapp'] = $sp['whatsapp'];
     $set[$API_NAME][$last]['support_note'] = $sp['note'];
     $set[$API_NAME][$last]['renew_url'] = ($device && $device['owner'] != 'reseller') ? $sp_base.'/cliente/' : '';
+    // Servidor parceiro: o app mostra o QR da página de envio da lista (/lista) até a lista chegar
+    require_once("includes/server_helper.php");
+    $srv = server_of_device($mysqli, $device);
+    $set[$API_NAME][$last]['owner_kind'] = $srv ? 'server' : ($device ? (string)$device['owner'] : '');
+    $set[$API_NAME][$last]['upload_url'] = $srv ? server_upload_url($device['device_id']) : '';
+    if ($srv && $status == 'expired') $set[$API_NAME][$last]['MSG'] = 'Sua ativação venceu. Digite o código do seu servidor de novo para renovar.';
     $set[$API_NAME][$last]['portal_url'] = $sp_base.'/cliente/';
     header( 'Content-Type: application/json; charset=utf-8' );
     echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));

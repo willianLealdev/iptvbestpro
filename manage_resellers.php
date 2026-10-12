@@ -41,7 +41,10 @@
     $sort = (isset($_GET['sort']) && isset($sortable[$_GET['sort']])) ? $_GET['sort'] : 'created';
     $dir = (isset($_GET['dir']) && strtolower($_GET['dir']) == 'asc') ? 'ASC' : 'DESC';
 
-    $where = array();
+    // servidores parceiros ficam em Servidores (manage_servers.php)
+    require_once("includes/server_helper.php");
+    server_migrate($mysqli);
+    $where = array(isset($rs_kind) ? "r.kind = '".$rs_kind."'" : "r.kind <> 'server'");
     if($keyword != ''){
         $kw = mysqli_real_escape_string($mysqli, $keyword);
         $where[] = "(r.name LIKE '%$kw%' OR r.email LIKE '%$kw%' OR r.remark LIKE '%$kw%' OR r.code LIKE '%$kw%' OR r.phone LIKE '%$kw%')";

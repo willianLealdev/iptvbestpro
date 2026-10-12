@@ -156,11 +156,16 @@
     $sort = (isset($_GET['sort']) && isset($sortable[$_GET['sort']])) ? $_GET['sort'] : 'seen';
     $dir = (isset($_GET['dir']) && strtolower($_GET['dir']) == 'asc') ? 'ASC' : 'DESC';
 
-    $tab = (isset($_GET['tab']) && $_GET['tab'] == 'dev') ? 'dev' : '';
+    $tab = (isset($_GET['tab']) && in_array($_GET['tab'], array('dev', 'srv'))) ? $_GET['tab'] : '';
     $now = time();
-    $where = array($tab == 'dev' ? "d.is_dev = 1" : "d.is_dev <> 1");
-    $dev_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices WHERE is_dev = 1"))['n'];
-    $real_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices WHERE is_dev <> 1"))['n'];
+    // aparelhos ativados com o código de um servidor parceiro ficam numa aba só deles
+    require_once("includes/server_helper.php");
+    server_migrate($mysqli);
+    $srv_sql = "(d.owner = 'reseller' AND d.reseller_id IN (SELECT id FROM tbl_resellers WHERE kind = 'server'))";
+    $where = array($tab == 'dev' ? "d.is_dev = 1" : ($tab == 'srv' ? "d.is_dev <> 1 AND $srv_sql" : "d.is_dev <> 1 AND NOT $srv_sql"));
+    $dev_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE d.is_dev = 1"))['n'];
+    $srv_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE d.is_dev <> 1 AND $srv_sql"))['n'];
+    $real_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE d.is_dev <> 1 AND NOT $srv_sql"))['n'];
     if($keyword != ''){
         $kw = mysqli_real_escape_string($mysqli, $keyword);
         $where[] = "(d.customer_name LIKE '%$kw%' OR d.device_id LIKE '%$kw%' OR d.activated_by LIKE '%$kw%' OR d.device_model LIKE '%$kw%' OR d.ip_address LIKE '%$kw%')";
@@ -297,14 +302,18 @@
             <div class="card-body p-4">
                 <div class="dv-tabs">
                     <a href="manage_devices.php" class="<?php echo $tab == '' ? 'active' : ''; ?>"><i class="ri-device-line"></i>Dispositivos <span class="dv-count"><?php echo thousandsNumberFormat($real_count); ?></span></a>
+                    <a href="manage_devices.php?tab=srv" class="<?php echo $tab == 'srv' ? 'active' : ''; ?>"><i class="ri-server-line"></i>Servidores <span class="dv-count"><?php echo thousandsNumberFormat($srv_count); ?></span></a>
                     <a href="manage_devices.php?tab=dev" class="<?php echo $tab == 'dev' ? 'active' : ''; ?>"><i class="ri-bug-line"></i>Dispositivos dev <span class="dv-count"><?php echo thousandsNumberFormat($dev_count); ?></span></a>
                 </div>
+                <?php if($tab == 'srv'){ ?>
+                    <p class="text-muted small mb-3">Aparelhos ativados com o código de um servidor parceiro. A ativação é automática (1 crédito do servidor) e a lista é enviada pelo cliente na página /lista.</p>
+                <?php } ?>
                 <?php if($tab == 'dev'){ ?>
                     <p class="text-muted small mb-3">Aparelhos de teste (emuladores, revisão das lojas e os que você marcar). Ficam fora da lista de dispositivos reais.</p>
                 <?php } ?>
                 <div class="dv-toolbar">
                     <form method="get" action="manage_devices.php" class="d-flex flex-wrap gap-2">
-                        <?php if($tab == 'dev'){ ?><input type="hidden" name="tab" value="dev"><?php } ?>
+                        <?php if($tab != ''){ ?><input type="hidden" name="tab" value="<?php echo $tab; ?>"><?php } ?>
                         <div class="dv-search">
                             <i class="ri-search-line"></i>
                             <input type="text" name="keyword" class="form-control" placeholder="Buscar cliente, MAC, e-mail ou IP" value="<?php echo htmlspecialchars($keyword); ?>">
@@ -342,7 +351,7 @@
                             <?php } ?>
                         </select>
                         <?php if($keyword != '' || $app_filter != '' || $pkg_filter != '' || $status_filter != '' || $owner_filter != ''){ ?>
-                            <a href="manage_devices.php<?php echo $tab == 'dev' ? '?tab=dev' : ''; ?>" class="btn btn-outline-secondary d-inline-flex align-items-center">Limpar</a>
+                            <a href="manage_devices.php<?php echo $tab != '' ? '?tab='.$tab : ''; ?>" class="btn btn-outline-secondary d-inline-flex align-items-center">Limpar</a>
                         <?php } ?>
                     </form>
                     <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center js-devices-refresh" title="Atualiza sozinho a cada 10 segundos"><i class="ri-refresh-line"></i><span class="ps-1">Atualizar</span></button>

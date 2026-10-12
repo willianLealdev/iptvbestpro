@@ -26,6 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $id = credit_orders_create($mysqli, $rid, $qty);
             rv_flash($id ? 'success' : 'error', $id ? 'Pedido #'.$id.' criado. Siga as instruções de pagamento abaixo.' : 'Não foi possível criar o pedido.');
         }
+    } else if (isset($_POST['buy_package']) && rv_is_server()) {
+        // servidor parceiro: compra um pacote criado pelo admin
+        $pending = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_credit_orders WHERE reseller_id = $rid AND status = 'pending'"));
+        if ((int)$pending['num'] >= 3) {
+            rv_flash('error', 'Você já tem 3 pedidos aguardando pagamento. Pague ou cancele um deles antes de criar outro.');
+        } else {
+            $id = server_order_create($mysqli, $rid, (int)$_POST['package_id']);
+            rv_flash($id ? 'success' : 'error', $id ? 'Pedido #'.$id.' criado. Siga as instruções de pagamento abaixo.' : 'Este pacote não está disponível. Escolha outro.');
+        }
     } else if (isset($_POST['cancel_order'])) {
         $ok = credit_orders_cancel($mysqli, (int)$_POST['order_id'], $rid);
         rv_flash($ok ? 'success' : 'error', $ok ? 'Pedido cancelado.' : 'Não foi possível cancelar este pedido.');
@@ -48,9 +57,39 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
             </div>
             <div class="p-3 rounded small" style="background:#f7f9fe;">
                 <b>1 crédito = 1 ano</b> de ativação para 1 aparelho.<br>
-                2 anos = 2 créditos, 3 anos = 3 créditos, e assim por diante (até <?php echo MAX_ACTIVATION_YEARS; ?> anos).
+                <?php if (rv_is_server()) { ?>
+                    Cada vez que um cliente digita o seu código no app, 1 crédito é usado e o aparelho ativa na hora. Quando vence, o cliente digita o código de novo.
+                <?php } else { ?>
+                    2 anos = 2 créditos, 3 anos = 3 créditos, e assim por diante (até <?php echo MAX_ACTIVATION_YEARS; ?> anos).
+                <?php } ?>
             </div>
         </div>
+<?php if (rv_is_server()) { $pkgs = server_packages($mysqli); ?>
+        <div class="rv-card p-4">
+            <h2 class="rv-title fs-5 mb-1">Comprar pacotes</h2>
+            <p class="rv-muted small mb-3">Preços em <?php echo $currency == 'USD' ? 'dólar (US$) · pagamento com cartão' : 'real (R$) · Pix ou cartão'; ?>.</p>
+            <?php if (!$pkgs) { ?>
+                <div class="alert alert-info mb-0">Nenhum pacote disponível no momento. <?php echo $contact != '' ? 'Contato: '.rv_e($contact) : 'Fale com o administrador.'; ?></div>
+            <?php } else { ?>
+                <div class="d-grid gap-3">
+                    <?php foreach ($pkgs as $p) { $pp = server_package_price($p, $currency); if ($pp <= 0) continue; ?>
+                        <form method="post" class="d-flex align-items-center gap-3 p-3 rounded border">
+                            <?php echo rv_csrf_field(); ?>
+                            <input type="hidden" name="package_id" value="<?php echo (int)$p['id']; ?>">
+                            <div class="flex-grow-1">
+                                <b class="d-block"><?php echo rv_e($p['name']); ?></b>
+                                <span class="rv-muted small"><?php echo (int)$p['credits']; ?> créditos · <?php echo money_currency($pp / max(1, (int)$p['credits']), $currency); ?> por aparelho</span>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold fs-5"><?php echo money_currency($pp, $currency); ?></div>
+                                <button type="submit" name="buy_package" value="1" class="btn btn-sm rv-btn-green mt-1"><i class="ri-shopping-cart-2-line"></i> Comprar</button>
+                            </div>
+                        </form>
+                    <?php } ?>
+                </div>
+            <?php } ?>
+        </div>
+<?php } else { ?>
 
         <div class="rv-card p-4">
             <h2 class="rv-title fs-5 mb-1">Comprar créditos</h2>
@@ -111,6 +150,7 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
                 </form>
             <?php } ?>
         </div>
+<?php } ?>
     </div>
 
     <div class="col-lg-7">

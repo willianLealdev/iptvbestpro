@@ -5,7 +5,7 @@ require_once(__DIR__."/../includes/auth_layout.php");
 
 if (rv_current($mysqli)) rv_redirect('dashboard.php');
 if (!rv_signup_enabled($mysqli)) {
-    rv_flash('error', 'O cadastro de novos revendedores está fechado no momento.');
+    rv_flash('error', rv_is_server() ? 'O cadastro de novos servidores está fechado no momento.' : 'O cadastro de novos revendedores está fechado no momento.');
     rv_redirect('index.php');
 }
 acc_migrate($mysqli);
@@ -37,21 +37,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         if ($existing) {
             // Não revela que o e-mail já existe: mostra a mesma tela e avisa o dono por e-mail
-            acc_send_exists_notice('reseller', $existing);
+            acc_send_exists_notice(rv_is_server() ? 'server' : 'reseller', $existing);
             $sent_to = $form['email'];
         } else {
-            $code = activation_code_generate($mysqli);
+            $code = rv_is_server() ? server_code_generate($mysqli) : activation_code_generate($mysqli);
+            $kind = RV_KIND;
             $hash = password_hash($password, PASSWORD_DEFAULT);
             $now = time();
             $country = devices_country(devices_client_ip());
             $currency = ($country['code'] == '' || strtoupper($country['code']) == 'BR') ? 'BRL' : 'USD';
-            $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_resellers (name, email, phone, password, code, credits, status, remark, currency, email_verified, created_at, updated_at) VALUES (?,?,?,?,?,0,1,'Cadastro pelo site',?,0,?,?)");
-            mysqli_stmt_bind_param($stmt, 'ssssssii', $form['name'], $form['email'], $form['phone'], $hash, $code, $currency, $now, $now);
+            $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_resellers (name, email, phone, password, code, credits, status, remark, currency, email_verified, created_at, updated_at, kind) VALUES (?,?,?,?,?,0,1,'Cadastro pelo site',?,0,?,?,?)");
+            mysqli_stmt_bind_param($stmt, 'ssssssiis', $form['name'], $form['email'], $form['phone'], $hash, $code, $currency, $now, $now, $kind);
             $ok = $code !== false && mysqli_stmt_execute($stmt);
             $new_id = mysqli_insert_id($mysqli);
             mysqli_stmt_close($stmt);
             if ($ok && $new_id) {
-                acc_send_verify($mysqli, 'reseller', array('id' => $new_id, 'name' => $form['name'], 'email' => $form['email']));
+                acc_send_verify($mysqli, rv_is_server() ? 'server' : 'reseller', array('id' => $new_id, 'name' => $form['name'], 'email' => $form['email']));
                 $sent_to = $form['email'];
             } else {
                 $errors[] = 'Não foi possível concluir o cadastro. Tente novamente.';
@@ -61,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 if ($sent_to !== '') {
-    auth_start(array('prefix' => '../', 'title' => 'Confirme seu e-mail', 'badge' => 'Seja um Revendedor', 'icon' => 'ri-store-2-line')); ?>
+    auth_start(array('prefix' => '../', 'title' => 'Confirme seu e-mail', 'badge' => rv_is_server() ? 'Seja um Parceiro' : 'Seja um Revendedor', 'icon' => rv_is_server() ? 'ri-server-line' : 'ri-store-2-line')); ?>
         <div class="au-done">
             <div class="au-done__ico"><i class="ri-mail-send-line"></i></div>
             <h2>Confirme seu e-mail</h2>
@@ -73,7 +74,8 @@ if ($sent_to !== '') {
     exit;
 }
 
-auth_start(array('prefix' => '../', 'title' => 'Cadastro', 'badge' => 'Seja um Revendedor', 'icon' => 'ri-store-2-line', 'wide' => true, 'subtitle' => 'Crie sua conta e receba seu código exclusivo de ativação.')); ?>
+auth_start(array('prefix' => '../', 'title' => 'Cadastro', 'badge' => rv_is_server() ? 'Seja um Parceiro' : 'Seja um Revendedor', 'icon' => rv_is_server() ? 'ri-server-line' : 'ri-store-2-line', 'wide' => true,
+    'subtitle' => rv_is_server() ? 'Cadastre o seu servidor e receba o seu código de ativação: o cliente digita no app e o aparelho ativa na hora.' : 'Crie sua conta e receba seu código exclusivo de ativação.')); ?>
         <?php auth_alert('err', $errors); ?>
         <form method="post">
             <?php echo rv_csrf_field(); ?>

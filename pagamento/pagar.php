@@ -18,7 +18,8 @@ if (!$p || $owner_id !== (int)$p['owner_id']) {
     header('Location: ../cliente/');
     exit;
 }
-$back = $p['owner_type'] == 'reseller' ? '../revenda/credits.php' : '../cliente/dashboard.php';
+$back = '../cliente/dashboard.php';
+if ($p['owner_type'] == 'reseller') { require_once(__DIR__.'/../includes/server_helper.php'); $back = '../'.server_portal_dir($mysqli, (int)$p['owner_id']).'/credits.php'; }
 
 // Retorno do Stripe: confirma na hora consultando a sessão (o webhook também confirma)
 if ($p['provider'] == 'stripe' && isset($_GET['s']) && $_GET['s'] == 'ok' && $p['provider_id'] != '') pay_stripe_sync($mysqli, $p['provider_id']);

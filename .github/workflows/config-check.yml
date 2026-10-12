@@ -19,7 +19,8 @@ jobs:
       - name: Apache configtest
         run: docker run --rm --entrypoint apache2ctl painel-check -t
       - name: PHP lint
-        run: docker run --rm --entrypoint sh painel-check -c 'cd /var/www/html && find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l | grep -v "^No syntax errors" || true'
+        # falha se algum arquivo PHP tiver erro de sintaxe (antes o passo sempre passava)
+        run: docker run --rm --entrypoint sh painel-check -c 'cd /var/www/html && find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l > /tmp/lint.txt 2>&1; grep -v "^No syntax errors" /tmp/lint.txt; ! grep -qiE "parse error|fatal error" /tmp/lint.txt'
       - name: Teste de requisições
         run: |
           docker run -d --name painel --entrypoint apache2-foreground -p 8080:80 painel-check

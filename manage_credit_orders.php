@@ -10,6 +10,8 @@
     }
 
     resellers_migrate($mysqli);
+    require_once("includes/server_helper.php");
+    server_migrate($mysqli); // pedidos de pacote dos servidores parceiros ficam na mesma lista
     $admin_id = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
 
     function co_flash($ok, $msg){
@@ -65,7 +67,7 @@
     if($page > $last_page){ $page = $last_page; }
     $start = ($page - 1) * $limit;
 
-    $result = mysqli_query($mysqli, "SELECT o.*, r.name AS reseller_name, r.email AS reseller_email, r.phone AS reseller_phone
+    $result = mysqli_query($mysqli, "SELECT o.*, r.name AS reseller_name, r.email AS reseller_email, r.phone AS reseller_phone, r.kind AS reseller_kind
                                      FROM tbl_credit_orders o LEFT JOIN tbl_resellers r ON r.id = o.reseller_id
                                      $where_sql ORDER BY (o.status = 'pending') DESC, o.id DESC LIMIT $start, $limit");
 
@@ -145,7 +147,7 @@
                                         <td><?php echo (int)$o['id']; ?></td>
                                         <td><?php echo date('d/m/Y H:i', $o['created_at']); ?></td>
                                         <td class="text-start">
-                                            <b><?php echo htmlspecialchars((string)$o['reseller_name']); ?></b><br>
+                                            <b><?php echo htmlspecialchars((string)$o['reseller_name']); ?></b><?php if(isset($o['reseller_kind']) && $o['reseller_kind'] == 'server'){ ?> <span class="badge bg-info text-dark">Servidor</span><?php } ?><?php if(!empty($o['package_name'])){ ?> <span class="badge bg-light text-dark border"><?php echo htmlspecialchars($o['package_name']); ?></span><?php } ?><br>
                                             <small class="text-muted"><?php echo htmlspecialchars((string)$o['reseller_email']); ?><?php echo $o['reseller_phone'] != '' ? ' · '.htmlspecialchars($o['reseller_phone']) : ''; ?></small>
                                         </td>
                                         <td><?php echo (int)$o['credits']; ?></td>

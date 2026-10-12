@@ -49,7 +49,7 @@ function accp_verify_page($mysqli, $cfg){
     session_regenerate_id(true);
     $_SESSION[$cfg['session_key']] = (int)$id;
     $msg = 'E-mail confirmado! Seu acesso está ativo.';
-    if ($cfg['type'] == 'reseller' && !empty($row['code'])) $msg .= ' '.__('Seu código de ativação é {0}.', $row['code']);
+    if (($cfg['type'] == 'reseller' || $cfg['type'] == 'server') && !empty($row['code'])) $msg .= ' '.__('Seu código de ativação é {0}.', $row['code']);
     $_SESSION[$cfg['flash_key']] = array('type' => 'success', 'msg' => $msg);
     header('Location: '.$cfg['after_login']);
     exit;

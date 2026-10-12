@@ -41,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $unverified_id = (int)$r['id'];
         } else if ((int)$r['status'] != 1) {
             $error = 'Sua conta está bloqueada. Fale com o administrador.';
+        } else if ((isset($r['kind']) && $r['kind'] != '' ? $r['kind'] : 'reseller') != RV_KIND) {
+            // conta de servidor tentando entrar na revenda (ou o contrário)
+            $error = rv_is_server() ? 'Esta conta é de revendedor. Entre pela Área do Revendedor.' : 'Esta conta é de servidor parceiro. Entre pela Área do Servidor.';
         } else {
             acc_clear_fails($mysqli, 'rv', $email);
             unset($_SESSION['rv_pending_verify']);
@@ -53,7 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 $f = rv_take_flash();
-auth_start(array('prefix' => '../', 'title' => 'Entrar', 'badge' => 'Área do Revendedor', 'icon' => 'ri-store-2-line', 'subtitle' => 'Entre para gerenciar seus aparelhos, créditos e a sua marca.')); ?>
+auth_start(rv_is_server()
+    ? array('prefix' => '../', 'title' => 'Entrar', 'badge' => 'Área do Servidor', 'icon' => 'ri-server-line', 'subtitle' => 'Entre para gerenciar seus créditos, DNS, aparelhos e a sua marca.')
+    : array('prefix' => '../', 'title' => 'Entrar', 'badge' => 'Área do Revendedor', 'icon' => 'ri-store-2-line', 'subtitle' => 'Entre para gerenciar seus aparelhos, créditos e a sua marca.')); ?>
         <?php if ($f) auth_alert($f['type'] == 'success' ? 'ok' : 'err', $f['msg']); ?>
         <?php auth_alert('err', $error); ?>
         <?php auth_alert('ok', $notice); ?>
@@ -74,6 +79,6 @@ auth_start(array('prefix' => '../', 'title' => 'Entrar', 'badge' => 'Área do Re
             <button type="submit" class="au-btn"><i class="ri-login-box-line"></i> Entrar</button>
         </form>
         <?php if (rv_signup_enabled($mysqli)) { ?>
-            <p class="au-alt">Ainda não é revendedor? <a href="register.php">Cadastre-se</a></p>
+            <p class="au-alt"><?php echo rv_is_server() ? 'Ainda não é parceiro?' : 'Ainda não é revendedor?'; ?> <a href="register.php">Cadastre-se</a></p>
         <?php } ?>
 <?php auth_end(); ?>

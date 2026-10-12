@@ -23,6 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rename_submit'])) {
     rv_redirect($back);
 }
 
+// servidor parceiro: a ativação é automática pelo código (aqui não ativa nem renova)
+if (rv_is_server() && isset($_POST['activate_submit'])) unset($_POST['activate_submit']);
+if (rv_is_server()) {
+    require_once(__DIR__."/../includes/playlist_helper.php");
+    playlists_migrate($mysqli);
+}
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['activate_submit'])) {
     if (!rv_csrf_ok()) {
         rv_flash('error', 'Sessão expirada. Tente novamente.');
@@ -103,7 +109,7 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
     <div class="table-responsive">
         <table class="table rv-table mb-0">
             <thead>
-                <tr><th>#</th><th>Cliente</th><th>Mac</th><th>App</th><th>Créditos usados</th><th>Pacote</th><th>Ativação</th><th>Vencimento</th><th>Ação</th></tr>
+                <tr><th>#</th><th>Cliente</th><th>Mac</th><th>App</th><th>Créditos usados</th><th>Pacote</th><th>Ativação</th><th>Vencimento</th><th><?php echo rv_is_server() ? 'Lista' : 'Ação'; ?></th></tr>
             </thead>
             <tbody>
             <?php if (mysqli_num_rows($result) > 0) { $i = 0; while ($d = mysqli_fetch_assoc($result)) { $i++;
@@ -133,12 +139,17 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
                         else if ((int)$d['expires_at'] == 0) echo 'Sem vencimento';
                         else echo '<span class="'.($st == 'expired' ? 'text-danger fw-semibold' : '').'">'.date('d/m/Y', $d['expires_at']).'</span>';
                     ?></td>
+                    <?php if (rv_is_server()) {
+                        $nl = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_users WHERE device_id = '".mysqli_real_escape_string($mysqli, $d['device_id'])."'"))['n']; ?>
+                    <td><?php echo $nl > 0 ? '<span class="dv-badge pk-year"><i class="ri-play-list-line"></i> Lista enviada</span>' : '<span class="dv-badge pk-trial">Sem lista</span>'; ?></td>
+                    <?php } else { ?>
                     <td>
                         <button type="button" class="btn btn-sm <?php echo $st == 'active' ? 'btn-outline-primary' : 'rv-btn-green'; ?> btn_activate" data-pk="<?php echo (int)$d['id']; ?>" data-mac="<?php echo rv_e($d['device_id']); ?>" data-customer="<?php echo rv_e($d['customer_name']); ?>">
                             <i class="ri-flashlight-line"></i> <?php echo $st == 'inactive' ? 'Ativar' : 'Renovar'; ?>
                         </button>
                         <a href="playlist.php?device=<?php echo (int)$d['id']; ?>" class="btn btn-sm btn-outline-secondary ms-1"><i class="ri-play-list-line"></i> Playlist</a>
                     </td>
+                    <?php } ?>
                 </tr>
             <?php } } else { ?>
                 <tr><td colspan="9"><div class="rv-empty"><i class="ri-inbox-line"></i>Nenhum dispositivo. Quando o cliente digitar seu código <b><?php echo rv_e($reseller['code']); ?></b> no app, ele aparece aqui.</div></td></tr>

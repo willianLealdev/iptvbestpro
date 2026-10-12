@@ -8,7 +8,12 @@ require_once(__DIR__."/../includes/lb_helper.php");
 require_once(__DIR__."/../includes/payment_helper.php");
 payments_migrate($mysqli);
 
-function co_back($as){ return $as == 'reseller' ? '../revenda/credits.php' : '../cliente/dashboard.php'; }
+function co_back($as){
+    global $mysqli;
+    if ($as != 'reseller') return '../cliente/dashboard.php';
+    require_once(__DIR__.'/../includes/server_helper.php');
+    return '../'.server_portal_dir($mysqli, isset($_SESSION['rv_id']) ? (int)$_SESSION['rv_id'] : 0).'/credits.php';
+}
 function co_fail($as, $msg){
     $key = $as == 'reseller' ? 'rv_flash' : 'cl_flash';
     $_SESSION[$key] = array('type' => 'error', 'msg' => $msg);

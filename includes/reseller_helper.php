@@ -649,6 +649,12 @@ function devices_purge($mysqli, $ids){
 
 function devices_link($mysqli, $data){
     resellers_migrate($mysqli);
+    // Código de 8 números de um servidor parceiro: ativa na hora, descontando 1 crédito do servidor
+    // (os outros códigos de 8 números são assinaturas de cliente)
+    require_once(__DIR__.'/server_helper.php');
+    if (server_code_matches($mysqli, isset($data['code']) ? $data['code'] : '')) {
+        return server_link_device($mysqli, $data);
+    }
     // Código numérico (8 dígitos) = assinatura de cliente final
     require_once(__DIR__.'/customer_helper.php');
     if (subscription_code_is_numeric(isset($data['code']) ? $data['code'] : '')) {

@@ -7,6 +7,13 @@ require_once(__DIR__."/../includes/lb_helper.php");
 require_once(__DIR__."/../includes/reseller_helper.php");
 
 resellers_migrate($mysqli);
+require_once(__DIR__."/../includes/server_helper.php");
+server_migrate($mysqli);
+
+// Mesmo portal para revenda (/revenda/) e servidor parceiro (/servidor/, que define RV_KIND = 'server')
+if (!defined('RV_KIND')) define('RV_KIND', 'reseller');
+function rv_is_server(){ return RV_KIND == 'server'; }
+function rv_area_label(){ return rv_is_server() ? 'Servidor' : 'Revenda'; }
 
 define('RV_LOGIN_MAX_FAILS', 8); // por IP, por hora
 
@@ -39,6 +46,8 @@ function rv_current($mysqli){
         unset($_SESSION['rv_id']);
         return null;
     }
+    // conta de servidor não entra na área da revenda (e vice-versa)
+    if ((isset($row['kind']) && $row['kind'] != '' ? $row['kind'] : 'reseller') != RV_KIND) return null;
     return geo_sync_account($mysqli, 'tbl_resellers', $row);
 }
 function rv_require_login($mysqli){
@@ -47,7 +56,7 @@ function rv_require_login($mysqli){
     return $r;
 }
 
-function rv_signup_enabled($mysqli){ return panel_config_get($mysqli, 'reseller_signup', '1') == '1'; }
+function rv_signup_enabled($mysqli){ return panel_config_get($mysqli, rv_is_server() ? 'server_signup' : 'reseller_signup', '1') == '1'; }
 
 function rv_head($title, $switcher = true){ ?>
 <!DOCTYPE html>
@@ -55,7 +64,7 @@ function rv_head($title, $switcher = true){ ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo rv_e($title); ?> | <?php echo rv_e(APP_NAME); ?> Revenda</title>
+    <title><?php echo rv_e($title); ?> | <?php echo rv_e(APP_NAME); ?> <?php echo rv_area_label(); ?></title>
     <link href="<?php echo rv_e(brand_logo_url('../')); ?>" rel="icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -148,12 +157,14 @@ function rv_header($mysqli, $reseller, $title, $active){
         array('posters', 'posters.php', 'ri-image-line', 'Pôsteres'),
         array('support', 'support.php', 'ri-customer-service-2-line', 'Suporte'),
     );
+    // servidor parceiro: sem treinamento da revenda
+    if (rv_is_server()) $rv_menu = array_values(array_filter($rv_menu, function ($m) { return $m[0] != 'training'; }));
     ?>
     <!-- menu lateral (no celular abre pelo botão ☰ e fecha ao escolher um item ou tocar fora) -->
     <aside class="rv-side" id="rvSide">
         <a class="rv-side__brand" href="dashboard.php">
             <img src="<?php echo rv_e(brand_logo_url('../')); ?>" alt="" onerror="this.style.display='none'">
-            <span><?php echo rv_e(APP_NAME); ?><small>Revenda</small></span>
+            <span><?php echo rv_e(APP_NAME); ?><small><?php echo rv_area_label(); ?></small></span>
         </a>
         <nav class="rv-side__nav">
             <?php foreach ($rv_menu as $mi) { ?>
@@ -190,7 +201,7 @@ function rv_header($mysqli, $reseller, $title, $active){
             </div>
         </header>
     <main class="rv-main">
-        <?php if (empty($reseller['training_seen']) && $active != 'training' && empty($_SESSION['rv_training_later'])) { ?>
+        <?php if (!rv_is_server() && empty($reseller['training_seen']) && $active != 'training' && empty($_SESSION['rv_training_later'])) { ?>
             <!-- primeiro acesso: convida a assistir o treinamento (some depois que abrir o Treinamento) -->
             <div class="modal fade" id="rvTrainModal" tabindex="-1">
                 <div class="modal-dialog modal-dialog-centered">

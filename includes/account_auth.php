@@ -52,7 +52,7 @@ function acc_migrate($mysqli){
 }
 
 function acc_table($type){
-    $map = array('reseller' => 'tbl_resellers', 'customer' => 'tbl_customers', 'admin' => 'tbl_admin');
+    $map = array('reseller' => 'tbl_resellers', 'server' => 'tbl_resellers', 'customer' => 'tbl_customers', 'admin' => 'tbl_admin');
     return isset($map[$type]) ? $map[$type] : '';
 }
 
@@ -207,7 +207,7 @@ function acc_email_html($title, $paragraphs, $button = '', $url = '', $note = ''
 
 // $path: caminho da área (revenda / cliente / '' para admin)
 function acc_area_url($type, $page){
-    $dir = $type == 'reseller' ? '/revenda/' : ($type == 'customer' ? '/cliente/' : '/');
+    $dir = $type == 'reseller' ? '/revenda/' : ($type == 'server' ? '/servidor/' : ($type == 'customer' ? '/cliente/' : '/'));
     return acc_base_url().$dir.$page;
 }
 

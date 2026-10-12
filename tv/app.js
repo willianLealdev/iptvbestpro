@@ -56,6 +56,7 @@
       act_help: 'Peça o seu código de ativação ao seu fornecedor ou revenda.',
       buy_title: 'Não tem um código?', buy_msg: 'Aponte a câmera do celular para o QR code e compre a sua licença no site. Você recebe o código na hora.', buy_or: 'ou acesse',
       no_net: 'Sem conexão com a internet. Verifique e tente de novo.', server_err: 'Não foi possível falar com o servidor. Tente de novo.',
+      up_title: 'Envie a sua lista', up_msg: 'Aponte a câmera do celular para o QR code e digite o usuário e a senha da sua lista. Esta tela abre sozinha quando a lista chegar.', up_wait: 'Aguardando a lista…',
       no_list: 'Nenhuma lista neste aparelho', no_list_msg: 'Peça para a sua revenda adicionar a sua lista no painel.', retry: 'Tentar de novo',
       list_err: 'Não foi possível carregar esta lista. Fale com a sua revenda.',
       live: 'TV AO VIVO', movies: 'FILMES', series: 'SÉRIES', playlist: 'PLAYLIST', settings: 'CONFIGURAÇÕES',
@@ -87,6 +88,7 @@
       act_help: 'Ask your provider or reseller for your activation code.',
       buy_title: "Don't have a code?", buy_msg: 'Point your phone camera at the QR code and buy your license on the website. You get the code right away.', buy_or: 'or visit',
       no_net: 'No internet connection. Check it and try again.', server_err: 'Could not reach the server. Try again.',
+      up_title: 'Send your list', up_msg: 'Point your phone camera at the QR code and enter your list username and password. This screen opens by itself when the list arrives.', up_wait: 'Waiting for the list…',
       no_list: 'No playlist on this device', no_list_msg: 'Ask your reseller to add your list in the panel.', retry: 'Try again',
       list_err: 'Could not load this list. Contact your reseller.',
       live: 'LIVE TV', movies: 'MOVIES', series: 'SERIES', playlist: 'PLAYLIST', settings: 'SETTINGS',
@@ -118,6 +120,7 @@
       act_help: 'Pide tu código de activación a tu proveedor o revendedor.',
       buy_title: '¿No tienes un código?', buy_msg: 'Apunta la cámara del celular al código QR y compra tu licencia en el sitio. Recibes el código al instante.', buy_or: 'o entra a',
       no_net: 'Sin conexión a internet. Revisa e intenta de nuevo.', server_err: 'No fue posible conectar con el servidor. Intenta de nuevo.',
+      up_title: 'Envía tu lista', up_msg: 'Apunta la cámara del celular al código QR y escribe el usuario y la contraseña de tu lista. Esta pantalla se abre sola cuando llega la lista.', up_wait: 'Esperando la lista…',
       no_list: 'Ninguna lista en este dispositivo', no_list_msg: 'Pide a tu revendedor que agregue tu lista en el panel.', retry: 'Intentar de nuevo',
       list_err: 'No fue posible cargar esta lista. Habla con tu revendedor.',
       live: 'TV EN VIVO', movies: 'PELÍCULAS', series: 'SERIES', playlist: 'PLAYLIST', settings: 'CONFIGURACIÓN',
@@ -634,6 +637,24 @@
     });
   }
   function noList() {
+    // Aparelho de servidor parceiro: QR code da página /lista e confere a cada 5 segundos se a lista chegou
+    var up = (S.status || {}).upload_url;
+    if (up) {
+      show('<div class="card withqr"><img class="logo" src="' + esc(S.brand.logo) + '"><h2>' + esc(t('up_title')) + '</h2><p>' + esc(t('up_msg')) + '</p>' +
+        '<div class="devid">' + esc(t('act_dev')) + '<b>' + esc(DID) + '</b></div><div class="spin"></div><p>' + esc(t('up_wait')) + '</p></div>' +
+        '<div class="buyqr"><h2>' + esc(t('up_title')) + '</h2>' + qrHtml(up) + '<p class="buyurl"><b>' + esc(up.replace(/^https?:\/\//, '').replace(/\?.*$/, '')) + '</b></p></div>',
+        { back: confirmExit });
+      S.screen = 'nolist';
+      every(function () {
+        if (S.screen !== 'nolist') return;
+        api('get_device_user', {}, function (err, arr) {
+          if (err || S.screen !== 'nolist') return;
+          var got = (arr || []).filter(function (p) { return p && p.user_name; });
+          if (got.length) loadPlaylists(false);
+        });
+      }, 5000);
+      return;
+    }
     show('<div class="card"><img class="logo" src="' + esc(S.brand.logo) + '"><h2>' + esc(t('no_list')) + '</h2><p>' + esc(t('no_list_msg')) + '</p>' +
       '<div class="devid">' + esc(t('act_dev')) + '<b>' + esc(DID) + '</b></div><div class="btn gold f" data-a="r">' + esc(t('retry')) + '</div></div>',
       { back: confirmExit, acts: { r: function () { checkStatus(); } } });
