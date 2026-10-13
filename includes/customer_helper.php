@@ -76,6 +76,19 @@ function customers_migrate($mysqli){
 
     $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_subscriptions` LIKE 'is_demo'");
     if ($col && mysqli_num_rows($col) == 0) mysqli_query($mysqli, "ALTER TABLE `tbl_subscriptions` ADD `is_demo` TINYINT(1) NOT NULL DEFAULT 0");
+    // Aparelhos que já usaram o teste grátis: fica guardado mesmo se o aparelho for excluído ou a licença resetada
+    mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS `tbl_trial_devices` (
+        `id` INT(11) NOT NULL AUTO_INCREMENT,
+        `device_id` VARCHAR(191) NOT NULL,
+        `platform` VARCHAR(30) NOT NULL DEFAULT '',
+        `device_model` VARCHAR(100) NOT NULL DEFAULT '',
+        `ip_address` VARCHAR(45) NOT NULL DEFAULT '',
+        `customer_id` INT(11) NOT NULL DEFAULT 0,
+        `used_at` INT(11) NOT NULL DEFAULT 0,
+        PRIMARY KEY (`id`),
+        KEY `idx_device` (`device_id`),
+        KEY `idx_finger` (`ip_address`, `platform`, `device_model`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     // Teste grátis: duração em dias (0 = usa os meses do plano)
     foreach (array('is_trial' => "TINYINT(1) NOT NULL DEFAULT 0", 'days' => "INT(11) NOT NULL DEFAULT 0", 'ip' => "VARCHAR(45) NOT NULL DEFAULT ''") as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_subscriptions` LIKE '$name'");
@@ -227,6 +240,14 @@ function trial_used_by_customer($mysqli, $customer_id){
 function trial_used_by_device($mysqli, $device){
     if (!$device) return false;
     if ((int)$device['activated_at'] > 0 || (int)$device['expires_at'] > 0) return true;
+    // registro permanente: o mesmo ID, ou mesmo modelo + plataforma + internet nos últimos 180 dias (reinstalou / resetou)
+    $since = time() - 180 * 86400;
+    $stmt = mysqli_prepare($mysqli, "SELECT COUNT(*) AS num FROM tbl_trial_devices WHERE device_id = ? OR (used_at > ? AND ip_address <> '' AND ip_address = ? AND platform = ? AND device_model = ?)");
+    mysqli_stmt_bind_param($stmt, 'sisss', $device['device_id'], $since, $device['ip_address'], $device['platform'], $device['device_model']);
+    mysqli_stmt_execute($stmt);
+    $t = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    if ((int)$t['num'] > 0) return true;
     $did = mysqli_real_escape_string($mysqli, $device['device_id']);
     $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions s JOIN tbl_devices d ON d.id = s.device_pk WHERE s.is_trial = 1 AND d.device_id = '$did'"));
     if ((int)$r['num'] > 0) return true;
@@ -406,6 +427,12 @@ function subscription_activate_device($mysqli, $data){
     }
 
     $cid = (int)$sub['customer_id'];
+    if ($is_trial) {
+        $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_trial_devices (device_id, platform, device_model, ip_address, customer_id, used_at) VALUES (?,?,?,?,?,?)");
+        mysqli_stmt_bind_param($stmt, 'ssssii', $device['device_id'], $device['platform'], $device['device_model'], $device['ip_address'], $cid, $now);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+    }
     $by = 'cliente: '.$sub['customer_email'];
     $cname = mb_substr($sub['customer_name'], 0, 120);
     $stmt = mysqli_prepare($mysqli, "UPDATE tbl_devices SET owner = 'customer', reseller_id = 0, customer_id = ?, linked_at = ?, package = ?, activated_by = ?,
