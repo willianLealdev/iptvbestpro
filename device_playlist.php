@@ -52,7 +52,8 @@
     }
 
     $playlists = playlist_list($mysqli, $device['device_id']);
-    $dns_list = dns_list_active($mysqli, playlist_dns_scope($mysqli, $device['device_id']));
+    // admin vê as DNS da revenda dona do aparelho + as dele
+    $dns_list = dns_list_for_admin($mysqli, $device['device_id']);
     $status = devices_activation_status($device);
     $owner_label = devices_owner_label($mysqli, $device);
 ?>

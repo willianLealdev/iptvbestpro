@@ -565,6 +565,34 @@ function playlist_dns_scope($mysqli, $device_id){
 }
 
 /**
+ * DNS que o ADMIN pode escolher para um aparelho: as da revenda dona + as do admin.
+ * (aparelho de servidor parceiro: só as DNS do servidor)
+ */
+function dns_list_for_admin($mysqli, $device_id){
+    $scope = playlist_dns_scope($mysqli, $device_id);
+    $list = dns_list_active($mysqli, $scope);
+    if ($scope > 0) {
+        $k = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT kind FROM tbl_resellers WHERE id = ".(int)$scope));
+        if ($k && isset($k['kind']) && $k['kind'] == 'server') return $list;
+        $seen = array();
+        foreach ($list as $d) $seen[(int)$d['id']] = 1;
+        foreach (dns_list_active($mysqli, 0) as $d) if (!isset($seen[(int)$d['id']])) $list[] = $d;
+    }
+    return $list;
+}
+
+// O admin usou uma DNS dele numa lista de aparelho de revenda: a revenda fica ligada a essa DNS
+// (assim a conferência e a troca automática do aparelho continuam funcionando com ela)
+function dns_share_with_device_owner($mysqli, $dns_id, $device_id){
+    $scope = playlist_dns_scope($mysqli, $device_id);
+    $dns_id = (int)$dns_id;
+    if ($scope <= 0 || $dns_id <= 0) return;
+    $own = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT reseller_id FROM tbl_xui_dns WHERE id = $dns_id"));
+    if (!$own || (int)$own['reseller_id'] == $scope) return;
+    mysqli_query($mysqli, "INSERT IGNORE INTO tbl_dns_share (dns_id, reseller_id, created_at) VALUES ($dns_id, ".(int)$scope.", ".time().")");
+}
+
+/**
  * Testa se cada servidor DNS responde (player_api.php sem login: um servidor no ar devolve resposta,
  * mesmo recusando o acesso). Atualiza health/latency em tbl_xui_dns. Retorna array id => 'online'|'offline'.
  */
@@ -840,9 +868,10 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
     $password = trim(isset($post['password']) ? $post['password'] : '');
     if ($username == '' || $password == '') return array('ok' => false, 'msg' => 'Informe usuário e senha.');
     $dns_id = isset($post['dns_id']) ? (int)$post['dns_id'] : 0;
+    $is_admin = strpos((string)$created_by, 'admin:') === 0;
     if ($dns_id > 0) {
         $chosen = null;
-        foreach (dns_list_active($mysqli, playlist_dns_scope($mysqli, $device_id)) as $d) if ((int)$d['id'] == $dns_id) $chosen = $d;
+        foreach (($is_admin ? dns_list_for_admin($mysqli, $device_id) : dns_list_active($mysqli, playlist_dns_scope($mysqli, $device_id))) as $d) if ((int)$d['id'] == $dns_id) $chosen = $d;
         if (!$chosen) return array('ok' => false, 'msg' => 'DNS não encontrada. Escolha outra.');
         $probe = playlist_probe_parallel(array($chosen), $username, $password, 6);
         if ($probe[0]['result'] == 'auth_fail') return array('ok' => false, 'msg' => 'A DNS "'.$chosen['title'].'" recusou este usuário e senha. Confira os dados ou escolha outra DNS.');
@@ -850,8 +879,13 @@ function playlist_handle_submit($mysqli, $device_id, $post, $created_by){
         $find = array('ok' => true, 'dns' => $chosen, 'probe' => $probe[0]);
     } else {
         $find = playlist_find_dns($mysqli, $username, $password, '', PLAYLIST_PROBE_TIMEOUT, playlist_dns_scope($mysqli, $device_id));
+        // admin no automático: se as DNS da revenda não acharem, procura também nas DNS do admin
+        if (!$find['ok'] && $is_admin && playlist_dns_scope($mysqli, $device_id) > 0 && count(dns_list_for_admin($mysqli, $device_id)) > count(dns_list_active($mysqli, playlist_dns_scope($mysqli, $device_id)))) {
+            $find = playlist_find_dns($mysqli, $username, $password, '', PLAYLIST_PROBE_TIMEOUT, 0);
+        }
         if (!$find['ok']) return array('ok' => false, 'msg' => $find['msg']);
     }
+    if ($is_admin && !empty($find['dns']['id'])) dns_share_with_device_owner($mysqli, $find['dns']['id'], $device_id);
 
     if (!playlist_save($mysqli, $device_id, $name, $username, $password, $find['dns']['base'], $created_by, 'account')) {
         return array('ok' => false, 'msg' => 'Erro ao salvar a playlist.');
