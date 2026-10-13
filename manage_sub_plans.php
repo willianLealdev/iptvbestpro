@@ -42,6 +42,13 @@
         header("Location:manage_sub_plans.php");
         exit;
     }
+    if(isset($_POST['save_trial'])){
+        panel_config_set($mysqli, 'trial_on', !empty($_POST['trial_on']) ? '1' : '0');
+        panel_config_set($mysqli, 'trial_days', (string)max(1, min(30, (int)$_POST['trial_days'])));
+        sp_flash(true, 'Teste grátis salvo.');
+        header("Location:manage_sub_plans.php");
+        exit;
+    }
     if(isset($_POST['delete_plan'])){
         $id = (int)$_POST['plan_id'];
         mysqli_query($mysqli, "DELETE FROM tbl_sub_plans WHERE id = $id");
@@ -58,6 +65,10 @@
     $edit = null;
     if(isset($_GET['edit'])){ foreach($plans as $p){ if((int)$p['id'] == (int)$_GET['edit']) $edit = $p; } }
     $portal_url = rtrim(getBaseUrl(), '/').'/cliente/';
+    $trial_on = trial_enabled($mysqli);
+    $trial_days = trial_days($mysqli);
+    $tr = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS total, SUM(code_used_at > 0) AS used FROM tbl_subscriptions WHERE is_trial = 1"));
+    $tr_conv = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(DISTINCT t.customer_id) AS num FROM tbl_subscriptions t JOIN tbl_subscriptions p ON p.customer_id = t.customer_id AND p.is_trial = 0 AND p.status = 'paid' AND p.is_demo = 0 WHERE t.is_trial = 1"));
 ?>
 
 <main id="nsofts_main">
@@ -109,6 +120,18 @@
             </div>
 
             <div class="col-xl-4">
+                <div class="card mb-4" style="border:0;border-radius:14px;box-shadow:0 4px 14px rgba(15,23,42,.06);">
+                    <div class="card-body p-4">
+                        <h5 class="mb-2"><i class="ri-gift-line text-success"></i> Teste grátis</h5>
+                        <p class="small text-muted">O cliente se cadastra no portal, clica em "Começar teste grátis" e recebe um código que ativa 1 aparelho novo pelos dias abaixo. Depois disso o app pede a compra de uma licença. 1 teste por cliente, por aparelho (aparelho que já foi ativado não ganha teste) e no máximo 2 por internet a cada 30 dias.</p>
+                        <form method="post">
+                            <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" name="trial_on" id="trial_on" value="1" <?php echo $trial_on ? 'checked' : ''; ?>><label class="form-check-label" for="trial_on">Teste grátis ligado</label></div>
+                            <div class="mb-3"><label class="form-label">Dias de teste</label><input type="number" name="trial_days" class="form-control" min="1" max="30" value="<?php echo $trial_days; ?>"></div>
+                            <button type="submit" name="save_trial" value="1" class="btn btn-success w-100">Salvar</button>
+                        </form>
+                        <div class="small text-muted mt-3">Testes gerados: <b><?php echo (int)$tr['total']; ?></b> · usados: <b><?php echo (int)$tr['used']; ?></b> · viraram clientes pagantes: <b><?php echo (int)$tr_conv['num']; ?></b></div>
+                    </div>
+                </div>
                 <div class="card mb-4" style="border:0;border-radius:14px;box-shadow:0 4px 14px rgba(15,23,42,.06);">
                     <div class="card-body p-4">
                         <h5 class="mb-3"><?php echo $edit ? 'Editar plano' : 'Novo plano'; ?></h5>

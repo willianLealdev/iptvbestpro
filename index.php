@@ -17,6 +17,8 @@ function lp_e($value){ return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-
 $name = brand_name();
 $currency = customer_currency_for_country(customer_detect_country());
 $plans = sub_plans_list($mysqli);
+$trial_on = trial_enabled($mysqli);
+$trial_days = trial_days($mysqli);
 // Menor preço entre os planos (para o "a partir de") e preço do crédito da revenda na mesma moeda
 $from_price = 0;
 foreach ($plans as $p) { $v = plan_price($p, $currency); if ($v > 0 && ($from_price == 0 || $v < $from_price)) $from_price = $v; }
@@ -361,7 +363,11 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
             <h1>Sua playlist, na sua TV.<br><span class="grad">Simples, rápido e estável.</span></h1>
             <p class="lead">Você já tem o conteúdo. Faltava um player que não trava, não mostra anúncios e funciona na sua TV, TV Box e celular. O <?php echo lp_e($name); ?> foi feito para isso.</p>
             <div class="ctas">
+                <?php if ($trial_on) { ?>
+                <a href="cliente/register.php" class="btn btn-gold btn-lg"><i class="ri-gift-line"></i> Testar grátis por <?php echo $trial_days; ?> dias</a>
+                <?php } else { ?>
                 <a href="cliente/register.php" class="btn btn-gold btn-lg"><i class="ri-flashlight-fill"></i> Ativar meu aparelho</a>
+                <?php } ?>
                 <a href="download" class="btn btn-ghost btn-lg"><i class="ri-download-2-line"></i> Baixar o app</a>
             </div>
             <?php foreach (array('live' => 'Disponível agora', 'soon' => 'Em breve') as $st => $label) { ?>
@@ -449,6 +455,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 30px;background:#050814}
                 <span class="eyebrow">Planos</span>
                 <h2 class="h2">Escolha o seu plano</h2>
                 <?php if ($from_price > 0) { ?><div class="from">a partir de <b><?php echo money_format_currency($from_price, $currency); ?></b></div><?php } ?>
+                <?php if ($trial_on) { ?><p class="sub" style="color:#4ade80;font-weight:700"><i class="ri-gift-line"></i> Teste grátis de <?php echo $trial_days; ?> dias antes de comprar. Sem cartão.</p><?php } ?>
                 <p class="sub">Pagamento seguro<?php echo $currency == 'BRL' ? ' por Pix ou cartão' : ' com cartão'; ?>. Cada plano ativa 1 aparelho.</p>
             </div>
             <div class="plans">

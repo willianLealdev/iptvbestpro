@@ -137,6 +137,8 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
     $set[$API_NAME][$last]['upload_url'] = $srv ? server_upload_url($device['device_id']) : '';
     // imagem do QR code dessa página, para os apps que não geram QR code sozinhos (Roku)
     $set[$API_NAME][$last]['upload_qr'] = $srv ? rtrim(brand_mail_base_url(), '/').'/qr?d='.rawurlencode($device['device_id']) : '';
+    if ($device && $device['package'] == 'trial' && $status == 'expired') $set[$API_NAME][$last]['MSG'] = 'Seu teste grátis terminou. Para continuar usando, ative uma licença.';
+    if ($device && $device['package'] == 'trial') $set[$API_NAME][$last]['is_trial'] = '1';
     if ($srv && $status == 'expired') $set[$API_NAME][$last]['MSG'] = 'Sua ativação venceu. Digite o código do seu servidor de novo para renovar.';
     $set[$API_NAME][$last]['portal_url'] = $sp_base.'/cliente/';
     header( 'Content-Type: application/json; charset=utf-8' );

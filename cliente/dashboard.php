@@ -10,6 +10,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else if (isset($_POST['subscribe'])) {
         $r = subscription_create($mysqli, $customer, (int)$_POST['plan_id']);
         cl_flash($r['ok'] ? 'success' : 'error', $r['msg']);
+    } else if (isset($_POST['start_trial'])) {
+        $r = trial_create($mysqli, $customer);
+        cl_flash($r['ok'] ? 'success' : 'error', $r['msg']);
     } else if (isset($_POST['cancel_sub'])) {
         $ok = subscription_cancel($mysqli, (int)$_POST['sub_id'], $cid);
         cl_flash($ok ? 'success' : 'error', $ok ? 'Pedido cancelado.' : 'Não foi possível cancelar este pedido.');
@@ -30,8 +33,26 @@ $pix_on = pay_mp_enabled($mysqli);
 $card_on = pay_stripe_enabled($mysqli);
 $instructions = trim(panel_config_get($mysqli, 'payment_instructions', ''));
 $contact = trim(panel_config_get($mysqli, 'payment_contact', ''));
+$trial_days = trial_days($mysqli);
+$trial_offer = trial_enabled($mysqli) && !trial_used_by_customer($mysqli, $cid);
 
 cl_header($customer, 'Minhas assinaturas', 'dashboard'); ?>
+
+<?php if ($trial_offer) { ?>
+<div class="cl-card p-4 mb-4" style="border:2px solid #16a34a;background:linear-gradient(135deg,#f0fdf4,#ffffff);">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h2 class="cl-title fs-4 mb-1"><i class="ri-gift-line" style="color:#16a34a;"></i> Teste grátis de <?php echo $trial_days; ?> dias</h2>
+            <p class="cl-muted mb-0">Experimente o app antes de comprar. Gere o seu código, digite no aparelho e use por <b><?php echo $trial_days; ?> dias</b> sem pagar nada. Depois disso, para continuar usando, é só escolher um plano.</p>
+            <p class="small cl-muted mb-0 mt-1">1 teste por cliente, em 1 aparelho que nunca foi ativado.</p>
+        </div>
+        <form method="post">
+            <?php echo cl_csrf_field(); ?>
+            <button type="submit" name="start_trial" value="1" class="btn cl-btn-green btn-lg"><i class="ri-play-circle-line"></i> Começar teste grátis</button>
+        </form>
+    </div>
+</div>
+<?php } ?>
 
 <div class="cl-card p-4 mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -48,7 +69,7 @@ cl_header($customer, 'Minhas assinaturas', 'dashboard'); ?>
                         <div class="d-flex justify-content-between align-items-start gap-2">
                             <div>
                                 <div class="fw-bold"><?php echo cl_e($s['plan_name']); ?> <span class="cl-muted fw-normal">· pedido #<?php echo (int)$s['id']; ?></span></div>
-                                <div class="small cl-muted"><?php echo money_format_currency($s['amount'], $s['currency']); ?> · <?php echo date('d/m/Y', $s['created_at']); ?></div>
+                                <div class="small cl-muted"><?php echo !empty($s['is_trial']) ? 'Grátis' : money_format_currency($s['amount'], $s['currency']); ?> · <?php echo date('d/m/Y', $s['created_at']); ?></div>
                             </div>
                             <?php echo subscription_state_badge($st); ?>
                         </div>
@@ -93,6 +114,7 @@ cl_header($customer, 'Minhas assinaturas', 'dashboard'); ?>
                                 <div class="cl-code"><?php echo cl_e(trim(chunk_split($s['code'], 4, ' '))); ?></div>
                                 <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-copy="<?php echo cl_e($s['code']); ?>"><i class="ri-file-copy-line"></i> Copiar código</button>
                                 <div class="small cl-muted mt-2">Digite este código no app do aparelho que você quer ativar. Vale para <b>1 aparelho</b>, uma única vez.</div>
+                                <?php if (!empty($s['is_trial'])) { ?><div class="small fw-bold mt-1" style="color:#16a34a;">Teste grátis de <?php echo (int)$s['days']; ?> dias. Conta a partir da ativação.</div><?php } ?>
                             </div>
                         <?php } else { ?>
                             <div class="mt-3 small">
@@ -100,6 +122,11 @@ cl_header($customer, 'Minhas assinaturas', 'dashboard'); ?>
                                 <div><span class="cl-muted">Ativado em:</span> <?php echo date('d/m/Y', $s['activated_at']); ?></div>
                                 <div><span class="cl-muted">Vence em:</span> <b class="<?php echo $st == 'expired' ? 'text-danger' : ''; ?>"><?php echo date('d/m/Y', $s['expires_at']); ?></b></div>
                             </div>
+                            <?php if (!empty($s['is_trial'])) { ?>
+                                <div class="alert <?php echo $st == 'expired' ? 'alert-danger' : 'alert-success'; ?> small mt-3 mb-0">
+                                    <?php echo $st == 'expired' ? '<b>Seu teste grátis terminou.</b> Para continuar usando, escolha um plano abaixo e ative o mesmo aparelho com o novo código.' : '<b>Teste grátis em andamento.</b> Gostou? Escolha um plano abaixo antes de vencer para não ficar sem acesso.'; ?>
+                                </div>
+                            <?php } ?>
                             <?php if ($s['device_pk']) { ?>
                                 <a href="playlist.php?sub=<?php echo (int)$s['id']; ?>" class="btn btn-sm btn-primary mt-3"><i class="ri-play-list-line"></i> Playlists deste aparelho</a>
                             <?php } ?>

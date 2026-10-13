@@ -76,6 +76,11 @@ function customers_migrate($mysqli){
 
     $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_subscriptions` LIKE 'is_demo'");
     if ($col && mysqli_num_rows($col) == 0) mysqli_query($mysqli, "ALTER TABLE `tbl_subscriptions` ADD `is_demo` TINYINT(1) NOT NULL DEFAULT 0");
+    // Teste grátis: duração em dias (0 = usa os meses do plano)
+    foreach (array('is_trial' => "TINYINT(1) NOT NULL DEFAULT 0", 'days' => "INT(11) NOT NULL DEFAULT 0", 'ip' => "VARCHAR(45) NOT NULL DEFAULT ''") as $name => $definition) {
+        $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_subscriptions` LIKE '$name'");
+        if ($col && mysqli_num_rows($col) == 0) mysqli_query($mysqli, "ALTER TABLE `tbl_subscriptions` ADD `$name` $definition");
+    }
 
     $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_devices` LIKE 'customer_id'");
     if ($col && mysqli_num_rows($col) == 0) {
@@ -206,6 +211,58 @@ function subscription_state_badge($state){
     return '<span class="dv-badge '.$s[1].'">'.$s[0].'</span>';
 }
 
+/* ---------- Teste grátis ---------- */
+
+// Ligado/desligado e dias do teste (admin: Clientes → Planos). Padrão: ligado, 7 dias.
+function trial_enabled($mysqli){ return panel_config_get($mysqli, 'trial_on', '1') == '1'; }
+function trial_days($mysqli){ return max(1, min(30, (int)panel_config_get($mysqli, 'trial_days', '7'))); }
+
+// O cliente já pegou o teste grátis? (1 por conta)
+function trial_used_by_customer($mysqli, $customer_id){
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions WHERE customer_id = ".(int)$customer_id." AND is_trial = 1"));
+    return (int)$r['num'] > 0;
+}
+
+// O aparelho já teve teste grátis ou qualquer ativação antes? (o teste é só para aparelho novo)
+function trial_used_by_device($mysqli, $device){
+    if (!$device) return false;
+    if ((int)$device['activated_at'] > 0 || (int)$device['expires_at'] > 0) return true;
+    $did = mysqli_real_escape_string($mysqli, $device['device_id']);
+    $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions s JOIN tbl_devices d ON d.id = s.device_pk WHERE s.is_trial = 1 AND d.device_id = '$did'"));
+    return (int)$r['num'] > 0;
+}
+
+// Cria o código do teste grátis para o cliente (já liberado, sem pagamento)
+function trial_create($mysqli, $customer){
+    customers_migrate($mysqli);
+    if (!trial_enabled($mysqli)) return array('ok' => false, 'msg' => 'O teste grátis não está disponível no momento.');
+    $cid = (int)$customer['id'];
+    if (trial_used_by_customer($mysqli, $cid)) return array('ok' => false, 'msg' => 'Você já usou o seu teste grátis. Escolha um plano para continuar.');
+    // no máximo 2 testes por internet (IP) a cada 30 dias
+    $ip = devices_clean(devices_client_ip(), 45);
+    $since = time() - 30 * 86400;
+    $stmt = mysqli_prepare($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions WHERE is_trial = 1 AND ip = ? AND created_at > ?");
+    mysqli_stmt_bind_param($stmt, 'si', $ip, $since);
+    mysqli_stmt_execute($stmt);
+    $n = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    if ($ip != '' && (int)$n['num'] >= 2) return array('ok' => false, 'msg' => 'O limite de testes grátis desta internet foi atingido. Escolha um plano para continuar.');
+
+    $code = subscription_code_generate($mysqli);
+    if (!$code) return array('ok' => false, 'msg' => 'Não foi possível gerar o código. Tente novamente.');
+    $days = trial_days($mysqli);
+    $name = 'Teste grátis '.$days.' dias';
+    $now = time();
+    $currency = $customer['currency'] == 'USD' ? 'USD' : 'BRL';
+    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_subscriptions (customer_id, plan_id, plan_name, months, currency, amount, status, created_at, code, paid_at, reference, is_trial, days, ip)
+                                     VALUES (?, 0, ?, 0, ?, 0, 'paid', ?, ?, ?, 'Teste grátis', 1, ?, ?)");
+    mysqli_stmt_bind_param($stmt, 'issisiis', $cid, $name, $currency, $now, $code, $now, $days, $ip);
+    $ok = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    return $ok ? array('ok' => true, 'msg' => 'Seu teste grátis de '.$days.' dias foi liberado! Digite o código no app.', 'code' => $code)
+               : array('ok' => false, 'msg' => 'Não foi possível criar o teste grátis.');
+}
+
 /* ---------- Ativação no app pelo código numérico ---------- */
 
 function subscription_code_normalize($code){
@@ -314,9 +371,15 @@ function subscription_activate_device($mysqli, $data){
         return array('ok' => false, 'msg' => 'Este aparelho já está ativo com outro revendedor.', 'device' => $device);
     }
 
+    // Teste grátis: só em aparelho que nunca foi ativado
+    $is_trial = !empty($sub['is_trial']);
+    if ($is_trial && trial_used_by_device($mysqli, $device)) {
+        return array('ok' => false, 'msg' => 'Este aparelho já usou o teste grátis ou já foi ativado antes. Para continuar, adquira uma licença.', 'device' => null);
+    }
+
     $now = time();
     $base = ((int)$device['customer_id'] === (int)$sub['customer_id'] && devices_activation_status($device) == 'active' && (int)$device['expires_at'] > $now) ? (int)$device['expires_at'] : $now;
-    $expires = strtotime('+'.(int)$sub['months'].' months', $base);
+    $expires = $is_trial ? $now + max(1, (int)$sub['days']) * 86400 : strtotime('+'.(int)$sub['months'].' months', $base);
 
     // Marca o código como usado (somente se ainda estiver livre)
     $sid = (int)$sub['id'];
@@ -331,9 +394,10 @@ function subscription_activate_device($mysqli, $data){
     $cid = (int)$sub['customer_id'];
     $by = 'cliente: '.$sub['customer_email'];
     $cname = mb_substr($sub['customer_name'], 0, 120);
-    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_devices SET owner = 'customer', reseller_id = 0, customer_id = ?, linked_at = ?, package = 'sub', activated_by = ?,
+    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_devices SET owner = 'customer', reseller_id = 0, customer_id = ?, linked_at = ?, package = ?, activated_by = ?,
                                      activated_at = IF(activated_at > 0 AND expires_at > ?, activated_at, ?), expires_at = ?, customer_name = IF(customer_name = '', ?, customer_name) WHERE id = ?");
-    mysqli_stmt_bind_param($stmt, 'iisiiisi', $cid, $now, $by, $now, $now, $expires, $cname, $dpk);
+    $pkg = $is_trial ? 'trial' : 'sub';
+    mysqli_stmt_bind_param($stmt, 'iissiiisi', $cid, $now, $pkg, $by, $now, $now, $expires, $cname, $dpk);
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
 
@@ -345,5 +409,5 @@ function subscription_activate_device($mysqli, $data){
     if ($is_demo) demo_attach_playlist($mysqli, $device['device_id']);
 
     $device = devices_find($mysqli, $device['device_id'], $device['application_id']);
-    return array('ok' => true, 'msg' => 'Assinatura ativada! Válida até '.date('d/m/Y', $expires).'.', 'device' => $device);
+    return array('ok' => true, 'msg' => ($is_trial ? 'Teste grátis ativado! Válido até ' : 'Assinatura ativada! Válida até ').date('d/m/Y', $expires).'.', 'device' => $device);
 }
