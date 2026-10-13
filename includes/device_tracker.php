@@ -7,6 +7,7 @@
 define('DEVICES_TZ', 'America/Sao_Paulo');
 define('DEVICES_GEO_DB', '/opt/geo/country.mmdb');
 define('DEVICES_GEO_AUTOLOAD', '/opt/geo/vendor/autoload.php');
+define('DEVICES_ASN_DB', '/opt/geo/asn.mmdb');
 
 function devices_migrate($mysqli){
     static $done = false;
@@ -35,6 +36,58 @@ function devices_migrate($mysqli){
         KEY `idx_platform` (`platform`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
     mysqli_query($mysqli, $sql);
+
+    // Provedor de internet (empresa dona do IP), origem provável e em quantos dias diferentes o app foi aberto
+    foreach (array('asn_org' => "VARCHAR(120) NOT NULL DEFAULT ''", 'origin' => "VARCHAR(20) NOT NULL DEFAULT ''", 'days_seen' => "INT(11) NOT NULL DEFAULT 1") as $name => $definition) {
+        $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_devices` LIKE '$name'");
+        if ($col && mysqli_num_rows($col) == 0) mysqli_query($mysqli, "ALTER TABLE `tbl_devices` ADD `$name` $definition");
+    }
+}
+
+// Empresa dona do IP (ex.: "Claro S.A.", "Google LLC", "Amazon.com, Inc."). Vazio quando a base não existe.
+function devices_asn_org($ip){
+    if ($ip == '' || !file_exists(DEVICES_ASN_DB) || !file_exists(DEVICES_GEO_AUTOLOAD)) return '';
+    try {
+        require_once DEVICES_GEO_AUTOLOAD;
+        static $reader = null;
+        if ($reader === null) $reader = new \MaxMind\Db\Reader(DEVICES_ASN_DB);
+        $r = $reader->get($ip);
+        if (!empty($r['autonomous_system_organization'])) return mb_substr((string)$r['autonomous_system_organization'], 0, 120);
+    } catch (\Throwable $e) {
+        error_log('device_tracker asn: '.$e->getMessage());
+    }
+    return '';
+}
+
+/**
+ * Origem provável do aparelho, pela empresa dona do IP e pelo modelo:
+ *  emulator | store_google | store_amazon | store_roku | store_apple | datacenter (servidor/robô) | real (internet de casa/celular) | '' (sem dados)
+ * As lojas testam os apps em aparelhos dentro da rede delas (Google, Amazon, Roku, Apple); cliente de verdade usa internet de casa ou do celular.
+ */
+function devices_origin_guess($model, $asn_org){
+    $m = strtolower((string)$model);
+    $o = strtolower((string)$asn_org);
+    if (preg_match('/sdk_gphone|sdk_google|android sdk built|emulator|emulador|generic_x86|genymotion|headlesschrome|simulator/', $m)) return 'emulator';
+    if ($o == '') return '';
+    if (strpos($o, 'google') !== false) return 'store_google';
+    if (strpos($o, 'amazon') !== false || preg_match('/\baws\b/', $o)) return 'store_amazon';
+    if (strpos($o, 'roku') !== false) return 'store_roku';
+    if (preg_match('/\bapple\b/', $o)) return 'store_apple';
+    if (preg_match('/microsoft|azure|digitalocean|ovh|hetzner|linode|akamai|oracle|alibaba|tencent|huawei cloud|vultr|choopa|m247|datacamp|leaseweb|contabo|scaleway|cloudflare|hostinger|zenlayer|psychz|quadranet|colocrossing|godaddy|ionos|hosting|datacenter|data center|servers?\b|cloud/', $o)) return 'datacenter';
+    return 'real';
+}
+
+function devices_origin_info($origin){
+    $map = array(
+        'real'         => array('Provável cliente real', 'or-real', 'ri-user-heart-line'),
+        'store_google' => array('Teste do Google (loja)', 'or-store', 'ri-google-play-line'),
+        'store_amazon' => array('Teste da Amazon (loja)', 'or-store', 'ri-amazon-line'),
+        'store_roku'   => array('Teste da Roku (loja)', 'or-store', 'ri-tv-line'),
+        'store_apple'  => array('Teste da Apple (loja)', 'or-store', 'ri-apple-line'),
+        'datacenter'   => array('Servidor / robô', 'or-bot', 'ri-robot-2-line'),
+        'emulator'     => array('Emulador', 'or-bot', 'ri-bug-line'),
+    );
+    return isset($map[$origin]) ? $map[$origin] : array('Sem dados', 'or-none', 'ri-question-line');
 }
 
 /**
@@ -181,10 +234,12 @@ function devices_register($mysqli, $data){
         'country_code'   => $country['code'],
         'country_name'   => devices_clean($country['name'], 80),
     );
+    $asn = devices_asn_org($ip);
+    $origin = devices_origin_guess($fields['device_model'], $asn);
 
     $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_devices
-        (device_id, application_id, app_name, app_version, platform, device_model, os_version, ip_address, country_code, country_name, first_seen, last_seen)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        (device_id, application_id, app_name, app_version, platform, device_model, os_version, ip_address, country_code, country_name, first_seen, last_seen, asn_org, origin)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE
             app_name = IF(VALUES(app_name) <> '', VALUES(app_name), app_name),
             app_version = IF(VALUES(app_version) <> '', VALUES(app_version), app_version),
@@ -194,13 +249,16 @@ function devices_register($mysqli, $data){
             ip_address = VALUES(ip_address),
             country_code = IF(VALUES(country_code) <> '', VALUES(country_code), country_code),
             country_name = IF(VALUES(country_name) <> '', VALUES(country_name), country_name),
+            asn_org = IF(VALUES(asn_org) <> '', VALUES(asn_org), asn_org),
+            origin = IF(VALUES(origin) <> '', VALUES(origin), origin),
+            days_seen = days_seen + IF(FLOOR((last_seen - 10800) / 86400) <> FLOOR((VALUES(last_seen) - 10800) / 86400), 1, 0),
             last_seen = VALUES(last_seen)");
     if (!$stmt) return false;
 
-    mysqli_stmt_bind_param($stmt, 'ssssssssssii',
+    mysqli_stmt_bind_param($stmt, 'ssssssssssiiss',
         $fields['device_id'], $fields['application_id'], $fields['app_name'], $fields['app_version'],
         $fields['platform'], $fields['device_model'], $fields['os_version'], $fields['ip_address'],
-        $fields['country_code'], $fields['country_name'], $now, $now);
+        $fields['country_code'], $fields['country_name'], $now, $now, $asn, $origin);
     $ok = mysqli_stmt_execute($stmt);
     $is_new = $ok && mysqli_stmt_affected_rows($stmt) == 1; // 1 = aparelho novo no painel (2 = já existia)
     mysqli_stmt_close($stmt);

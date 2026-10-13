@@ -229,7 +229,21 @@ function trial_used_by_device($mysqli, $device){
     if ((int)$device['activated_at'] > 0 || (int)$device['expires_at'] > 0) return true;
     $did = mysqli_real_escape_string($mysqli, $device['device_id']);
     $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions s JOIN tbl_devices d ON d.id = s.device_pk WHERE s.is_trial = 1 AND d.device_id = '$did'"));
-    return (int)$r['num'] > 0;
+    if ((int)$r['num'] > 0) return true;
+    // Reinstalou o app e ganhou outro ID? Mesmo modelo, mesma plataforma e mesma internet de um aparelho que já teve teste (últimos 180 dias)
+    // = o mesmo aparelho. Android, Roku e iPhone/Apple TV já mantêm o ID ao reinstalar; isto cobre as TVs (Samsung, LG, Whale, Titan).
+    if ($device['ip_address'] != '') {
+        $since = time() - 180 * 86400;
+        $stmt = mysqli_prepare($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions s JOIN tbl_devices d ON d.id = s.device_pk
+                                         WHERE s.is_trial = 1 AND s.activated_at > ? AND d.id <> ? AND d.ip_address = ? AND d.platform = ? AND d.device_model = ?");
+        $id = (int)$device['id'];
+        mysqli_stmt_bind_param($stmt, 'iisss', $since, $id, $device['ip_address'], $device['platform'], $device['device_model']);
+        mysqli_stmt_execute($stmt);
+        $r = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+        mysqli_stmt_close($stmt);
+        if ((int)$r['num'] > 0) return true;
+    }
+    return false;
 }
 
 // Cria o código do teste grátis para o cliente (já liberado, sem pagamento)

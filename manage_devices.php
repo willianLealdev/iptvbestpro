@@ -97,7 +97,13 @@
         $ids = isset($_POST['ids']) ? implode(',', array_filter(array_map('intval', explode(',', (string)$_POST['ids'])))) : '';
         $n = $ids != '' ? count(explode(',', $ids)) : 0;
         $act = (string)$_POST['bulk_action'];
-        if($n == 0){
+        if($act == 'dev_bots'){
+            // todos os que estão aguardando ativação e vieram de rede de loja, servidor ou emulador
+            mysqli_query($mysqli, "UPDATE tbl_devices SET is_dev = 1 WHERE is_dev <> 1 AND package = '' AND origin IN ('store_google','store_amazon','store_roku','store_apple','datacenter','emulator')");
+            dev_flash(true, mysqli_affected_rows($mysqli).' dispositivo(s) de teste das lojas / robôs movido(s) para Dispositivos dev.');
+            header("Location:".$back_url);
+            exit;
+        } else if($n == 0){
             dev_flash(false, 'Nenhum dispositivo selecionado.');
         } else if($act == 'dev' || $act == 'real'){
             mysqli_query($mysqli, "UPDATE tbl_devices SET is_dev = ".($act == 'dev' ? 1 : 2)." WHERE id IN ($ids)");
@@ -156,16 +162,42 @@
     $sort = (isset($_GET['sort']) && isset($sortable[$_GET['sort']])) ? $_GET['sort'] : 'seen';
     $dir = (isset($_GET['dir']) && strtolower($_GET['dir']) == 'asc') ? 'ASC' : 'DESC';
 
-    $tab = (isset($_GET['tab']) && in_array($_GET['tab'], array('dev', 'srv'))) ? $_GET['tab'] : '';
+    $tab = (isset($_GET['tab']) && in_array($_GET['tab'], array('dev', 'srv', 'wait'))) ? $_GET['tab'] : '';
+    $origin_filter = (isset($_GET['origin']) && in_array($_GET['origin'], array('real', 'test', 'unknown'))) ? $_GET['origin'] : '';
     $now = time();
     // aparelhos ativados com o código de um servidor parceiro ficam numa aba só deles
     require_once("includes/server_helper.php");
     server_migrate($mysqli);
     $srv_sql = "(d.owner = 'reseller' AND d.reseller_id IN (SELECT id FROM tbl_resellers WHERE kind = 'server'))";
-    $where = array($tab == 'dev' ? "d.is_dev = 1" : ($tab == 'srv' ? "d.is_dev <> 1 AND $srv_sql" : "d.is_dev <> 1 AND NOT $srv_sql"));
-    $dev_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE d.is_dev = 1"))['n'];
-    $srv_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE d.is_dev <> 1 AND $srv_sql"))['n'];
-    $real_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE d.is_dev <> 1 AND NOT $srv_sql"))['n'];
+    // Dispositivos = já ativados; Aguardando ativação = abriram o app mas ainda não foram ativados (ao ativar, passam sozinhos para Dispositivos)
+    $tab_sql = array(
+        ''     => "d.is_dev <> 1 AND NOT $srv_sql AND d.package <> ''",
+        'wait' => "d.is_dev <> 1 AND NOT $srv_sql AND d.package = ''",
+        'srv'  => "d.is_dev <> 1 AND $srv_sql",
+        'dev'  => "d.is_dev = 1",
+    );
+    $where = array($tab_sql[$tab]);
+    $dev_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['dev']))['n'];
+    $srv_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['srv']))['n'];
+    $real_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['']))['n'];
+    $wait_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['wait']))['n'];
+    // Aparelhos antigos (de antes da origem existir): descobre a empresa dona do IP aos poucos (200 por vez)
+    $bf = mysqli_query($mysqli, "SELECT id, ip_address, device_model FROM tbl_devices WHERE origin = '' AND ip_address <> '' ORDER BY last_seen DESC LIMIT 200");
+    while($bf && $b = mysqli_fetch_assoc($bf)){
+        $org = devices_asn_org($b['ip_address']);
+        $og = devices_origin_guess($b['device_model'], $org);
+        if($og == '') continue;
+        $st = mysqli_prepare($mysqli, "UPDATE tbl_devices SET asn_org = ?, origin = ? WHERE id = ?");
+        mysqli_stmt_bind_param($st, 'ssi', $org, $og, $b['id']);
+        mysqli_stmt_execute($st); mysqli_stmt_close($st);
+    }
+    $wait_origin = array('real' => 0, 'test' => 0, 'unknown' => 0);
+    $wo = mysqli_query($mysqli, "SELECT CASE WHEN d.origin = 'real' THEN 'real' WHEN d.origin = '' THEN 'unknown' ELSE 'test' END AS k, COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['wait']." GROUP BY k");
+    while($wo && $w = mysqli_fetch_assoc($wo)){ $wait_origin[$w['k']] = (int)$w['n']; }
+    if($origin_filter == 'real'){ $where[] = "d.origin = 'real'"; }
+    if($origin_filter == 'unknown'){ $where[] = "d.origin = ''"; }
+    if($origin_filter == 'test'){ $where[] = "d.origin NOT IN ('', 'real')"; }
+    $my_ip = devices_client_ip();
     if($keyword != ''){
         $kw = mysqli_real_escape_string($mysqli, $keyword);
         $where[] = "(d.customer_name LIKE '%$kw%' OR d.device_id LIKE '%$kw%' OR d.activated_by LIKE '%$kw%' OR d.device_model LIKE '%$kw%' OR d.ip_address LIKE '%$kw%')";
@@ -271,6 +303,11 @@
             .dv-tabs { display: flex; gap: 6px; border-bottom: 1px solid #eef0f4; margin-bottom: 18px; flex-wrap: wrap; }
             .dv-tabs a { padding: 10px 16px; color: #6b7280; text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; }
             .dv-tabs a.active { color: #3b6cf6; border-bottom-color: #3b6cf6; }
+            .dv-origin { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 4px; font-size: 12.5px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
+            .or-real { color: #389e0d; background: #f6ffed; border-color: #d9f7be; }
+            .or-store { color: #d46b08; background: #fff7e6; border-color: #ffe7ba; }
+            .or-bot { color: #cf1322; background: #fff1f0; border-color: #ffccc7; }
+            .or-none { color: #8c8c8c; background: #fafafa; border-color: #f0f0f0; }
             .dv-tabs .dv-count { background: #eef2ff; color: #3b6cf6; border-radius: 10px; padding: 0 8px; font-size: 12px; }
             .dv-check { width: 18px; height: 18px; cursor: pointer; vertical-align: middle; }
             .dv-bulk { display: none; align-items: center; gap: 8px; flex-wrap: wrap; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; }
@@ -302,11 +339,27 @@
             <div class="card-body p-4">
                 <div class="dv-tabs">
                     <a href="manage_devices.php" class="<?php echo $tab == '' ? 'active' : ''; ?>"><i class="ri-device-line"></i>Dispositivos <span class="dv-count"><?php echo thousandsNumberFormat($real_count); ?></span></a>
+                    <a href="manage_devices.php?tab=wait" class="<?php echo $tab == 'wait' ? 'active' : ''; ?>"><i class="ri-time-line"></i>Aguardando ativação <span class="dv-count"><?php echo thousandsNumberFormat($wait_count); ?></span></a>
                     <a href="manage_devices.php?tab=srv" class="<?php echo $tab == 'srv' ? 'active' : ''; ?>"><i class="ri-server-line"></i>Servidores <span class="dv-count"><?php echo thousandsNumberFormat($srv_count); ?></span></a>
                     <a href="manage_devices.php?tab=dev" class="<?php echo $tab == 'dev' ? 'active' : ''; ?>"><i class="ri-bug-line"></i>Dispositivos dev <span class="dv-count"><?php echo thousandsNumberFormat($dev_count); ?></span></a>
                 </div>
                 <?php if($tab == 'srv'){ ?>
                     <p class="text-muted small mb-3">Aparelhos ativados com o código de um servidor parceiro. A ativação é automática (1 crédito do servidor) e a lista é enviada pelo cliente na página /lista.</p>
+                <?php } ?>
+                <?php if($tab == 'wait'){ ?>
+                    <p class="text-muted small mb-2">Aparelhos que abriram o app mas ainda não foram ativados. Quando são ativados, passam sozinhos para <b>Dispositivos</b>.
+                        A <b>origem provável</b> vem da empresa dona da internet do aparelho: as lojas (Google, Amazon, Roku, Apple) testam o app dentro da rede delas, e cliente de verdade usa internet de casa ou do celular.</p>
+                    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                        <a href="<?php echo htmlspecialchars(dv_url(array('origin' => '', 'page' => ''))); ?>" class="btn btn-sm <?php echo $origin_filter == '' ? 'btn-primary' : 'btn-outline-secondary'; ?>">Todos</a>
+                        <a href="<?php echo htmlspecialchars(dv_url(array('origin' => 'real', 'page' => ''))); ?>" class="btn btn-sm <?php echo $origin_filter == 'real' ? 'btn-success' : 'btn-outline-success'; ?>"><i class="ri-user-heart-line"></i> Prováveis clientes reais (<?php echo $wait_origin['real']; ?>)</a>
+                        <a href="<?php echo htmlspecialchars(dv_url(array('origin' => 'test', 'page' => ''))); ?>" class="btn btn-sm <?php echo $origin_filter == 'test' ? 'btn-warning' : 'btn-outline-warning'; ?>"><i class="ri-robot-2-line"></i> Lojas / robôs (<?php echo $wait_origin['test']; ?>)</a>
+                        <a href="<?php echo htmlspecialchars(dv_url(array('origin' => 'unknown', 'page' => ''))); ?>" class="btn btn-sm <?php echo $origin_filter == 'unknown' ? 'btn-secondary' : 'btn-outline-secondary'; ?>">Sem dados (<?php echo $wait_origin['unknown']; ?>)</a>
+                        <?php if($wait_origin['test'] > 0){ ?>
+                        <form method="post" class="ms-auto" onsubmit="return confirm('Mover para Dispositivos dev todos os que estão aguardando ativação e vieram das lojas, de servidores ou de emuladores?');">
+                            <button type="submit" name="bulk_action" value="dev_bots" class="btn btn-sm btn-outline-primary"><i class="ri-bug-line"></i> Mover lojas / robôs para Dispositivos dev</button>
+                        </form>
+                        <?php } ?>
+                    </div>
                 <?php } ?>
                 <?php if($tab == 'dev'){ ?>
                     <p class="text-muted small mb-3">Aparelhos de teste (emuladores, revisão das lojas e os que você marcar). Ficam fora da lista de dispositivos reais.</p>
@@ -383,10 +436,17 @@
                                     <th>Mac</th>
                                     <th>Revendedor</th>
                                     <th>App<?php echo dv_sort('app', $sort, $dir); ?></th>
+                                    <?php if($tab == 'wait'){ ?>
+                                    <th>Origem provável</th>
+                                    <th>Primeiro acesso<?php echo dv_sort('seen', $sort, $dir); ?></th>
+                                    <th>Último acesso</th>
+                                    <th>Dias de uso</th>
+                                    <?php } else { ?>
                                     <th>Créditos usados<?php echo dv_sort('credits', $sort, $dir); ?></th>
                                     <th>Pacote</th>
                                     <th>Ativação<?php echo dv_sort('activated', $sort, $dir); ?></th>
                                     <th>Vencimento<?php echo dv_sort('expires', $sort, $dir); ?></th>
+                                    <?php } ?>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
@@ -421,6 +481,16 @@
                                                 <span><?php echo htmlspecialchars($row['app_label']); ?></span>
                                             </span>
                                         </td>
+                                        <?php if($tab == 'wait'){ $oi = devices_origin_info($row['origin']); ?>
+                                        <td>
+                                            <span class="dv-origin <?php echo $oi[1]; ?>"><i class="<?php echo $oi[2]; ?>"></i> <?php echo $oi[0]; ?></span>
+                                            <?php if($row['asn_org'] != ''){ ?><br><small class="dv-muted" translate="no"><?php echo htmlspecialchars($row['asn_org']); ?></small><?php } ?>
+                                            <?php if($row['ip_address'] != '' && $row['ip_address'] === $my_ip){ ?><br><small class="text-primary fw-semibold">Mesma internet que você</small><?php } ?>
+                                        </td>
+                                        <td><?php echo (int)$row['first_seen'] > 0 ? date('d/m/Y H:i', $row['first_seen']) : '—'; ?></td>
+                                        <td><?php echo (int)$row['last_seen'] > 0 ? date('d/m/Y H:i', $row['last_seen']) : '—'; ?><?php if($row['app_version'] != ''){ ?><br><small class="dv-muted">versão <?php echo htmlspecialchars($row['app_version']); ?></small><?php } ?></td>
+                                        <td><?php $ds = max(1, (int)$row['days_seen']); echo $ds; ?><?php if($ds >= 2){ ?><br><small class="text-success">voltou outros dias</small><?php } else { ?><br><small class="dv-muted">só 1 dia</small><?php } ?></td>
+                                        <?php } else { ?>
                                         <td><?php echo (int)$row['used_credits']; ?></td>
                                         <td>
                                             <?php if($pkg){ ?>
@@ -440,6 +510,7 @@
                                                 <?php if($status == 'expired'){ ?><br><small class="dv-expired">Expirado</small><?php } ?>
                                             <?php } ?>
                                         </td>
+                                        <?php } ?>
                                         <td>
                                             <div class="dropdown">
                                                 <button class="dv-dots" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">···</button>

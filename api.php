@@ -141,6 +141,10 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
     if ($device && $device['package'] == 'trial') $set[$API_NAME][$last]['is_trial'] = '1';
     if ($srv && $status == 'expired') $set[$API_NAME][$last]['MSG'] = 'Sua ativação venceu. Digite o código do seu servidor de novo para renovar.';
     $set[$API_NAME][$last]['portal_url'] = $sp_base.'/cliente/';
+    // Teste grátis: o app mostra "Teste grátis de N dias" no QR code de compra (só aparelho que ainda não usou)
+    require_once("includes/customer_helper.php");
+    customers_migrate($mysqli);
+    $set[$API_NAME][$last]['trial_days'] = ($status == 'unlinked' && trial_enabled($mysqli) && !trial_used_by_device($mysqli, $device)) ? (string)trial_days($mysqli) : '0';
     header( 'Content-Type: application/json; charset=utf-8' );
     echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     die();

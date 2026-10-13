@@ -7,7 +7,11 @@ RUN composer require maxmind-db/reader:^1.11 --no-interaction --no-progress --no
     && M_ANTERIOR=$(date -d @$(( $(date +%s) - 2764800 )) +%Y-%m) \
     && ( curl -fsSL "https://download.db-ip.com/free/dbip-country-lite-${M_ATUAL}.mmdb.gz" -o country.mmdb.gz \
          || curl -fsSL "https://download.db-ip.com/free/dbip-country-lite-${M_ANTERIOR}.mmdb.gz" -o country.mmdb.gz ) \
-    && gunzip country.mmdb.gz
+    && gunzip country.mmdb.gz \
+    && ( curl -fsSL "https://download.db-ip.com/free/dbip-asn-lite-${M_ATUAL}.mmdb.gz" -o asn.mmdb.gz \
+         || curl -fsSL "https://download.db-ip.com/free/dbip-asn-lite-${M_ANTERIOR}.mmdb.gz" -o asn.mmdb.gz \
+         || true ) \
+    && ( [ ! -f asn.mmdb.gz ] || gunzip asn.mmdb.gz )
 
 # Etapa 2: PHPMailer atualizado (substitui o vendor/ antigo do pacote original)
 FROM composer:2 AS mailer

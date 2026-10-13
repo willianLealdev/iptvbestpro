@@ -54,7 +54,7 @@
       act_wait_msg: 'Seu código foi enviado. Esta tela verifica sozinha a cada 5 segundos.', act_other: 'Usar outro código',
       act_expired: 'Sua ativação venceu', act_expired_msg: 'Fale com a sua revenda para renovar.', act_invalid: 'Código inválido. Use 6 letras ou 8 números.',
       act_help: 'Peça o seu código de ativação ao seu fornecedor ou revenda.',
-      buy_title: 'Não tem um código?', buy_msg: 'Aponte a câmera do celular para o QR code e compre a sua licença no site. Você recebe o código na hora.', buy_or: 'ou acesse',
+      buy_title: 'Não tem um código?', buy_msg: 'Aponte a câmera do celular para o QR code e compre a sua licença no site. Você recebe o código na hora.', buy_or: 'ou acesse', trial_title: 'Teste grátis de {0} dias', trial_msg: 'Aponte a câmera do celular para o QR code, crie a sua conta e ganhe {0} dias grátis. Você recebe o código na hora.',
       no_net: 'Sem conexão com a internet. Verifique e tente de novo.', server_err: 'Não foi possível falar com o servidor. Tente de novo.',
       up_title: 'Envie a sua lista', up_msg: 'Aponte a câmera do celular para o QR code e digite o usuário e a senha da sua lista. Esta tela abre sozinha quando a lista chegar.', up_wait: 'Aguardando a lista…',
       no_list: 'Nenhuma lista neste aparelho', no_list_msg: 'Peça para a sua revenda adicionar a sua lista no painel.', retry: 'Tentar de novo',
@@ -86,7 +86,7 @@
       act_wait_msg: 'Your code was sent. This screen checks automatically every 5 seconds.', act_other: 'Use another code',
       act_expired: 'Your activation has expired', act_expired_msg: 'Contact your reseller to renew.', act_invalid: 'Invalid code. Use 6 letters or 8 numbers.',
       act_help: 'Ask your provider or reseller for your activation code.',
-      buy_title: "Don't have a code?", buy_msg: 'Point your phone camera at the QR code and buy your license on the website. You get the code right away.', buy_or: 'or visit',
+      buy_title: "Don't have a code?", buy_msg: 'Point your phone camera at the QR code and buy your license on the website. You get the code right away.', buy_or: 'or visit', trial_title: '{0}-day free trial', trial_msg: 'Point your phone camera at the QR code, create your account and get {0} days free. You get the code right away.',
       no_net: 'No internet connection. Check it and try again.', server_err: 'Could not reach the server. Try again.',
       up_title: 'Send your list', up_msg: 'Point your phone camera at the QR code and enter your list username and password. This screen opens by itself when the list arrives.', up_wait: 'Waiting for the list…',
       no_list: 'No playlist on this device', no_list_msg: 'Ask your reseller to add your list in the panel.', retry: 'Try again',
@@ -118,7 +118,7 @@
       act_wait_msg: 'Tu código fue enviado. Esta pantalla verifica sola cada 5 segundos.', act_other: 'Usar otro código',
       act_expired: 'Tu activación venció', act_expired_msg: 'Habla con tu revendedor para renovar.', act_invalid: 'Código inválido. Usa 6 letras u 8 números.',
       act_help: 'Pide tu código de activación a tu proveedor o revendedor.',
-      buy_title: '¿No tienes un código?', buy_msg: 'Apunta la cámara del celular al código QR y compra tu licencia en el sitio. Recibes el código al instante.', buy_or: 'o entra a',
+      buy_title: '¿No tienes un código?', buy_msg: 'Apunta la cámara del celular al código QR y compra tu licencia en el sitio. Recibes el código al instante.', buy_or: 'o entra a', trial_title: 'Prueba gratis de {0} días', trial_msg: 'Apunta la cámara del celular al código QR, crea tu cuenta y obtén {0} días gratis. Recibes el código al instante.',
       no_net: 'Sin conexión a internet. Revisa e intenta de nuevo.', server_err: 'No fue posible conectar con el servidor. Intenta de nuevo.',
       up_title: 'Envía tu lista', up_msg: 'Apunta la cámara del celular al código QR y escribe el usuario y la contraseña de tu lista. Esta pantalla se abre sola cuando llega la lista.', up_wait: 'Esperando la lista…',
       no_list: 'Ninguna lista en este dispositivo', no_list_msg: 'Pide a tu revendedor que agregue tu lista en el panel.', retry: 'Intentar de nuevo',
@@ -576,7 +576,9 @@
     if (!waiting && st.owner !== 'reseller') {
       var buy = SRV + '/cliente/register?ref=tv&device=' + encodeURIComponent(DID);
       html = html.replace('<div class="card">', '<div class="card withqr">') +
-        '<div class="buyqr"><h2>' + esc(t('buy_title')) + '</h2>' + qrHtml(buy) + '<p>' + esc(t('buy_msg')) + '</p>' +
+        (+st.trial_days > 0
+          ? '<div class="buyqr"><div class="trialtag">' + esc(t('trial_title', st.trial_days)) + '</div>' + qrHtml(buy) + '<p>' + esc(t('trial_msg', st.trial_days)) + '</p>'
+          : '<div class="buyqr"><h2>' + esc(t('buy_title')) + '</h2>' + qrHtml(buy) + '<p>' + esc(t('buy_msg')) + '</p>') +
         '<p class="buyurl">' + esc(t('buy_or')) + ' <b>' + esc(SRV.replace(/^https?:\/\//, '')) + '</b></p></div>';
     }
     show(html, {
