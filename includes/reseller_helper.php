@@ -521,26 +521,13 @@ function devices_activate($mysqli, $device_pk, $package_key, $charge_reseller_id
     if (!$device) return array('ok' => false, 'msg' => 'Dispositivo não encontrado.');
 
     $charge_reseller_id = (int)$charge_reseller_id;
-    // Ativar cobrando de uma revenda um aparelho que é de outro dono
-    if ($charge_reseller_id > 0 && !($device['owner'] == 'reseller' && (int)$device['reseller_id'] == $charge_reseller_id)) {
-        $is_active = devices_activation_status($device) == 'active'
-            || devices_active_elsewhere($mysqli, $device['device_id'], 'reseller', $charge_reseller_id, 0, $device_pk);
-        if ($device['owner'] != '' && $is_active) {
-            return array('ok' => false, 'msg' => 'Este aparelho está ativo com outro dono ('.devices_owner_name($mysqli, $device).'). Outra revenda só pode ativar depois que o cliente resetar a licença no app ou quando a ativação vencer.');
-        }
-        if ($device['owner'] != '') {
-            devices_take_over($mysqli, $device_pk, 'reseller', $charge_reseller_id);
-            $device = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM tbl_devices WHERE id = $device_pk"));
-        }
+    // O aparelho fica sempre com o dono do código que foi digitado no app (revenda, servidor, admin ou cliente).
+    // No painel ele só é ativado/renovado por esse dono; para ir para outro, o cliente digita outro código ou reseta a licença.
+    if ($device['owner'] != '' && $charge_reseller_id > 0 && !($device['owner'] == 'reseller' && (int)$device['reseller_id'] == $charge_reseller_id)) {
+        return array('ok' => false, 'msg' => 'Este aparelho está ligado ao código de '.devices_owner_name($mysqli, $device).'. Ele só pode ser ativado por esse dono. Para trocar, o cliente digita outro código no app ou reseta a licença.');
     }
-    // Admin ativando sem cobrar de revenda um aparelho que não está ativo (sem dono, aguardando outra revenda,
-    // ou vencido): o aparelho passa a ser do admin, que foi quem ativou
-    if ($charge_reseller_id == 0 && $device['owner'] != '' && $device['owner'] != 'admin' && devices_activation_status($device) != 'active') {
-        devices_take_over($mysqli, $device_pk, 'admin', 0);
-        $device = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM tbl_devices WHERE id = $device_pk"));
-    }
-    // Admin ativando um aparelho sem dono que já está ativo com outro dono (outro registro do mesmo aparelho)
-    if ($charge_reseller_id == 0 && $device['owner'] == '' && devices_active_elsewhere($mysqli, $device['device_id'], 'admin', 0, 0, $device_pk)) {
+    // Aparelho sem dono (ativação manual): quem ativa vira o dono; não pode estar ativo com outro dono em outro registro
+    if ($device['owner'] == '' && devices_active_elsewhere($mysqli, $device['device_id'], $charge_reseller_id > 0 ? 'reseller' : 'admin', $charge_reseller_id, 0, $device_pk)) {
         return array('ok' => false, 'msg' => 'Este aparelho já está ativo com outro dono. Ele só pode ser ativado de novo depois que o cliente resetar a licença no app ou quando a ativação vencer.');
     }
     $credits = 0;

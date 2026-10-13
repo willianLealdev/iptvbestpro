@@ -530,7 +530,7 @@
                                             <div class="dropdown">
                                                 <button class="dv-dots" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">···</button>
                                                 <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li><a class="dropdown-item btn_activate" href="javascript:void(0)" data-pk="<?php echo $row['id']; ?>" data-mac="<?php echo htmlspecialchars($row['device_id']); ?>" data-customer="<?php echo htmlspecialchars($row['customer_name']); ?>">
+                                                    <li><a class="dropdown-item btn_activate" href="javascript:void(0)" data-pk="<?php echo $row['id']; ?>" data-mac="<?php echo htmlspecialchars($row['device_id']); ?>" data-customer="<?php echo htmlspecialchars($row['customer_name']); ?>" data-owner="<?php echo htmlspecialchars($row['owner']); ?>" data-reseller="<?php echo (int)$row['reseller_id']; ?>" data-owner-name="<?php echo htmlspecialchars($owner_label); ?>">
                                                         <i class="ri-flashlight-line me-1"></i><?php echo $status == 'inactive' ? 'Ativar' : 'Renovar / trocar pacote'; ?></a></li>
                                                     <li><a class="dropdown-item" href="device_playlist.php?device=<?php echo $row['id']; ?>"><i class="ri-play-list-line me-1"></i>Playlist</a></li>
                                                     <?php if($status != 'inactive'){ ?>
@@ -648,6 +648,7 @@
                 </div>
                 <p class="text-muted small">Se o dispositivo ainda estiver válido, os dias do novo pacote são somados ao vencimento atual.</p>
                 <?php dv_package_reseller_fields($packages, $resellers, $is_super_admin); ?>
+                <div id="activate_owner_note" class="alert alert-info small mt-3 mb-0" style="display:none"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -760,6 +761,20 @@ document.addEventListener('click', function (e) {
         document.getElementById('activate_pk').value = act.getAttribute('data-pk');
         document.getElementById('activate_mac').textContent = act.getAttribute('data-mac');
         document.getElementById('activate_customer').value = act.getAttribute('data-customer') || '';
+        // O aparelho fica com o dono do código digitado: só esse dono pode ativar/renovar
+        var sel = document.querySelector('#activateModal select[name="reseller_id"]'), note = document.getElementById('activate_owner_note');
+        var ow = act.getAttribute('data-owner') || '', rid = act.getAttribute('data-reseller') || '0';
+        if (sel) {
+            for (var i = 0; i < sel.options.length; i++) {
+                var v = sel.options[i].value;
+                sel.options[i].disabled = ow === '' ? false : (ow === 'reseller' ? v !== rid : v !== '0');
+            }
+            sel.value = ow === 'reseller' ? rid : '0';
+        }
+        if (note) {
+            note.textContent = ow === '' ? '' : 'Este aparelho está ligado ao código de ' + (act.getAttribute('data-owner-name') || ow) + '. Só esse dono pode ativar. Para trocar, o cliente digita outro código no app ou reseta a licença.';
+            note.style.display = ow === '' ? 'none' : 'block';
+        }
         bootstrap.Modal.getOrCreateInstance(document.getElementById('activateModal')).show();
     }
 });
