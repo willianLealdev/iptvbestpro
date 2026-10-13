@@ -119,8 +119,8 @@ function server_link_device($mysqli, $data){
     $sid = (int)$server['id'];
     $same = ($device['owner'] == 'reseller' && (int)$device['reseller_id'] == $sid);
     $active = devices_activation_status($device) == 'active';
-    if ($active && !$same && $device['owner'] != '') {
-        return array('ok' => false, 'msg' => 'Este dispositivo já está ativo com outro revendedor.', 'device' => $device);
+    if (($active && !$same && $device['owner'] != '') || devices_active_elsewhere($mysqli, $device_id, 'reseller', $sid, 0, (int)$device['id'])) {
+        return array('ok' => false, 'msg' => 'Este aparelho já está ativo com outra revenda. Para usar outro código, resete a licença no app (Configurações → Resetar licença).', 'device' => $device);
     }
     if ($active && $same) return array('ok' => true, 'msg' => 'Dispositivo ativo.', 'device' => $device);
 
@@ -128,11 +128,8 @@ function server_link_device($mysqli, $data){
         return array('ok' => false, 'msg' => 'Não há créditos disponíveis. Verifique com o seu revendedor ou servidor, ou adquira uma nova licença.', 'device' => $device);
     }
     if (!$same) {
-        // Troca de dono: as listas do dono anterior nunca passam para o servidor
-        devices_wipe_playlists($mysqli, $device_id);
-        $now = time();
-        mysqli_query($mysqli, "UPDATE tbl_devices SET owner = 'reseller', reseller_id = $sid, linked_at = $now,
-                               package = IF(package <> '' AND expires_at > 0 AND expires_at < $now, '', package) WHERE id = ".(int)$device['id']);
+        // Troca de dono: chega zerado (sem listas, ativação, nome ou créditos do dono anterior)
+        devices_take_over($mysqli, (int)$device['id'], 'reseller', $sid);
     }
     $r = devices_activate($mysqli, (int)$device['id'], '1y', $sid, '', 0);
     $device = devices_find($mysqli, $device_id, $application_id);

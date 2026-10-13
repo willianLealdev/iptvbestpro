@@ -521,6 +521,22 @@ function devices_activate($mysqli, $device_pk, $package_key, $charge_reseller_id
     if (!$device) return array('ok' => false, 'msg' => 'Dispositivo não encontrado.');
 
     $charge_reseller_id = (int)$charge_reseller_id;
+    // Ativar cobrando de uma revenda um aparelho que é de outro dono
+    if ($charge_reseller_id > 0 && !($device['owner'] == 'reseller' && (int)$device['reseller_id'] == $charge_reseller_id)) {
+        $is_active = devices_activation_status($device) == 'active'
+            || devices_active_elsewhere($mysqli, $device['device_id'], 'reseller', $charge_reseller_id, 0, $device_pk);
+        if ($device['owner'] != '' && $is_active) {
+            return array('ok' => false, 'msg' => 'Este aparelho está ativo com outro dono ('.devices_owner_name($mysqli, $device).'). Outra revenda só pode ativar depois que o cliente resetar a licença no app ou quando a ativação vencer.');
+        }
+        if ($device['owner'] != '') {
+            devices_take_over($mysqli, $device_pk, 'reseller', $charge_reseller_id);
+            $device = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM tbl_devices WHERE id = $device_pk"));
+        }
+    }
+    // Admin ativando um aparelho sem dono que já está ativo com outro dono (outro registro do mesmo aparelho)
+    if ($charge_reseller_id == 0 && $device['owner'] == '' && devices_active_elsewhere($mysqli, $device['device_id'], 'admin', 0, 0, $device_pk)) {
+        return array('ok' => false, 'msg' => 'Este aparelho já está ativo com outro dono. Ele só pode ser ativado de novo depois que o cliente resetar a licença no app ou quando a ativação vencer.');
+    }
     $credits = 0;
     $activated_by = $actor_label;
     if ($charge_reseller_id > 0) {
@@ -636,6 +652,44 @@ function devices_wipe_playlists($mysqli, $device_id){
     mysqli_stmt_close($stmt);
 }
 
+/**
+ * Regra do dono: o aparelho é de quem o ativou. Enquanto estiver ativo, nenhum outro dono (revenda, servidor,
+ * assinatura ou admin cobrando outra revenda) ativa, renova ou "pega" o aparelho. Outro dono só entra depois
+ * que o cliente reseta a licença no app ou quando a ativação venceu.
+ * Um mesmo aparelho (device_id) pode ter mais de um registro (um por app): a regra vale para todos.
+ */
+function devices_active_elsewhere($mysqli, $device_id, $owner, $reseller_id, $customer_id = 0, $exclude_pk = 0){
+    $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_devices WHERE device_id = ? AND id <> ? AND owner <> ''");
+    $ex = (int)$exclude_pk;
+    mysqli_stmt_bind_param($stmt, 'si', $device_id, $ex);
+    mysqli_stmt_execute($stmt);
+    $res = mysqli_stmt_get_result($stmt);
+    $found = null;
+    while ($res && $row = mysqli_fetch_assoc($res)) {
+        if (devices_activation_status($row) != 'active') continue;
+        $same = $row['owner'] == $owner && (int)$row['reseller_id'] == (int)$reseller_id && ($owner != 'customer' || (int)$row['customer_id'] == (int)$customer_id);
+        if (!$same) { $found = $row; break; }
+    }
+    mysqli_stmt_close($stmt);
+    return $found;
+}
+
+// Troca de dono: o aparelho chega zerado para o novo dono (sem ativação, nome, créditos ou listas do anterior)
+// e os outros registros antigos do mesmo aparelho (de outros apps, sem ativação válida) são apagados.
+function devices_take_over($mysqli, $device_pk, $owner, $reseller_id, $customer_id = 0){
+    $pk = (int)$device_pk;
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT device_id FROM tbl_devices WHERE id = $pk"));
+    if (!$row) return false;
+    $now = time();
+    $owner = in_array($owner, array('reseller', 'admin', 'customer'), true) ? $owner : '';
+    devices_wipe_playlists($mysqli, $row['device_id']);
+    mysqli_query($mysqli, "UPDATE tbl_devices SET owner = '$owner', reseller_id = ".(int)$reseller_id.", customer_id = ".(int)$customer_id.", linked_at = $now,
+                           package = '', activated_at = 0, expires_at = 0, activated_by = '', used_credits = 0, customer_name = '' WHERE id = $pk");
+    $did = mysqli_real_escape_string($mysqli, $row['device_id']);
+    mysqli_query($mysqli, "DELETE FROM tbl_devices WHERE device_id = '$did' AND id <> $pk");
+    return true;
+}
+
 // Excluir aparelho = apagar tudo dele (listas incluídas). Ao voltar, ele chega zerado.
 function devices_purge($mysqli, $ids){
     $ids = array_filter(array_map('intval', is_array($ids) ? $ids : explode(',', (string)$ids)));
@@ -680,18 +734,14 @@ function devices_link($mysqli, $data){
 
     $new_reseller = $owner['owner'] == 'reseller' ? (int)$owner['reseller']['id'] : 0;
     $same_owner = ($device['owner'] == $owner['owner'] && (int)$device['reseller_id'] == $new_reseller);
-    if (!$same_owner && $device['owner'] != '' && devices_activation_status($device) == 'active') {
-        return array('ok' => false, 'msg' => 'Este dispositivo já está ativo com outro revendedor.', 'device' => $device);
+    if ((!$same_owner && $device['owner'] != '' && devices_activation_status($device) == 'active')
+        || devices_active_elsewhere($mysqli, $device_id, $owner['owner'], $new_reseller, 0, (int)$device['id'])) {
+        return array('ok' => false, 'msg' => 'Este aparelho já está ativo com outra revenda. Para usar outro código, resete a licença no app (Configurações → Resetar licença).', 'device' => $device);
     }
 
     if (!$same_owner) {
-        $now = time();
-        // Troca de dono: as listas do dono anterior nunca passam para o novo
-        devices_wipe_playlists($mysqli, $device_id);
-        // Troca de dono: zera ativação vencida/pendente do dono anterior
-        mysqli_query($mysqli, "UPDATE tbl_devices SET owner = '".$owner['owner']."', reseller_id = $new_reseller, linked_at = $now,
-                               package = IF(package <> '' AND expires_at > 0 AND expires_at < $now, '', package)
-                               WHERE id = ".(int)$device['id']);
+        // Troca de dono: chega zerado (sem listas, ativação, nome ou créditos do dono anterior)
+        devices_take_over($mysqli, (int)$device['id'], $owner['owner'], $new_reseller);
         $device = devices_find($mysqli, $device_id, $application_id);
     }
     return array('ok' => true, 'msg' => 'Dispositivo vinculado. Aguarde a ativação pelo seu revendedor.', 'device' => $device);

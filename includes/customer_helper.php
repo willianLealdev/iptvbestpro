@@ -402,8 +402,18 @@ function subscription_activate_device($mysqli, $data){
         if ((int)$sub['device_pk'] === (int)$device['id']) return array('ok' => true, 'msg' => 'Dispositivo já ativado.', 'device' => $device);
         return array('ok' => false, 'msg' => 'Este código já foi usado em outro aparelho. Para ativar outro aparelho, contrate uma nova assinatura.', 'device' => null);
     }
-    if ($device['owner'] != '' && $device['owner'] != 'customer' && devices_activation_status($device) == 'active') {
-        return array('ok' => false, 'msg' => 'Este aparelho já está ativo com outro revendedor.', 'device' => $device);
+    if (($device['owner'] != '' && devices_activation_status($device) == 'active' && !($device['owner'] == 'customer' && (int)$device['customer_id'] === (int)$sub['customer_id']))
+        || devices_active_elsewhere($mysqli, $device['device_id'], 'customer', 0, (int)$sub['customer_id'], (int)$device['id'])) {
+        return array('ok' => false, 'msg' => 'Este aparelho já está ativo com outra revenda. Para usar outro código, resete a licença no app (Configurações → Resetar licença).', 'device' => $device);
+    }
+    // Teste grátis: confere antes de zerar (o aparelho que já foi ativado por outra revenda não ganha teste)
+    if (!empty($sub['is_trial']) && trial_used_by_device($mysqli, $device)) {
+        return array('ok' => false, 'msg' => 'Este aparelho já usou o teste grátis ou já foi ativado antes. Para continuar, adquira uma licença.', 'device' => null);
+    }
+    // Outro dono (revenda vencida ou outro cliente): chega zerado antes de ativar a assinatura
+    if ($device['owner'] != '' && !($device['owner'] == 'customer' && (int)$device['customer_id'] === (int)$sub['customer_id'])) {
+        devices_take_over($mysqli, (int)$device['id'], '', 0);
+        $device = devices_find($mysqli, $device['device_id'], $device['application_id']);
     }
 
     // Teste grátis: só em aparelho que nunca foi ativado

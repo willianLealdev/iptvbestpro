@@ -60,10 +60,17 @@ if($get_helper['helper_name']=="device_reset"){
     $aid = devices_clean(isset($get_helper['application_id']) ? $get_helper['application_id'] : '', 191);
     $ok = '0';
     if ($did !== '') {
-        $device = devices_find($mysqli, $did, $aid);
-        // apaga o aparelho de vez (some da lista da revenda e do admin) junto com as listas dele
+        // apaga o aparelho de vez (some da lista da revenda e do admin) junto com as listas dele,
+        // em todos os registros desse aparelho (um por app), para nenhum dono antigo continuar com ele
         devices_wipe_playlists($mysqli, $did);
-        if ($device) devices_purge($mysqli, array((int)$device['id']));
+        $ids = array();
+        $st = mysqli_prepare($mysqli, "SELECT id FROM tbl_devices WHERE device_id = ?");
+        mysqli_stmt_bind_param($st, 's', $did);
+        mysqli_stmt_execute($st);
+        $rs = mysqli_stmt_get_result($st);
+        while ($rs && $x = mysqli_fetch_assoc($rs)) $ids[] = (int)$x['id'];
+        mysqli_stmt_close($st);
+        if ($ids) devices_purge($mysqli, $ids);
         $ok = '1';
     }
     $set[$API_NAME][] = array('success' => $ok, 'status' => 'unlinked', 'MSG' => $ok == '1' ? 'Licença resetada. Digite o novo código.' : 'Dispositivo não identificado.');
