@@ -145,6 +145,8 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
     require_once("includes/customer_helper.php");
     customers_migrate($mysqli);
     $set[$API_NAME][$last]['trial_days'] = ($status == 'unlinked' && trial_enabled($mysqli) && !trial_used_by_device($mysqli, $device)) ? (string)trial_days($mysqli) : '0';
+    // imagem do QR code do cadastro (teste grátis), para os apps que não geram QR code sozinhos (Roku)
+    $set[$API_NAME][$last]['trial_qr'] = ($set[$API_NAME][$last]['trial_days'] != '0' && $device) ? $sp_base.'/qr?r=1&d='.rawurlencode($device['device_id']) : '';
     header( 'Content-Type: application/json; charset=utf-8' );
     echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     die();
