@@ -32,8 +32,10 @@
   var IS_WHALE = /[?&]p=whale\b/i.test(location.search) || /WhaleTV|Whale ?OS|Zeasn/i.test(UA);
   // Titan OS (Philips e JVC desde 2023): app aberto pelo endereço /tv/?p=titan; o navegador traz "TitanOS/" no UA
   var IS_TITAN = /[?&]p=titan\b/i.test(location.search) || /TitanOS\//i.test(UA);
-  var PLATFORM = IS_TITAN ? 'titan_os' : (IS_WHALE ? 'whale_tv' : (/Tizen/i.test(UA) ? 'samsung_tv' : 'lg_tv'));
-  var PLATFORM_NAME = { titan_os: 'Titan OS', whale_tv: 'Whale TV', samsung_tv: 'Samsung Tizen', lg_tv: 'LG webOS' }[PLATFORM];
+  // Windows (app da Microsoft Store): aberto pelo endereço /tv/?p=windows; usa mouse e teclado
+  var IS_WIN = /[?&]p=windows\b/i.test(location.search);
+  var PLATFORM = IS_WIN ? 'windows' : (IS_TITAN ? 'titan_os' : (IS_WHALE ? 'whale_tv' : (/Tizen/i.test(UA) ? 'samsung_tv' : 'lg_tv')));
+  var PLATFORM_NAME = { windows: 'Windows', titan_os: 'Titan OS', whale_tv: 'Whale TV', samsung_tv: 'Samsung Tizen', lg_tv: 'LG webOS' }[PLATFORM];
   var DID = LS.get('bp_did', '');
   if (!DID) {
     DID = 'tv';
@@ -193,7 +195,7 @@
   }
   function api(helper, extra, cb) {
     var o = { helper_name: helper, application_id: APP_ID, device_id: DID, platform: PLATFORM,
-      device_model: { lg_tv: 'LG webOS TV', whale_tv: 'Whale TV', titan_os: 'Titan OS TV', samsung_tv: 'Samsung Smart TV' }[PLATFORM], os_version: '', app_version: VER, app_name: 'IPTV Best Pro' };
+      device_model: { windows: 'Windows PC', lg_tv: 'LG webOS TV', whale_tv: 'Whale TV', titan_os: 'Titan OS TV', samsung_tv: 'Samsung Smart TV' }[PLATFORM], os_version: '', app_version: VER, app_name: 'IPTV Best Pro' };
     for (var k in extra) if (extra.hasOwnProperty(k)) o[k] = extra[k];
     var fd = new FormData();
     fd.append('data', b64(JSON.stringify(o)));
@@ -302,6 +304,24 @@
     else if (k === 'ok') { if (focused) activate(focused); }
     else if (k === 'back') { if (S.back) S.back(); }
   }, true);
+  // Windows: botão Voltar na tela (mouse), botão "voltar" do mouse e rodinha para subir/descer nas listas
+  function goBack() { if (S.modal) closeModal(); else if (S.back) S.back(); }
+  if (IS_WIN) {
+    document.documentElement.className += ' win';
+    var wb = document.createElement('div');
+    wb.id = 'winback'; wb.title = 'Voltar'; wb.innerHTML = '&#8592;';
+    wb.addEventListener('click', function (e) { e.preventDefault(); goBack(); });
+    document.body.appendChild(wb);
+    document.addEventListener('mouseup', function (e) { if (e.button === 3) { e.preventDefault(); goBack(); } });
+    var wheelAt = 0;
+    document.addEventListener('wheel', function (e) {
+      if (S.screen === 'play') return;
+      var now = Date.now();
+      if (now - wheelAt < 120 || !e.deltaY) return;
+      wheelAt = now;
+      move(e.deltaY > 0 ? 'down' : 'up');
+    }, { passive: true });
+  }
   stage.addEventListener('click', function (e) {
     var el = e.target; while (el && el !== stage && !(el.classList && el.classList.contains('f'))) el = el.parentNode;
     if (el && el !== stage) { focus(el); activate(el); }

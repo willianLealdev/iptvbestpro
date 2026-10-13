@@ -205,6 +205,7 @@ function devices_normalize_platform($platform){
         'iphone' => 'iphone', 'ios' => 'iphone',
         'ipad' => 'ipad', 'ipados' => 'ipad',
         'apple_tv' => 'apple_tv', 'tvos' => 'apple_tv', 'appletv' => 'apple_tv',
+        'windows' => 'windows', 'win' => 'windows', 'pc' => 'windows',
     );
     return isset($map[$p]) ? $map[$p] : 'android';
 }
@@ -225,6 +226,7 @@ function devices_platform_labels(){
         'iphone'       => array('label' => 'iPhone',          'icon' => 'ri-apple-line',      'color' => '#111827'),
         'ipad'         => array('label' => 'iPad',            'icon' => 'ri-tablet-line',     'color' => '#374151'),
         'apple_tv'     => array('label' => 'Apple TV',        'icon' => 'ri-tv-2-line',       'color' => '#6b7280'),
+        'windows'      => array('label' => 'Windows (PC)',    'icon' => 'ri-windows-line',    'color' => '#0078d4'),
     );
 }
 

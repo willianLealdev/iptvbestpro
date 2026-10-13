@@ -5,12 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>IPTV Best Pro TV</title>
-<link rel="stylesheet" href="app.css?v=17">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#070b18">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="app.css?v=18">
 </head>
 <body>
 <!-- Prévia do app de TV no navegador (setas, Enter e Esc funcionam como o controle remoto) -->
 <div id="stage"></div>
 <script src="qrcode.min.js"></script>
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
+<script>if ('serviceWorker' in navigator && /[?&]p=windows\b/.test(location.search)) navigator.serviceWorker.register('sw.js').catch(function () {});</script>
 </body>
 </html>

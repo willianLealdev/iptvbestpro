@@ -42,6 +42,7 @@ $platforms = array(
     array('soon', 'titan', 'Titan OS', ''),
     array('soon', 'apple', 'iPhone e iPad', ''),
     array('soon', 'appletv', 'Apple TV', ''),
+    array('soon', 'windows', 'Windows (PC)', ''),
 );
 function lp_logo($k){
     $l = array(
@@ -59,6 +60,7 @@ function lp_logo($k){
         'whale'     => array('#1d2a6e', '<b style="font-size:9.5px">whale</b>'),
         'titan'     => array('#e11d48', '<b style="font-size:9.5px">TITAN</b>'),
         'apple'     => array('#000', '<i class="ri-apple-fill"></i>'),
+        'windows'   => array('#0078d4', '<i class="ri-windows-fill"></i>'),
         'appletv'   => array('#000', '<b style="font-size:12px;display:flex;align-items:center"><i class="ri-apple-fill" style="font-size:15px"></i>tv</b>'),
     );
     $x = isset($l[$k]) ? $l[$k] : array('#2f6bff', '<i class="ri-tv-2-line"></i>');
