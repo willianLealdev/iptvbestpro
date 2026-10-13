@@ -163,6 +163,7 @@
     $dir = (isset($_GET['dir']) && strtolower($_GET['dir']) == 'asc') ? 'ASC' : 'DESC';
 
     $tab = (isset($_GET['tab']) && in_array($_GET['tab'], array('dev', 'srv', 'wait'))) ? $_GET['tab'] : '';
+    $usage_filter = (isset($_GET['usage']) && in_array($_GET['usage'], array('using', 'idle', 'gone'))) ? $_GET['usage'] : '';
     $origin_filter = (isset($_GET['origin']) && in_array($_GET['origin'], array('real', 'test', 'unknown'))) ? $_GET['origin'] : '';
     $now = time();
     // aparelhos ativados com o código de um servidor parceiro ficam numa aba só deles
@@ -194,6 +195,7 @@
     $wait_origin = array('real' => 0, 'test' => 0, 'unknown' => 0);
     $wo = mysqli_query($mysqli, "SELECT CASE WHEN d.origin = 'real' THEN 'real' WHEN d.origin = '' THEN 'unknown' ELSE 'test' END AS k, COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['wait']." GROUP BY k");
     while($wo && $w = mysqli_fetch_assoc($wo)){ $wait_origin[$w['k']] = (int)$w['n']; }
+    if($usage_filter != ''){ $where[] = devices_usage_sql($usage_filter); }
     if($origin_filter == 'real'){ $where[] = "d.origin = 'real'"; }
     if($origin_filter == 'unknown'){ $where[] = "d.origin = ''"; }
     if($origin_filter == 'test'){ $where[] = "d.origin NOT IN ('', 'real')"; }
@@ -303,6 +305,10 @@
             .dv-tabs { display: flex; gap: 6px; border-bottom: 1px solid #eef0f4; margin-bottom: 18px; flex-wrap: wrap; }
             .dv-tabs a { padding: 10px 16px; color: #6b7280; text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; }
             .dv-tabs a.active { color: #3b6cf6; border-bottom-color: #3b6cf6; }
+            .dv-usage { display: inline-flex; align-items: center; gap: 3px; margin-top: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+            .us-using { color: #389e0d; }
+            .us-idle { color: #d46b08; }
+            .us-gone { color: #cf1322; }
             .dv-origin { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 4px; font-size: 12.5px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
             .or-real { color: #389e0d; background: #f6ffed; border-color: #d9f7be; }
             .or-store { color: #d46b08; background: #fff7e6; border-color: #ffe7ba; }
@@ -394,6 +400,13 @@
                             <input type="hidden" name="sort" value="<?php echo htmlspecialchars($sort); ?>">
                             <input type="hidden" name="dir" value="<?php echo strtolower($dir); ?>">
                         <?php } ?>
+                        <select name="usage" class="form-select dv-filter" onchange="this.form.submit()" title="Pelo último acesso: o app não avisa quando é removido">
+                            <option value="">Todos os usos</option>
+                            <option value="using" <?php if($usage_filter == 'using'){ echo 'selected'; } ?>>Usando (até 3 dias)</option>
+                            <option value="idle" <?php if($usage_filter == 'idle'){ echo 'selected'; } ?>>Parados (4 a 15 dias)</option>
+                            <option value="gone" <?php if($usage_filter == 'gone'){ echo 'selected'; } ?>>Provavelmente removeram (mais de 15 dias)</option>
+                        </select>
+                        <?php if($origin_filter != ''){ ?><input type="hidden" name="origin" value="<?php echo htmlspecialchars($origin_filter); ?>"><?php } ?>
                         <select name="owner" class="form-select dv-filter" onchange="this.form.submit()">
                             <option value="">Todos os revendedores</option>
                             <option value="admin" <?php if($owner_filter == 'admin'){ echo 'selected'; } ?>>Meus (admin)</option>
@@ -403,7 +416,7 @@
                                 <option value="<?php echo $r['id']; ?>" <?php if($owner_filter === (string)$r['id']){ echo 'selected'; } ?>><?php echo htmlspecialchars($r['name']); ?></option>
                             <?php } ?>
                         </select>
-                        <?php if($keyword != '' || $app_filter != '' || $pkg_filter != '' || $status_filter != '' || $owner_filter != ''){ ?>
+                        <?php if($keyword != '' || $app_filter != '' || $pkg_filter != '' || $status_filter != '' || $owner_filter != '' || $usage_filter != ''){ ?>
                             <a href="manage_devices.php<?php echo $tab != '' ? '?tab='.$tab : ''; ?>" class="btn btn-outline-secondary d-inline-flex align-items-center">Limpar</a>
                         <?php } ?>
                     </form>
@@ -480,6 +493,8 @@
                                                 <img src="<?php echo htmlspecialchars(brand_logo_url()); ?>" alt="" onerror="this.style.visibility='hidden'">
                                                 <span><?php echo htmlspecialchars($row['app_label']); ?></span>
                                             </span>
+                                            <?php $us = devices_usage_info($row['last_seen']); ?>
+                                            <br><span class="dv-usage <?php echo $us[2]; ?>" title="Último acesso: <?php echo (int)$row['last_seen'] > 0 ? date('d/m/Y H:i', $row['last_seen']) : '—'; ?>"><i class="<?php echo $us[3]; ?>"></i> <?php echo $us[1]; ?></span>
                                         </td>
                                         <?php if($tab == 'wait'){ $oi = devices_origin_info($row['origin']); ?>
                                         <td>

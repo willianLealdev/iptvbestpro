@@ -16,6 +16,14 @@
     $total_devices   = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices");
     $total_resellers = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_resellers");
     $total_credit_share = resellers_total_credit_share($mysqli);
+    // Uso do app pelo último acesso (sem os aparelhos de teste): ativados e aguardando ativação
+    $usage = array();
+    foreach (array('using', 'idle', 'gone') as $uk) {
+        $usage[$uk] = array(
+            'act'  => dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices d WHERE d.is_dev <> 1 AND d.package <> '' AND ".devices_usage_sql($uk)),
+            'wait' => dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices d WHERE d.is_dev <> 1 AND d.package = '' AND ".devices_usage_sql($uk)),
+        );
+    }
 
     // Dispositivos por App
     $by_app = array();
@@ -152,6 +160,32 @@
                 </div>
             </div>
         </div>
+
+        <!-- Uso do app (pelo último acesso) -->
+        <div class="row g-4 mt-1">
+            <?php foreach (array(
+                'using' => array('Usando o app', 'abriram nos últimos 3 dias', '#16c784', '#f3fdf7', '#ccf7dd', 'ri-checkbox-circle-fill'),
+                'idle'  => array('Parados', '4 a 15 dias sem abrir', '#f59e0b', '#fffbeb', '#fde68a', 'ri-pause-circle-fill'),
+                'gone'  => array('Provavelmente removeram', 'mais de 15 dias sem abrir', '#ef4444', '#fef2f2', '#fecaca', 'ri-delete-bin-6-fill'),
+            ) as $uk => $u) { ?>
+            <div class="col-md-4">
+                <div class="card dash-stat" style="--dash-color:<?php echo $u[2]; ?>; --dash-bg:<?php echo $u[3]; ?>; --dash-icon-bg:<?php echo $u[4]; ?>;">
+                    <div class="card-body">
+                        <div class="dash-stat__icon"><i class="<?php echo $u[5]; ?>"></i></div>
+                        <div>
+                            <div class="dash-stat__label"><?php echo $u[0]; ?> <small class="text-muted fw-normal">· <?php echo $u[1]; ?></small></div>
+                            <div class="dash-stat__value"><?php echo thousandsNumberFormat($usage[$uk]['act'] + $usage[$uk]['wait']); ?></div>
+                            <div class="small">
+                                <a href="manage_devices.php?usage=<?php echo $uk; ?>">Ativados: <b><?php echo thousandsNumberFormat($usage[$uk]['act']); ?></b></a>
+                                · <a href="manage_devices.php?tab=wait&amp;usage=<?php echo $uk; ?>">Aguardando ativação: <b><?php echo thousandsNumberFormat($usage[$uk]['wait']); ?></b></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php } ?>
+        </div>
+        <p class="small text-muted mt-2 mb-0">O app não avisa quando é removido. Estes números vêm do último acesso de cada aparelho (sem os Dispositivos dev).</p>
 
         <!-- Por App / Por Plataforma -->
         <div class="row g-4 mt-1">

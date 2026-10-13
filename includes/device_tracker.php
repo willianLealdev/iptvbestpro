@@ -77,6 +77,28 @@ function devices_origin_guess($model, $asn_org){
     return 'real';
 }
 
+/**
+ * Uso do app pelo último acesso (o app não avisa quando é removido; quem some por muitos dias provavelmente removeu):
+ * using = abriu nos últimos 3 dias | idle = 4 a 15 dias sem abrir | gone = mais de 15 dias sem abrir
+ */
+define('DEVICES_USING_DAYS', 3);
+define('DEVICES_GONE_DAYS', 15);
+function devices_usage_sql($key, $alias = 'd'){
+    $now = time();
+    $a = $now - DEVICES_USING_DAYS * 86400;
+    $b = $now - DEVICES_GONE_DAYS * 86400;
+    if ($key == 'using') return "$alias.last_seen >= $a";
+    if ($key == 'idle') return "($alias.last_seen < $a AND $alias.last_seen >= $b)";
+    if ($key == 'gone') return "$alias.last_seen < $b";
+    return '1=1';
+}
+function devices_usage_info($last_seen){
+    $days = $last_seen > 0 ? (int)floor((time() - (int)$last_seen) / 86400) : 999;
+    if ($days < DEVICES_USING_DAYS) return array('using', 'Usando', 'us-using', 'ri-checkbox-circle-line');
+    if ($days < DEVICES_GONE_DAYS) return array('idle', 'Parado há '.$days.' dias', 'us-idle', 'ri-pause-circle-line');
+    return array('gone', 'Provavelmente removeu', 'us-gone', 'ri-delete-bin-6-line');
+}
+
 function devices_origin_info($origin){
     $map = array(
         'real'         => array('Provável cliente real', 'or-real', 'ri-user-heart-line'),

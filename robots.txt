@@ -1,9 +1,22 @@
+# Páginas públicas do site podem ser indexadas; painel, API e áreas logadas não.
 User-agent: *
 Allow: /$
 Allow: /index.php
-Allow: /terms.php
-Allow: /privacy_policy.php
+Allow: /terms
+Allow: /privacy_policy
 Allow: /download
-Allow: /download.php
+Allow: /policy/
+Allow: /cliente/$
+Allow: /cliente/index.php
+Allow: /cliente/register
+Allow: /revenda/$
+Allow: /revenda/index.php
+Allow: /revenda/register
+Allow: /servidor/$
+Allow: /servidor/index.php
+Allow: /servidor/register
 Allow: /assets/
+Allow: /images/
 Disallow: /
+
+Sitemap: https://iptvbestpro.com/sitemap.xml
