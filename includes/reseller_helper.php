@@ -607,10 +607,19 @@ function devices_set_customer($mysqli, $device_pk, $name, $reseller_id = 0){
     return $ok;
 }
 
+// Desativar = o aparelho fica livre (sem dono, sem ativação e sem as listas do dono), igual ao Resetar licença no app:
+// depois pode ser ativado com o código de qualquer revenda, servidor ou assinatura.
+// activated_at fica guardado só como histórico (aparelho que já foi ativado não ganha teste grátis).
 function devices_deactivate($mysqli, $device_pk, $reseller_id = 0){
     $device_pk = (int)$device_pk;
     $extra = $reseller_id > 0 ? " AND owner = 'reseller' AND reseller_id = ".(int)$reseller_id : '';
-    return mysqli_query($mysqli, "UPDATE tbl_devices SET package = '', expires_at = 0 WHERE id = $device_pk".$extra);
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT device_id FROM tbl_devices WHERE id = $device_pk".$extra));
+    if (!$row) return false;
+    devices_wipe_playlists($mysqli, $row['device_id']);
+    $did = mysqli_real_escape_string($mysqli, $row['device_id']);
+    // todos os registros desse aparelho (um por app) ficam livres
+    return mysqli_query($mysqli, "UPDATE tbl_devices SET owner = '', reseller_id = 0, customer_id = 0, linked_at = 0, package = '', expires_at = 0,
+                                  activated_by = '', used_credits = 0, customer_name = '' WHERE device_id = '$did'");
 }
 
 /* ---------- Vínculo pelo app (código de 6 letras) ---------- */

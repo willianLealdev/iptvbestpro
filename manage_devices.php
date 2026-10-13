@@ -109,7 +109,7 @@
             mysqli_query($mysqli, "UPDATE tbl_devices SET is_dev = ".($act == 'dev' ? 1 : 2)." WHERE id IN ($ids)");
             dev_flash(true, $act == 'dev' ? $n.' dispositivo(s) movido(s) para Dispositivos dev.' : $n.' dispositivo(s) movido(s) para a lista de dispositivos reais.');
         } else if($act == 'deactivate'){
-            mysqli_query($mysqli, "UPDATE tbl_devices SET package = '', expires_at = 0 WHERE id IN ($ids)");
+            foreach(explode(',', $ids) as $one){ devices_deactivate($mysqli, (int)$one); }
             dev_flash(true, $n.' dispositivo(s) desativado(s).');
         } else if($act == 'delete'){
             devices_purge($mysqli, $ids); // apaga os aparelhos e todas as listas deles
@@ -131,7 +131,7 @@
     // Desativar
     if(isset($_POST['deactivate_submit'])){
         devices_deactivate($mysqli, $_POST['device_pk']);
-        dev_flash(true, 'Ativação removida.');
+        dev_flash(true, 'Dispositivo desativado e livre para ativar com qualquer código.');
         header("Location:".$back_url);
         exit;
     }
@@ -434,7 +434,7 @@
                     <?php } else { ?>
                         <button type="submit" name="bulk_action" value="dev" class="btn btn-sm btn-outline-primary"><i class="ri-bug-line"></i> Mover para Dispositivos dev</button>
                     <?php } ?>
-                    <button type="submit" name="bulk_action" value="deactivate" class="btn btn-sm btn-outline-secondary" data-confirm="Desativar os dispositivos selecionados? Os créditos usados não são devolvidos."><i class="ri-forbid-line"></i> Desativar</button>
+                    <button type="submit" name="bulk_action" value="deactivate" class="btn btn-sm btn-outline-secondary" data-confirm="Desativar os dispositivos selecionados? Eles ficam livres (sem revenda e sem listas) para ativar com qualquer código. Os créditos usados não são devolvidos."><i class="ri-forbid-line"></i> Desativar</button>
                     <button type="submit" name="bulk_action" value="delete" class="btn btn-sm btn-outline-danger" data-confirm="Excluir os dispositivos selecionados e todas as listas deles? Não dá para desfazer."><i class="ri-delete-bin-line"></i> Excluir</button>
                     <button type="button" class="btn btn-sm btn-link text-muted" id="dvBulkClear">Limpar seleção</button>
                 </form>
@@ -535,7 +535,7 @@
                                                     <li><a class="dropdown-item" href="device_playlist.php?device=<?php echo $row['id']; ?>"><i class="ri-play-list-line me-1"></i>Playlist</a></li>
                                                     <?php if($status != 'inactive'){ ?>
                                                         <li>
-                                                            <form method="post" onsubmit="return confirm('Remover a ativação deste dispositivo? Os créditos usados não são devolvidos.');">
+                                                            <form method="post" onsubmit="return confirm('Desativar este dispositivo? Ele fica livre (sem revenda e sem listas) para ativar com qualquer código. Os créditos usados não são devolvidos.');">
                                                                 <input type="hidden" name="device_pk" value="<?php echo $row['id']; ?>">
                                                                 <button type="submit" name="deactivate_submit" class="dropdown-item"><i class="ri-forbid-line me-1"></i>Desativar</button>
                                                             </form>
