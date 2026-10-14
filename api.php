@@ -82,7 +82,7 @@ if($get_helper['helper_name']=="device_reset"){
 // Ativação por código de revendedor
 // device_link:   { device_id, code, platform?, device_model?, ... } -> vincula o aparelho ao dono do código
 // device_status: { device_id } -> status: unlinked | pending | active | expired
-if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="device_status" || $get_helper['helper_name']=="apple_iap"){
+if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="device_status" || $get_helper['helper_name']=="apple_iap" || $get_helper['helper_name']=="amazon_iap"){
     require_once("includes/reseller_helper.php");
     resellers_migrate($mysqli);
 
@@ -90,6 +90,13 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
         // App iPhone/iPad/Apple TV: compra (ou restauração) pela Apple ativa o aparelho como cliente direto
         require_once("includes/apple_iap_helper.php");
         $link = apple_claim($mysqli, $get_helper);
+        $device = $link['device'];
+        $success = $link['ok'] ? '1' : '0';
+        $msg = $link['msg'];
+    } else if($get_helper['helper_name']=="amazon_iap"){
+        // App da Amazon (Fire TV): compra (ou restauração) pela Amazon ativa o aparelho como cliente direto
+        require_once("includes/amazon_iap_helper.php");
+        $link = amazon_claim($mysqli, $get_helper);
         $device = $link['device'];
         $success = $link['ok'] ? '1' : '0';
         $msg = $link['msg'];
@@ -105,6 +112,11 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
             : null;
         $success = '1';
         $msg = '';
+        // assinatura da Amazon perto de vencer: confere renovação / cancelamento com a Amazon
+        if ($device && $device['activated_by'] == 'cliente: Amazon') {
+            require_once("includes/amazon_iap_helper.php");
+            $device = amazon_refresh_device($mysqli, $device);
+        }
     }
 
     $status = devices_app_status($device);
@@ -148,6 +160,9 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
     if ($device && $device['package'] == 'trial') $set[$API_NAME][$last]['is_trial'] = '1';
     if ($srv && $status == 'expired') $set[$API_NAME][$last]['MSG'] = 'Sua ativação venceu. Digite o código do seu servidor de novo para renovar.';
     $set[$API_NAME][$last]['portal_url'] = $sp_base.'/cliente/';
+    // compra pela Amazon disponível (o app da Amazon mostra o botão "Assinar pela Amazon")
+    require_once("includes/payment_helper.php");
+    $set[$API_NAME][$last]['amazon_iap'] = pay_cfg($mysqli, 'amazon_secret') != '' ? '1' : '0';
     // Teste grátis: o app mostra "Teste grátis de N dias" no QR code de compra (só aparelho que ainda não usou)
     require_once("includes/customer_helper.php");
     customers_migrate($mysqli);

@@ -18,7 +18,7 @@
 
     /* ---------- Filtros ---------- */
     $kind = (isset($_GET['kind']) && in_array($_GET['kind'], array('credit', 'sub'))) ? $_GET['kind'] : '';
-    $method = (isset($_GET['method']) && in_array($_GET['method'], array('mercadopago', 'stripe', 'apple', 'manual'))) ? $_GET['method'] : '';
+    $method = (isset($_GET['method']) && in_array($_GET['method'], array('mercadopago', 'stripe', 'apple', 'amazon', 'manual'))) ? $_GET['method'] : '';
     $period = (isset($_GET['period']) && in_array($_GET['period'], array('today', '7d', 'month', 'last_month', '30d', 'year', 'all', 'custom'))) ? $_GET['period'] : 'month';
     $q = isset($_GET['q']) ? mb_substr(trim(strip_tags($_GET['q'])), 0, 100) : '';
     $date_from = isset($_GET['from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['from']) ? $_GET['from'] : '';
@@ -43,7 +43,7 @@
     if ($t_from > 0) $w[] = "x.paid_at >= ".(int)$t_from;
     if ($t_to > 0) $w[] = "x.paid_at < ".(int)$t_to;
     if ($kind != '') $w[] = "x.kind = '$kind'";
-    if ($method == 'manual') $w[] = "x.method NOT IN ('mercadopago', 'stripe', 'apple')";
+    if ($method == 'manual') $w[] = "x.method NOT IN ('mercadopago', 'stripe', 'apple', 'amazon')";
     elseif ($method != '') $w[] = "x.method = '$method'";
     if ($q != '') {
         $qe = mysqli_real_escape_string($mysqli, $q);
@@ -67,6 +67,7 @@
         if ($m == 'mercadopago') return 'Pix (Mercado Pago)';
         if ($m == 'stripe') return 'Cartão (Stripe)';
         if ($m == 'apple') return 'Apple (App Store)';
+        if ($m == 'amazon') return 'Amazon (Appstore)';
         return 'Manual';
     }
 
@@ -179,6 +180,7 @@
                             <option value="mercadopago" <?php if ($method == 'mercadopago') echo 'selected'; ?>>Pix (Mercado Pago)</option>
                             <option value="stripe" <?php if ($method == 'stripe') echo 'selected'; ?>>Cartão (Stripe)</option>
                             <option value="apple" <?php if ($method == 'apple') echo 'selected'; ?>>Apple (App Store)</option>
+                            <option value="amazon" <?php if ($method == 'amazon') echo 'selected'; ?>>Amazon (Appstore)</option>
                             <option value="manual" <?php if ($method == 'manual') echo 'selected'; ?>>Manual</option>
                         </select>
                     </div>

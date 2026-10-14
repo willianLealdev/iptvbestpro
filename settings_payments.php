@@ -3,6 +3,7 @@
     require("includes/lb_helper.php");
     require("language/language.php");
     require_once("includes/payment_helper.php");
+    define('AMAZON_IAP_SKU_UI', 'com.iptvbestpro.app.year');
 
     if(!isset($_SESSION['admin_type']) || $_SESSION['admin_type'] != 3){
         header("Location:dashboard.php"); // chaves de pagamento: somente o Super Admin
@@ -34,6 +35,12 @@
         gw_secret($mysqli, 'stripe_secret', 'stripe_secret');
         gw_secret($mysqli, 'stripe_webhook_secret', 'stripe_webhook_secret');
         gw_flash(true, 'Stripe salvo.');
+        header("Location:settings_payments.php"); exit;
+    }
+    if(isset($_POST['save_amazon'])){
+        gw_secret($mysqli, 'amazon_secret', 'amazon_secret');
+        pay_set($mysqli, 'amazon_sandbox_ok', !empty($_POST['amazon_sandbox_ok']) ? '1' : '0');
+        gw_flash(true, 'Amazon salvo.');
         header("Location:settings_payments.php"); exit;
     }
     if(isset($_POST['test_mp'])){
@@ -153,6 +160,28 @@
                         </form>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="card gw-card mt-4">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="mb-0"><i class="ri-amazon-line"></i> Amazon Appstore — compra dentro do app (Fire TV)</h5>
+                    <span class="badge <?php echo pay_cfg($mysqli, 'amazon_secret') != '' ? 'bg-success' : 'bg-secondary'; ?>"><?php echo pay_cfg($mysqli, 'amazon_secret') != '' ? 'Ativo' : 'Inativo'; ?></span>
+                </div>
+                <p class="small text-muted">No app da Amazon, o cliente assina pelo botão "Assinar pela Amazon" e paga com a conta Amazon dele. O painel confere cada compra direto com a Amazon e ativa o aparelho sozinho. Produto (SKU do período de 1 ano): <b><?php echo htmlspecialchars(AMAZON_IAP_SKU_UI); ?></b></p>
+                <form method="post" autocomplete="off">
+                    <div class="mb-3">
+                        <label class="form-label">Shared Key (chave compartilhada)</label>
+                        <input type="password" name="amazon_secret" class="form-control" autocomplete="new-password" placeholder="<?php echo pay_cfg($mysqli, 'amazon_secret') != '' ? 'Salva: '.htmlspecialchars(pay_mask(pay_cfg($mysqli, 'amazon_secret'))).' (deixe em branco para manter)' : '2:...'; ?>">
+                        <small class="text-muted">Amazon Developer Console → seu perfil (canto de cima) → <b>Shared Key</b>.</small>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="amazon_sandbox_ok" id="amazon_sandbox_ok" value="1" <?php if(pay_cfg($mysqli, 'amazon_sandbox_ok') == '1'){ echo 'checked'; } ?>>
+                        <label class="form-check-label" for="amazon_sandbox_ok">Aceitar compras de teste do App Tester (deixe desligado em produção)</label>
+                    </div>
+                    <button type="submit" name="save_amazon" class="btn btn-primary">Salvar</button>
+                </form>
             </div>
         </div>
 
