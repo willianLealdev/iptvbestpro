@@ -41,6 +41,20 @@ function amazon_migrate($mysqli){
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
+// Registro das últimas tentativas de compra (aparece em Gateways de Pagamento para ver o motivo de um erro)
+function amazon_log($mysqli, $msg, $extra = array()){
+    $log = json_decode(pay_cfg($mysqli, 'amazon_log', '[]'), true);
+    if (!is_array($log)) $log = array();
+    array_unshift($log, array_merge(array('t' => time(), 'msg' => mb_substr((string)$msg, 0, 200)), $extra));
+    pay_set($mysqli, 'amazon_log', json_encode(array_slice($log, 0, 15), JSON_UNESCAPED_UNICODE));
+}
+
+// SKU da assinatura: a Amazon pode devolver o SKU do período (term) ou o SKU "pai" da assinatura
+function amazon_sku_ok($sku){
+    $sku = (string)$sku;
+    return $sku === AMAZON_IAP_SKU || $sku === 'com.iptvbestpro.app.sub' || strpos($sku, 'com.iptvbestpro.app') === 0;
+}
+
 function amazon_enabled($mysqli){ return pay_cfg($mysqli, 'amazon_secret') != ''; }
 
 /**
@@ -50,8 +64,10 @@ function amazon_enabled($mysqli){ return pay_cfg($mysqli, 'amazon_secret') != ''
 function amazon_rvs($mysqli, $user_id, $receipt_id, $sandbox = false){
     $secret = pay_cfg($mysqli, 'amazon_secret');
     if ($secret == '') return array('ok' => false, 'code' => 0, 'json' => null);
-    $url = AMAZON_RVS.($sandbox ? '/sandbox' : '').'/version/1.0/verifyReceiptId/developer/'.rawurlencode($secret)
-         .'/user/'.rawurlencode($user_id).'/receiptId/'.rawurlencode($receipt_id);
+    // ':' e '=' fazem parte da Shared Key e dos recibos da Amazon e são válidos no caminho da URL: ficam como estão
+    $seg = function ($x) { return str_replace(array('%3A', '%3D'), array(':', '='), rawurlencode(trim((string)$x))); };
+    $url = AMAZON_RVS.($sandbox ? '/sandbox' : '').'/version/1.0/verifyReceiptId/developer/'.$seg($secret)
+         .'/user/'.$seg($user_id).'/receiptId/'.$seg($receipt_id);
     $ch = curl_init($url);
     curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_CONNECTTIMEOUT => 8));
     $body = curl_exec($ch);
@@ -97,12 +113,19 @@ function amazon_record_payment($mysqli, $customer_id, $device_pk, $receipt_id, $
  */
 function amazon_apply($mysqli, $user_id, $receipt_id, $rcpt, $sandbox, $device){
     amazon_migrate($mysqli);
-    if (($rcpt['productId'] ?? '') !== AMAZON_IAP_SKU) return array('ok' => false, 'msg' => 'Produto desconhecido.', 'device' => $device);
+    $pid = (string)($rcpt['productId'] ?? '');
+    $term = (string)($rcpt['termSku'] ?? '');
+    if (!amazon_sku_ok($pid) && !amazon_sku_ok($term)) {
+        amazon_log($mysqli, 'Produto desconhecido', array('sku' => $pid, 'term' => $term));
+        return array('ok' => false, 'msg' => 'Produto desconhecido.', 'device' => $device);
+    }
     $now = time();
     $purchase = isset($rcpt['purchaseDate']) ? (int)floor($rcpt['purchaseDate'] / 1000) : $now;
     $cancel = !empty($rcpt['cancelDate']) ? (int)floor($rcpt['cancelDate'] / 1000) : 0;
     $renew = !empty($rcpt['renewalDate']) ? (int)floor($rcpt['renewalDate'] / 1000) : 0;
     $exp = $cancel > 0 ? $cancel : ($renew > 0 ? $renew : strtotime('+1 year', $purchase));
+    // compra de teste (App Tester) sem o teste ligado no painel: vale só 24 horas (a Amazon consegue revisar; não serve para usar de graça)
+    if ($sandbox && pay_cfg($mysqli, 'amazon_sandbox_ok', '0') != '1') $exp = min($exp, $now + 86400);
     $test = !empty($rcpt['testTransaction']) ? 1 : 0;
     $status = $exp > $now ? 'active' : ($cancel > 0 ? 'cancelled' : 'expired');
 
@@ -162,22 +185,42 @@ function amazon_apply($mysqli, $user_id, $receipt_id, $rcpt, $sandbox, $device){
 function amazon_claim($mysqli, $data){
     amazon_migrate($mysqli);
     if (empty($data['device_id'])) return array('ok' => false, 'msg' => 'Dispositivo não identificado.', 'device' => null);
+    // o app avisou um erro devolvido pela Amazon: só registra
+    if (!empty($data['amazon_error'])) {
+        amazon_log($mysqli, 'App: '.mb_substr((string)$data['amazon_error'], 0, 120), array('device' => devices_clean($data['device_id'], 60)));
+        return array('ok' => false, 'msg' => '', 'device' => null);
+    }
     if (!amazon_enabled($mysqli)) return array('ok' => false, 'msg' => 'A compra pela Amazon ainda não está disponível. Tente mais tarde.', 'device' => null);
     $uid = trim((string)($data['amazon_user'] ?? ''));
     $rid = trim((string)($data['amazon_receipt'] ?? ''));
     if ($uid === '' || $rid === '' || strlen($uid) > 191 || strlen($rid) > 191) return array('ok' => false, 'msg' => 'Compra inválida.', 'device' => null);
     $sandbox = !empty($data['amazon_sandbox']);
     // compras do App Tester (teste local) só valem quando o admin liga o teste em Gateways de Pagamento
-    if ($sandbox && pay_cfg($mysqli, 'amazon_sandbox_ok', '0') != '1') return array('ok' => false, 'msg' => 'Compras de teste estão desativadas.', 'device' => null);
+    // confere no ambiente informado pelo app; se não achar, no outro (a revisão da Amazon pode usar qualquer um dos dois)
     $v = amazon_rvs($mysqli, $uid, $rid, $sandbox);
     if (!$v['ok']) {
-        error_log('amazon rvs: HTTP '.$v['code']);
-        return array('ok' => false, 'msg' => $v['code'] == 400 ? 'Compra inválida.' : 'Não foi possível confirmar a compra com a Amazon. Tente de novo.', 'device' => null);
+        $v2 = amazon_rvs($mysqli, $uid, $rid, !$sandbox);
+        if ($v2['ok']) { $v = $v2; $sandbox = !$sandbox; }
+    }
+    if (!$v['ok']) {
+        amazon_log($mysqli, 'Amazon recusou o recibo', array('http' => $v['code'], 'sandbox' => $sandbox ? 1 : 0));
+        $why = $v['code'] == 496 ? ' (Shared Key inválida)' : '';
+        return array('ok' => false, 'msg' => ($v['code'] == 400 ? 'Compra inválida.' : 'Não foi possível confirmar a compra com a Amazon. Tente de novo.').$why, 'device' => null);
     }
     devices_register($mysqli, $data);
     $device = devices_find($mysqli, devices_clean($data['device_id'], 191), devices_clean(isset($data['application_id']) ? $data['application_id'] : '', 191));
     if (!$device) return array('ok' => false, 'msg' => 'Erro ao registrar o dispositivo.', 'device' => null);
-    return amazon_apply($mysqli, $uid, $rid, $v['json'], $sandbox, $device);
+    $r = amazon_apply($mysqli, $uid, $rid, $v['json'], $sandbox, $device);
+    amazon_log($mysqli, $r['ok'] ? 'Ativado' : $r['msg'], array('device' => $device['device_id'], 'sandbox' => $sandbox ? 1 : 0, 'sku' => (string)($v['json']['productId'] ?? '')));
+    return $r;
+}
+
+// Teste da Shared Key: a Amazon responde 496 quando a chave está errada; com a chave certa, um recibo inventado dá 400/497
+function amazon_test_key($mysqli){
+    $v = amazon_rvs($mysqli, 'teste-iptvbestpro', 'teste-iptvbestpro', false);
+    if ($v['code'] == 496) return array(false, 'A Amazon recusou a Shared Key (HTTP 496). Copie de novo em My Settings → Identity → Shared Key.');
+    if (in_array($v['code'], array(400, 497, 410))) return array(true, 'Shared Key aceita pela Amazon (HTTP '.$v['code'].' para um recibo de teste, como esperado).');
+    return array(false, 'Resposta inesperada da Amazon (HTTP '.$v['code'].'). Tente de novo em alguns minutos.');
 }
 
 // Na abertura do app: assinatura da Amazon perto de vencer (ou vencida há pouco) é conferida de novo (renovação / cancelamento)

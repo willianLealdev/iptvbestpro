@@ -37,6 +37,12 @@
         gw_flash(true, 'Stripe salvo.');
         header("Location:settings_payments.php"); exit;
     }
+    if(isset($_POST['test_amazon'])){
+        require_once("includes/amazon_iap_helper.php");
+        $t = amazon_test_key($mysqli);
+        gw_flash($t[0], $t[1]);
+        header("Location:settings_payments.php"); exit;
+    }
     if(isset($_POST['save_amazon'])){
         gw_secret($mysqli, 'amazon_secret', 'amazon_secret');
         pay_set($mysqli, 'amazon_sandbox_ok', !empty($_POST['amazon_sandbox_ok']) ? '1' : '0');
@@ -178,10 +184,24 @@
                     </div>
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" name="amazon_sandbox_ok" id="amazon_sandbox_ok" value="1" <?php if(pay_cfg($mysqli, 'amazon_sandbox_ok') == '1'){ echo 'checked'; } ?>>
-                        <label class="form-check-label" for="amazon_sandbox_ok">Aceitar compras de teste do App Tester (deixe desligado em produção)</label>
+                        <label class="form-check-label" for="amazon_sandbox_ok">Compras de teste do App Tester valendo o período inteiro (desligado: valem só 24 horas, o suficiente para a revisão da Amazon)</label>
                     </div>
-                    <button type="submit" name="save_amazon" class="btn btn-primary">Salvar</button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="save_amazon" class="btn btn-primary">Salvar</button>
+                        <button type="submit" name="test_amazon" class="btn btn-outline-secondary" <?php if(pay_cfg($mysqli, 'amazon_secret') == ''){ echo 'disabled'; } ?>>Testar Shared Key</button>
+                    </div>
                 </form>
+                <?php $alog = json_decode(pay_cfg($mysqli, 'amazon_log', '[]'), true); if (is_array($alog) && $alog) { ?>
+                    <div class="mt-3 small">
+                        <b>Últimas tentativas de compra pela Amazon</b>
+                        <table class="table table-sm mt-1 mb-0">
+                            <?php foreach ($alog as $l) { ?>
+                                <tr><td class="text-nowrap"><?php echo date('d/m/Y H:i', (int)$l['t']); ?></td><td><?php echo htmlspecialchars($l['msg']); ?></td>
+                                <td class="text-muted"><?php foreach (array('device', 'sku', 'term', 'http', 'sandbox') as $k) if (isset($l[$k]) && $l[$k] !== '') echo htmlspecialchars($k.': '.$l[$k]).' '; ?></td></tr>
+                            <?php } ?>
+                        </table>
+                    </div>
+                <?php } ?>
             </div>
         </div>
 
