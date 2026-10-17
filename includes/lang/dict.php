@@ -1822,4 +1822,6 @@ return array(
   'Ativados:' => array('pt' => 'Ativados:', 'en' => 'Activated:', 'es' => 'Activados:'),
   '· Aguardando ativação:' => array('pt' => '· Aguardando ativação:', 'en' => '· Awaiting activation:', 'es' => '· Esperando activación:'),
   'O app não avisa quando é removido. Estes números vêm do último acesso de cada aparelho (sem os Dispositivos dev).' => array('pt' => 'O app não avisa quando é removido. Estes números vêm do último acesso de cada aparelho (sem os Dispositivos dev).', 'en' => 'The app does not report when it is removed. These numbers come from each device\'s last access (excluding Dev devices).', 'es' => 'La app no avisa cuando se elimina. Estos números vienen del último acceso de cada dispositivo (sin los Dispositivos dev).'),
+  'E-mails que recebem os alertas' => array('pt' => 'E-mails que recebem os alertas', 'en' => 'E-mails that receive the alerts', 'es' => 'Correos que reciben las alertas'),
+  'Só estes e-mails recebem. Se deixar vazio, recebe o Super Admin:' => array('pt' => 'Só estes e-mails recebem. Se deixar vazio, recebe o Super Admin:', 'en' => 'Only these e-mails receive alerts. If left empty, the Super Admin receives them:', 'es' => 'Solo estos correos reciben. Si se deja vacío, recibe el Super Admin:'),
 );

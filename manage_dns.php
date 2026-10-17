@@ -156,9 +156,9 @@
                     </div>
                     <div class="row g-3">
                         <div class="col-lg-6">
-                            <label class="form-label" for="alert_emails">E-mails que recebem (além do Super Admin)</label>
+                            <label class="form-label" for="alert_emails">E-mails que recebem os alertas</label>
                             <input type="text" name="alert_emails" id="alert_emails" class="form-control" value="<?php echo htmlspecialchars($alert_cfg['emails']); ?>" placeholder="ex.: suporte@seudominio.com, outro@seudominio.com">
-                            <div class="dns-alert__hint">Super Admin: <span translate="no"><?php echo $alert_admins ? htmlspecialchars(implode(', ', array_map(function($a){ return $a['email']; }, $alert_admins))) : '—'; ?></span></div>
+                            <div class="dns-alert__hint">Só estes e-mails recebem. Se deixar vazio, recebe o Super Admin: <span translate="no"><?php echo $alert_admins ? htmlspecialchars(implode(', ', array_map(function($a){ return $a['email']; }, $alert_admins))) : '—'; ?></span></div>
                         </div>
                         <div class="col-sm-6 col-lg-2">
                             <label class="form-label" for="alert_minutes">Avisar depois de</label>

@@ -1,7 +1,7 @@
 <?php
 /**
  * Alertas por e-mail quando um servidor DNS cai (e quando volta).
- *  - DNS do admin (reseller_id = 0): e-mail para o Super Admin (+ e-mails extras configurados).
+ *  - DNS do admin (reseller_id = 0): e-mail para os e-mails cadastrados no alerta (lista vazia = Super Admins).
  *  - DNS de revendedor: e-mail para o revendedor dono e uma cópia para o admin (se ligado).
  *  - Todas as revendas que usam o servidor também recebem: as que compartilham o DNS e as que tinham
  *    clientes nele nos últimos dias (inclusive em DNS do admin) — ver dns_users_resellers().
@@ -112,20 +112,21 @@ function dns_alert_send($to, $down, $up, $is_admin_copy = false){
     return $sent;
 }
 
-// Destinatários do admin: Super Admins ativos + e-mails extras configurados
+// Destinatários do admin: os e-mails cadastrados no alerta; só quando a lista está vazia vai para os Super Admins
 function dns_alert_admin_recipients($mysqli, $cfg){
     $list = array();
     $base = acc_base_url();
+    foreach (preg_split('/[\s,;]+/', $cfg['emails']) as $e) {
+        $e = trim($e);
+        if ($e != '' && filter_var($e, FILTER_VALIDATE_EMAIL)) {
+            $list[strtolower($e)] = array('type' => 'admin', 'email' => $e, 'name' => brand_name(), 'lang' => 'pt', 'link' => $base.'/manage_dns.php');
+        }
+    }
+    if ($list) return array_values($list);
     $res = mysqli_query($mysqli, "SELECT * FROM tbl_admin WHERE admin_type = 3 AND status = 1 AND email <> ''");
     while ($res && $a = mysqli_fetch_assoc($res)) {
         if (!filter_var($a['email'], FILTER_VALIDATE_EMAIL)) continue;
         $list[strtolower($a['email'])] = array('type' => 'admin', 'email' => $a['email'], 'name' => $a['username'], 'lang' => isset($a['lang']) && $a['lang'] != '' ? $a['lang'] : 'pt', 'link' => $base.'/manage_dns.php');
-    }
-    foreach (preg_split('/[\s,;]+/', $cfg['emails']) as $e) {
-        $e = trim($e);
-        if ($e != '' && filter_var($e, FILTER_VALIDATE_EMAIL) && !isset($list[strtolower($e)])) {
-            $list[strtolower($e)] = array('type' => 'admin', 'email' => $e, 'name' => brand_name(), 'lang' => 'pt', 'link' => $base.'/manage_dns.php');
-        }
     }
     return array_values($list);
 }
