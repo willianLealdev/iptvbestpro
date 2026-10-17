@@ -33,7 +33,7 @@ $platforms = array(
     array('live', 'tvbox', 'TV Box', 'download'),
     array('live', 'firetv', 'Fire TV Stick', 'download'),
     array('live', 'roku', 'Roku', ''),
-    array('soon', 'play', 'Google Play', ''),
+    array('live', 'play', 'Google Play', 'https://play.google.com/store/apps/details?id=com.iptvbestpro.app'),
     array('live', 'amazon', 'Amazon Appstore', ''),
     array('live', 'aptoide', 'Aptoide', ''),
     array('soon', 'samsung', 'Samsung Smart TV', ''),
