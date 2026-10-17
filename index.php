@@ -42,7 +42,7 @@ $platforms = array(
     array('soon', 'titan', 'Titan OS', ''),
     array('soon', 'apple', 'iPhone e iPad', ''),
     array('soon', 'appletv', 'Apple TV', ''),
-    array('soon', 'windows', 'Windows (PC)', ''),
+    array('live', 'windows', 'Windows (Microsoft Store)', 'https://apps.microsoft.com/search?query=IPTV+Best+Pro'),
 );
 function lp_logo($k){
     $l = array(
