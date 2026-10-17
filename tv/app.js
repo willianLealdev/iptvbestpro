@@ -70,7 +70,7 @@
       sup_scan: 'Aponte a câmera do celular para abrir o WhatsApp', close: 'Fechar',
       exp_title: 'Seu plano está vencendo', exp_days: 'Seu plano vence em {0} dia(s).', exp_today: 'Seu plano vence hoje.',
       exp_reseller: 'Fale com a sua revenda para renovar e continuar assistindo.', exp_support: 'Fale com o suporte para renovar e continuar assistindo.',
-      exit_q: 'Sair do app?', yes: 'Sim', no: 'Não',
+      exit_hint: 'Para sair, feche a janela no X do canto de cima.', exit_q: 'Sair do app?', yes: 'Sim', no: 'Não',
       search: 'BUSCA', favorites: 'FAVORITOS', cont_tile: 'CONTINUAR', cw_empty: 'Nada para continuar ainda. Assista um canal, filme ou episódio e ele aparece aqui.',
       search_hint: 'Digite o nome do canal, filme ou série', search_go: 'Buscar', search_none: 'Nada encontrado.', searching: 'Buscando…',
       fav_add: '★ Favoritar', fav_del: '★ Remover dos favoritos', fav_added: 'Adicionado aos favoritos.', fav_removed: 'Removido dos favoritos.',
@@ -102,7 +102,7 @@
       sup_scan: 'Point your phone camera at the code to open WhatsApp', close: 'Close',
       exp_title: 'Your plan is about to expire', exp_days: 'Your plan expires in {0} day(s).', exp_today: 'Your plan expires today.',
       exp_reseller: 'Talk to your reseller to renew and keep watching.', exp_support: 'Contact support to renew and keep watching.',
-      exit_q: 'Do you want to exit?', yes: 'Yes', no: 'No',
+      exit_hint: 'To exit, close the window with the X at the top corner.', exit_q: 'Do you want to exit?', yes: 'Yes', no: 'No',
       search: 'SEARCH', favorites: 'FAVORITES', cont_tile: 'CONTINUE', cw_empty: 'Nothing to continue yet. Watch a channel, movie or episode and it will show up here.',
       search_hint: 'Type the name of a channel, movie or series', search_go: 'Search', search_none: 'Nothing found.', searching: 'Searching…',
       fav_add: '★ Add to favorites', fav_del: '★ Remove from favorites', fav_added: 'Added to favorites.', fav_removed: 'Removed from favorites.',
@@ -134,7 +134,7 @@
       sup_scan: 'Apunta la cámara del celular al código para abrir WhatsApp', close: 'Cerrar',
       exp_title: 'Tu plan está por vencer', exp_days: 'Tu plan vence en {0} día(s).', exp_today: 'Tu plan vence hoy.',
       exp_reseller: 'Habla con tu revendedor para renovar y seguir viendo.', exp_support: 'Habla con soporte para renovar y seguir viendo.',
-      exit_q: '¿Salir de la app?', yes: 'Sí', no: 'No',
+      exit_hint: 'Para salir, cierra la ventana con la X de la esquina superior.', exit_q: '¿Salir de la app?', yes: 'Sí', no: 'No',
       search: 'BUSCAR', favorites: 'FAVORITOS', cont_tile: 'SEGUIR', cw_empty: 'Nada para seguir todavía. Mira un canal, película o episodio y aparecerá aquí.',
       search_hint: 'Escribe el nombre del canal, película o serie', search_go: 'Buscar', search_none: 'No se encontró nada.', searching: 'Buscando…',
       fav_add: '★ Agregar a favoritos', fav_del: '★ Quitar de favoritos', fav_added: 'Agregado a favoritos.', fav_removed: 'Quitado de favoritos.',
@@ -636,7 +636,11 @@
   }
   function confirmExit() {
     modal('<h2>' + esc(t('exit_q')) + '</h2><div class="btn gold f" data-a="y">' + esc(t('yes')) + '</div><div class="btn f" data-a="_close">' + esc(t('no')) + '</div>',
-      { y: function () { try { if (window.webOS && webOS.platformBack) webOS.platformBack(); else if (typeof SmartTvA_API !== 'undefined' && SmartTvA_API.exit) SmartTvA_API.exit(); else if (window.tizen) tizen.application.getCurrentApplication().exit(); else window.close(); } catch (e) { window.close(); } } });
+      { y: function () {
+        try { if (window.webOS && webOS.platformBack) webOS.platformBack(); else if (typeof SmartTvA_API !== 'undefined' && SmartTvA_API.exit) SmartTvA_API.exit(); else if (window.tizen) tizen.application.getCurrentApplication().exit(); else window.close(); } catch (e) { try { window.close(); } catch (e2) {} }
+        // Windows / navegador: o sistema não deixa a página fechar a janela sozinha; avisa como sair
+        setTimeout(function () { if (!document.hidden) { closeModal(); toast(t('exit_hint'), 5000); } }, 600);
+      } });
   }
 
   /* ---------------- listas do aparelho ---------------- */
