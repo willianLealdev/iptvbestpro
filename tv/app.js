@@ -59,7 +59,7 @@
       buy_title: 'Não tem um código?', buy_msg: 'Aponte a câmera do celular para o QR code e compre a sua licença no site. Você recebe o código na hora.', buy_or: 'ou acesse', trial_title: 'Teste grátis de {0} dias', trial_msg: 'Aponte a câmera do celular para o QR code, crie a sua conta e ganhe {0} dias grátis. Você recebe o código na hora.',
       no_net: 'Sem conexão com a internet. Verifique e tente de novo.', server_err: 'Não foi possível falar com o servidor. Tente de novo.',
       up_title: 'Envie a sua lista', up_msg: 'Aponte a câmera do celular para o QR code e digite o usuário e a senha da sua lista. Esta tela abre sozinha quando a lista chegar.', up_wait: 'Aguardando a lista…',
-      no_list: 'Nenhuma lista neste aparelho', no_list_msg: 'Peça para a sua revenda adicionar a sua lista no painel.', retry: 'Tentar de novo',
+      no_list: 'Nenhuma lista neste aparelho', no_list_msg: 'Peça para a sua revenda adicionar a sua lista no painel.', no_list_cust: 'Entre na sua área do cliente em {0} e adicione a sua lista em "Playlists deste aparelho". Depois aperte Tentar de novo.', retry: 'Tentar de novo',
       list_err: 'Não foi possível carregar esta lista. Fale com a sua revenda.',
       live: 'TV AO VIVO', movies: 'FILMES', series: 'SÉRIES', playlist: 'PLAYLIST', settings: 'CONFIGURAÇÕES',
       categories: 'Categorias', loading: 'Carregando…', empty: 'Nada por aqui.', now: 'Agora', next: 'A seguir', no_epg: 'Sem guia de programação',
@@ -91,7 +91,7 @@
       buy_title: "Don't have a code?", buy_msg: 'Point your phone camera at the QR code and buy your license on the website. You get the code right away.', buy_or: 'or visit', trial_title: '{0}-day free trial', trial_msg: 'Point your phone camera at the QR code, create your account and get {0} days free. You get the code right away.',
       no_net: 'No internet connection. Check it and try again.', server_err: 'Could not reach the server. Try again.',
       up_title: 'Send your list', up_msg: 'Point your phone camera at the QR code and enter your list username and password. This screen opens by itself when the list arrives.', up_wait: 'Waiting for the list…',
-      no_list: 'No playlist on this device', no_list_msg: 'Ask your reseller to add your list in the panel.', retry: 'Try again',
+      no_list: 'No playlist on this device', no_list_msg: 'Ask your reseller to add your list in the panel.', no_list_cust: 'Sign in to your customer area at {0} and add your list in "Playlists for this device". Then press Try again.', retry: 'Try again',
       list_err: 'Could not load this list. Contact your reseller.',
       live: 'LIVE TV', movies: 'MOVIES', series: 'SERIES', playlist: 'PLAYLIST', settings: 'SETTINGS',
       categories: 'Categories', loading: 'Loading…', empty: 'Nothing here.', now: 'Now', next: 'Next', no_epg: 'No program guide',
@@ -123,7 +123,7 @@
       buy_title: '¿No tienes un código?', buy_msg: 'Apunta la cámara del celular al código QR y compra tu licencia en el sitio. Recibes el código al instante.', buy_or: 'o entra a', trial_title: 'Prueba gratis de {0} días', trial_msg: 'Apunta la cámara del celular al código QR, crea tu cuenta y obtén {0} días gratis. Recibes el código al instante.',
       no_net: 'Sin conexión a internet. Revisa e intenta de nuevo.', server_err: 'No fue posible conectar con el servidor. Intenta de nuevo.',
       up_title: 'Envía tu lista', up_msg: 'Apunta la cámara del celular al código QR y escribe el usuario y la contraseña de tu lista. Esta pantalla se abre sola cuando llega la lista.', up_wait: 'Esperando la lista…',
-      no_list: 'Ninguna lista en este dispositivo', no_list_msg: 'Pide a tu revendedor que agregue tu lista en el panel.', retry: 'Intentar de nuevo',
+      no_list: 'Ninguna lista en este dispositivo', no_list_msg: 'Pide a tu revendedor que agregue tu lista en el panel.', no_list_cust: 'Entra en tu área de cliente en {0} y agrega tu lista en "Listas de este dispositivo". Luego presiona Intentar de nuevo.', retry: 'Intentar de nuevo',
       list_err: 'No fue posible cargar esta lista. Habla con tu revendedor.',
       live: 'TV EN VIVO', movies: 'PELÍCULAS', series: 'SERIES', playlist: 'PLAYLIST', settings: 'CONFIGURACIÓN',
       categories: 'Categorías', loading: 'Cargando…', empty: 'Nada por aquí.', now: 'Ahora', next: 'A continuación', no_epg: 'Sin guía de programación',
@@ -681,7 +681,7 @@
       }, 5000);
       return;
     }
-    show('<div class="card"><img class="logo" src="' + esc(S.brand.logo) + '"><h2>' + esc(t('no_list')) + '</h2><p>' + esc(t('no_list_msg')) + '</p>' +
+    show('<div class="card"><img class="logo" src="' + esc(S.brand.logo) + '"><h2>' + esc(t('no_list')) + '</h2><p>' + esc((S.status || {}).owner === 'customer' ? t('no_list_cust', SRV.replace(/^https?:\/\//, '') + '/cliente') : t('no_list_msg')) + '</p>' +
       '<div class="devid">' + esc(t('act_dev')) + '<b>' + esc(DID) + '</b></div><div class="btn gold f" data-a="r">' + esc(t('retry')) + '</div></div>',
       { back: confirmExit, acts: { r: function () { checkStatus(); } } });
     S.screen = 'nolist';
