@@ -1846,4 +1846,6 @@ return array(
   'Abrem sem lista' => array('pt' => 'Abrem sem lista', 'en' => 'Open without a list', 'es' => 'Abren sin lista'),
   '· abriram nas últimas 24 horas, com lista' => array('pt' => '· abriram nas últimas 24 horas, com lista', 'en' => '· opened in the last 24 hours, with a list', 'es' => '· abrieron en las últimas 24 horas, con lista'),
   '· abriram nas últimas 24 horas, sem nenhuma lista' => array('pt' => '· abriram nas últimas 24 horas, sem nenhuma lista', 'en' => '· opened in the last 24 hours, without any list', 'es' => '· abrieron en las últimas 24 horas, sin ninguna lista'),
+  '. Os que não abrem o app há 15 dias saem sozinhos do painel.' => array('pt' => '. Os que não abrem o app há 15 dias saem sozinhos do painel.', 'en' => '. Devices that have not opened the app for 15 days are removed from the panel automatically.', 'es' => '. Los que no abren la app hace 15 días salen solos del panel.'),
+  'Os não ativados que não abrem o app há 15 dias saem sozinhos do painel.' => array('pt' => 'Os não ativados que não abrem o app há 15 dias saem sozinhos do painel.', 'en' => 'Non-activated devices that have not opened the app for 15 days are removed automatically.', 'es' => 'Los no activados que no abren la app hace 15 días salen solos del panel.'),
 );

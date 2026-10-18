@@ -355,7 +355,7 @@
                     <p class="text-muted small mb-3">Aparelhos ativados com o código de um servidor parceiro. A ativação é automática (1 crédito do servidor) e a lista é enviada pelo cliente na página /lista.</p>
                 <?php } ?>
                 <?php if($tab == 'wait'){ ?>
-                    <p class="text-muted small mb-2">Aparelhos que abriram o app mas ainda não foram ativados. Quando são ativados, passam sozinhos para <b>Dispositivos</b>.
+                    <p class="text-muted small mb-2">Aparelhos que abriram o app mas ainda não foram ativados. Quando são ativados, passam sozinhos para <b>Dispositivos</b>. Os que não abrem o app há 15 dias saem sozinhos do painel.
                         A <b>origem provável</b> vem da empresa dona da internet do aparelho: as lojas (Google, Amazon, Roku, Apple) testam o app dentro da rede delas, e cliente de verdade usa internet de casa ou do celular.</p>
                     <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
                         <a href="<?php echo htmlspecialchars(dv_url(array('origin' => '', 'page' => ''))); ?>" class="btn btn-sm <?php echo $origin_filter == '' ? 'btn-primary' : 'btn-outline-secondary'; ?>">Todos</a>
@@ -370,7 +370,7 @@
                     </div>
                 <?php } ?>
                 <?php if($tab == 'dev'){ ?>
-                    <p class="text-muted small mb-3">Aparelhos de teste (emuladores, revisão das lojas e os que você marcar). Ficam fora da lista de dispositivos reais.</p>
+                    <p class="text-muted small mb-3">Aparelhos de teste (emuladores, revisão das lojas e os que você marcar). Ficam fora da lista de dispositivos reais. Os não ativados que não abrem o app há 15 dias saem sozinhos do painel.</p>
                 <?php } ?>
                 <div class="dv-toolbar">
                     <form method="get" action="manage_devices.php" class="d-flex flex-wrap gap-2">

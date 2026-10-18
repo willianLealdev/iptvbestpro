@@ -709,6 +709,32 @@ function devices_take_over($mysqli, $device_pk, $owner, $reseller_id, $customer_
     return true;
 }
 
+/**
+ * Limpeza automática do painel (roda uma vez por hora, pelo monitor):
+ *  - aparelho que nunca foi ativado (Aguardando ativação ou Dispositivos dev) e não abre o app há 15 dias;
+ *  - teste grátis que venceu há mais de 30 dias e o cliente não comprou (o pacote continua 'trial').
+ * O registro de quem já usou o teste grátis (tbl_trial_devices) fica guardado: o aparelho não ganha outro teste.
+ * Retorna array('waiting' => n, 'trial' => n).
+ */
+define('DEVICES_WAIT_DELETE_DAYS', 15);
+define('DEVICES_TRIAL_DELETE_DAYS', 30);
+function devices_auto_cleanup($mysqli){
+    $now = time();
+    $cut = $now - DEVICES_WAIT_DELETE_DAYS * 86400;
+    $tcut = $now - DEVICES_TRIAL_DELETE_DAYS * 86400;
+    $out = array('waiting' => 0, 'trial' => 0);
+    $ids = array();
+    $res = mysqli_query($mysqli, "SELECT id FROM tbl_devices WHERE package = '' AND activated_at = 0
+                                  AND ((last_seen > 0 AND last_seen < $cut) OR (last_seen = 0 AND first_seen > 0 AND first_seen < $cut)) LIMIT 1000");
+    while ($res && $r = mysqli_fetch_assoc($res)) $ids[] = (int)$r['id'];
+    if ($ids) $out['waiting'] = devices_purge($mysqli, $ids);
+    $ids = array();
+    $res = mysqli_query($mysqli, "SELECT id FROM tbl_devices WHERE package = 'trial' AND expires_at > 0 AND expires_at < $tcut LIMIT 1000");
+    while ($res && $r = mysqli_fetch_assoc($res)) $ids[] = (int)$r['id'];
+    if ($ids) $out['trial'] = devices_purge($mysqli, $ids);
+    return $out;
+}
+
 // Excluir aparelho = apagar tudo dele (listas incluídas). Ao voltar, ele chega zerado.
 function devices_purge($mysqli, $ids){
     $ids = array_filter(array_map('intval', is_array($ids) ? $ids : explode(',', (string)$ids)));
