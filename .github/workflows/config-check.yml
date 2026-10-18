@@ -14,6 +14,8 @@ jobs:
         run: php tests/apple_jws_test.php
       - name: Teste da troca de usuário
         run: php tests/fallback_test.php
+      - name: Teste da lista migrada de servidor (vencida no antigo)
+        run: php tests/probe_test.php
       - name: Build da imagem
         run: docker build -t painel-check .
       - name: Apache configtest

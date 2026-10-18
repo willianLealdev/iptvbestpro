@@ -189,7 +189,7 @@ function playlist_list_render($playlists, $hidden_html, $allow_pin = true){
                                     <div class="pl-srv__title">Em quais servidores este login funciona</div>
                                     <?php foreach ($chk as $c) {
                                         $is_cur = $c['norm'] == dns_normalize($p['dns_base']);
-                                        $txt = $c['result'] == 'ok' ? 'Aceita' : ($c['result'] == 'auth_fail' ? 'Recusou' : 'Não respondeu'); ?>
+                                        $txt = $c['result'] == 'ok' ? (isset($c['active']) && !$c['active'] ? 'Aceita, mas vencido/desativado' : 'Aceita') : ($c['result'] == 'auth_fail' ? 'Recusou' : 'Não respondeu'); ?>
                                         <div class="pl-srv__row <?php echo $c['result'] == 'ok' ? 'is-ok' : ''; ?>">
                                             <span class="pl-srv__name"><?php echo htmlspecialchars(html_entity_decode($c['title'], ENT_QUOTES, 'UTF-8')); ?><?php if ($is_cur) { ?> <small>(em uso)</small><?php } ?></span>
                                             <span class="pl-srv__res"><?php echo $txt; ?><?php if ($c['result'] == 'ok' && $c['server'] != '' && $c['server'] != $c['norm']) { ?> · aponta para <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $c['server'])); ?></b><?php } ?><?php if ($c['catch_all']) { ?> · aceita qualquer usuário<?php } ?></span>

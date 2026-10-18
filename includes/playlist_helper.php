@@ -175,7 +175,9 @@ function playlist_probe_result($body, $code){
             $port = $proto == 'https' ? (isset($si['https_port']) ? $si['https_port'] : '') : (isset($si['port']) ? $si['port'] : '');
             $server = dns_normalize($proto.'://'.$si['url'].($port !== '' ? ':'.$port : ''));
         }
-        return array('result' => 'ok', 'exp_date' => $exp, 'status' => $status, 'server' => $server);
+        // usuário migrado de servidor: no antigo ele continua existindo, mas vencido/desativado (Expired, Disabled, Banned)
+        $active = ($status === '' || strcasecmp($status, 'Active') === 0) && ($exp === null || $exp <= 0 || $exp > time());
+        return array('result' => 'ok', 'exp_date' => $exp, 'status' => $status, 'server' => $server, 'active' => $active);
     }
     // o servidor respondeu e recusou o usuário (o XUI devolve 404 para usuário que não existe nele)
     if (is_array($json) || ($code >= 200 && $code < 500)) return array('result' => 'auth_fail', 'exp_date' => null, 'status' => '');
@@ -187,7 +189,7 @@ function playlist_probe_result($body, $code){
  * $prefer_norm: servidor a testar primeiro (o da URL colada ou o último que funcionou).
  * Retorna array('ok' => bool, 'msg' => string, 'dns' => item|null, 'probe' => array|null)
  */
-function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $timeout = PLAYLIST_PROBE_TIMEOUT, $scope = 0, $hard_pref = false){
+function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $timeout = PLAYLIST_PROBE_TIMEOUT, $scope = 0, $hard_pref = false, $newest = false){
     dns_health_migrate($mysqli);
     dns_catch_all_refresh($mysqli); // só testa os servidores que não foram verificados nas últimas 6 horas
     $list = dns_list_active($mysqli, $scope);
@@ -196,6 +198,10 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
     $results = playlist_probe_parallel($list, $username, $password, $timeout);
     foreach ($list as $i => $d) if ($results[$i]['result'] == 'ok' && !empty($results[$i]['server'])) dns_note_real($mysqli, $d['id'], $results[$i]['server']);
     $winner = null;
+    // Login aceito mas vencido/desativado só conta se nenhum servidor tiver o usuário ativo
+    $any_active = false;
+    foreach ($list as $i => $d) if ($results[$i]['result'] == 'ok' && !empty($results[$i]['active'])) $any_active = true;
+    if ($any_active) foreach ($list as $i => $d) if ($results[$i]['result'] == 'ok' && empty($results[$i]['active'])) $results[$i]['result'] = 'inactive';
     // Ordem de escolha quando mais de um servidor aceita o mesmo usuário:
     //  1º o servidor preferido (o da URL colada / o último que funcionou), se ele for confiável;
     //  2º o servidor "de verdade": o endereço dele é o mesmo que o painel IPTV informa (os outros são só portas para ele);
@@ -216,6 +222,17 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
             if ($sp != '' && $sp != $list[$pref]['norm']) $pref = $native;
         }
         $winner = $pref !== null ? $pref : ($native !== null ? $native : $first);
+        // Atualizar no app / verificação periódica: se outro servidor tem o usuário com vencimento bem mais longe
+        // (a lista foi migrada ou renovada nele), usa esse — sem DNS escolhido no painel
+        if ($newest && !$hard_pref && $winner !== null) {
+            $expOf = function ($r) { return (empty($r['exp_date']) || (int)$r['exp_date'] <= 0) ? PHP_INT_MAX : (int)$r['exp_date']; };
+            $best = $winner;
+            foreach ($list as $i => $d) {
+                if ($results[$i]['result'] != 'ok' || !empty($d['catch_all']) != $loose) continue;
+                if ($expOf($results[$i]) > $expOf($results[$best]) + 86400) $best = $i;
+            }
+            $winner = $best;
+        }
         if ($winner !== null) break;
     }
     if ($winner !== null) {
@@ -247,15 +264,18 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
     $pin = isset($row['dns_pin']) ? (string)$row['dns_pin'] : '';
     // o DNS em uso ainda conecta: continua nele (rápido, sem testar todos)
     $catch = dns_list_catch_all_norms($mysqli);
-    if ($pin == '' && trim((string)$row['dns_base']) != '' && empty($catch[dns_normalize($row['dns_base'])])) {
+    if (!$fresh && $pin == '' && trim((string)$row['dns_base']) != '' && empty($catch[dns_normalize($row['dns_base'])])) {
         $cur = playlist_probe_parallel(array(array('base' => rtrim(trim((string)$row['dns_base']), '/'))), $row['user_name'], $row['user_password'], 4);
-        if ($cur[0]['result'] == 'ok') {
+        if ($cur[0]['result'] == 'ok' && !empty($cur[0]['active'])) {
             playlist_set_dns_state($mysqli, $row['id'], $row['dns_base'], true, isset($cur[0]['server']) ? $cur[0]['server'] : null);
             $status = 'online';
             return $row['dns_base'];
         }
     }
-    $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], $pin != '' ? $pin : dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '');
+    // "Atualizar" no app: no máximo uma busca completa por lista a cada 2 minutos (não sobrecarrega os servidores)
+    if ($fresh && !empty($row['dns_full_at']) && $now - (int)$row['dns_full_at'] < 120) return $row['dns_base'];
+    if ($fresh) mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = $now WHERE id = ".(int)$row['id']);
+    $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], $pin != '' ? $pin : dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '', true);
     $base = $find['ok'] ? $find['dns']['base'] : $row['dns_base'];
     playlist_set_dns_state($mysqli, $row['id'], $base, $find['ok'], $find['ok'] && isset($find['probe']['server']) ? $find['probe']['server'] : null);
     $status = $find['ok'] ? 'online' : 'offline';
@@ -747,8 +767,17 @@ function playlist_monitor_run($mysqli){
         $tasks[$id] = array('base' => $cur, 'username' => $r['user_name'], 'password' => $r['user_password']);
     }
     $results = playlist_probe_tasks($tasks, 5, 20);
+    $periodic = 0;
     foreach ($results as $id => $probe) {
         $stats['checked']++;
+        if ($probe['result'] == 'ok' && empty($probe['active'])) {
+            // login aceito mas vencido/desativado: provavelmente a lista foi migrada para outro servidor
+            // (procura no máximo a cada 30 min enquanto continuar assim, para não errar login demais)
+            if (time() - (int)$rows[$id]['dns_search_at'] >= 1800) { $failed[$id] = $rows[$id]; $failed[$id]['want_newest'] = 1; continue; }
+            playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true, isset($probe['server']) ? $probe['server'] : null);
+            $stats['online']++;
+            continue;
+        }
         if ($probe['result'] == 'ok') {
             $srv = isset($probe['server']) ? $probe['server'] : '';
             $allowed = $scopes[(int)$rows[$id]['scope']];
@@ -765,6 +794,14 @@ function playlist_monitor_run($mysqli){
                 $failed[$id] = $rows[$id];
                 continue;
             }
+            // a cada 3 horas, poucas por ciclo: confere se outro servidor tem esta lista mais nova (migração com o antigo ainda ativo)
+            if (empty($rows[$id]['dns_pin']) && time() - (int)$rows[$id]['dns_full_at'] > 10800 && $periodic < 25) {
+                $periodic++;
+                mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = ".time()." WHERE id = ".(int)$id);
+                $failed[$id] = $rows[$id];
+                $failed[$id]['want_newest'] = 1;
+                continue;
+            }
             playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true, $srv);
             $stats['online']++;
         } else {
@@ -776,10 +813,10 @@ function playlist_monitor_run($mysqli){
     //    para não errar login demais — os servidores IPTV bloqueiam o IP que erra muito)
     foreach ($failed as $id => $r) {
         if (!$scopes[(int)$r['scope']]) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
-        if ($r['dns_status'] == 'offline' && time() - (int)$r['dns_search_at'] < 600) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
+        if (empty($r['want_newest']) && $r['dns_status'] == 'offline' && time() - (int)$r['dns_search_at'] < 600) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
         mysqli_query($mysqli, "UPDATE tbl_users SET dns_search_at = ".time()." WHERE id = ".(int)$id);
         $pin = !empty($r['dns_pin']) ? $r['dns_pin'] : '';
-        $find = playlist_find_dns($mysqli, $r['user_name'], $r['user_password'], $pin != '' ? $pin : dns_normalize($r['dns_base']), 5, (int)$r['scope'], $pin != '');
+        $find = playlist_find_dns($mysqli, $r['user_name'], $r['user_password'], $pin != '' ? $pin : dns_normalize($r['dns_base']), 5, (int)$r['scope'], $pin != '', !empty($r['want_newest']));
         if ($find['ok']) {
             $switched = dns_normalize($find['dns']['base']) != dns_normalize($r['dns_base']);
             playlist_set_dns_state($mysqli, $id, $find['dns']['base'], true, isset($find['probe']['server']) ? $find['probe']['server'] : '');
@@ -921,7 +958,7 @@ function playlist_check_servers($mysqli, $row){
     $out = array();
     foreach ($list as $i => $d) {
         $out[] = array('id' => (int)$d['id'], 'title' => $d['title'], 'base' => $d['base'], 'norm' => $d['norm'], 'catch_all' => !empty($d['catch_all']),
-                       'result' => $res[$i]['result'], 'server' => isset($res[$i]['server']) ? $res[$i]['server'] : '');
+                       'result' => $res[$i]['result'], 'server' => isset($res[$i]['server']) ? $res[$i]['server'] : '', 'active' => !isset($res[$i]['active']) || $res[$i]['active']);
     }
     // primeiro os que aceitam
     usort($out, function ($a, $b) { return ($a['result'] == 'ok' ? 0 : 1) - ($b['result'] == 'ok' ? 0 : 1); });
