@@ -1829,4 +1829,7 @@ return array(
   'Grátis (teste das lojas)' => array('pt' => 'Grátis (teste das lojas)', 'en' => 'Free (store review code)', 'es' => 'Gratis (prueba de las tiendas)'),
   'Manual (confirmado no painel)' => array('pt' => 'Manual (confirmado no painel)', 'en' => 'Manual (confirmed in the panel)', 'es' => 'Manual (confirmado en el panel)'),
   'Grátis (testes)' => array('pt' => 'Grátis (testes)', 'en' => 'Free (trials)', 'es' => 'Gratis (pruebas)'),
+  'Pagamento online indisponível no momento.' => array('pt' => 'Pagamento online indisponível no momento.', 'en' => 'Online payment is unavailable right now.', 'es' => 'El pago en línea no está disponible en este momento.'),
+  'Tente de novo mais tarde. Os pagamentos são feitos só pelo site (Pix ou cartão).' => array('pt' => 'Tente de novo mais tarde. Os pagamentos são feitos só pelo site (Pix ou cartão).', 'en' => 'Please try again later. Payments are made only on the website (Pix or card).', 'es' => 'Inténtalo de nuevo más tarde. Los pagos se hacen solo en el sitio (Pix o tarjeta).'),
+  'O pagamento online não está disponível no momento. Tente de novo mais tarde.' => array('pt' => 'O pagamento online não está disponível no momento. Tente de novo mais tarde.', 'en' => 'Online payment is not available right now. Please try again later.', 'es' => 'El pago en línea no está disponible en este momento. Inténtalo de nuevo más tarde.'),
 );

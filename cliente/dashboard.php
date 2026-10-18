@@ -1,12 +1,20 @@
 <?php
 require_once(__DIR__."/_init.php");
 $customer = cl_require_login($mysqli);
+require_once(__DIR__."/../includes/payment_helper.php");
+// Cliente só paga pelas formas online ativas no sistema: Pix (Mercado Pago, só em R$) e cartão (Stripe)
+function cl_can_pay_online($mysqli, $customer){
+    $brl = ($customer['currency'] == 'USD' ? 'USD' : 'BRL') == 'BRL';
+    return pay_stripe_enabled($mysqli) || ($brl && pay_mp_enabled($mysqli));
+}
 $cid = (int)$customer['id'];
 $currency = $customer['currency'] == 'USD' ? 'USD' : 'BRL';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (!cl_csrf_ok()) {
         cl_flash('error', 'Sessão expirada. Tente novamente.');
+    } else if (isset($_POST['subscribe']) && !cl_can_pay_online($mysqli, $customer)) {
+        cl_flash('error', 'O pagamento online não está disponível no momento. Tente de novo mais tarde.');
     } else if (isset($_POST['subscribe'])) {
         $r = subscription_create($mysqli, $customer, (int)$_POST['plan_id']);
         cl_flash($r['ok'] ? 'success' : 'error', $r['msg']);
@@ -31,8 +39,6 @@ foreach ($subs as $s) { if ($s['status'] == 'pending') $has_pending = true; }
 require_once(__DIR__."/../includes/payment_helper.php");
 $pix_on = pay_mp_enabled($mysqli);
 $card_on = pay_stripe_enabled($mysqli);
-$instructions = trim(panel_config_get($mysqli, 'payment_instructions', ''));
-$contact = trim(panel_config_get($mysqli, 'payment_contact', ''));
 $trial_days = trial_days($mysqli);
 $trial_offer = trial_enabled($mysqli) && !trial_used_by_customer($mysqli, $cid);
 
@@ -98,9 +104,8 @@ cl_header($customer, 'Minhas assinaturas', 'dashboard'); ?>
                                 <div class="small cl-muted mb-2">Assim que o pagamento for aprovado, o código de ativação aparece aqui automaticamente.</div>
                             <?php } else { ?>
                                 <div class="alert alert-warning small mt-3 mb-2">
-                                    <b>Aguardando pagamento.</b><br>
-                                    <?php echo $instructions != '' ? nl2br(cl_e($instructions)) : 'Fale com o suporte para efetuar o pagamento.'; ?>
-                                    <?php if ($contact != '') { ?><br>Envie o comprovante com o número do pedido para: <b><?php echo cl_e($contact); ?></b><?php } ?>
+                                    <b>Pagamento online indisponível no momento.</b><br>
+                                    Tente de novo mais tarde. Os pagamentos são feitos só pelo site (Pix ou cartão).
                                 </div>
                             <?php } ?>
                             <form method="post" onsubmit="return confirm('Cancelar este pedido?');">
