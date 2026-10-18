@@ -102,6 +102,7 @@ function cl_header($customer, $title, $active){
                 <ul class="navbar-nav me-auto ms-lg-4 gap-1">
                     <li class="nav-item"><a class="nav-link <?php if($active=='dashboard'){echo 'active';} ?>" href="dashboard.php"><i class="ri-vip-crown-line me-1"></i>Minhas assinaturas</a></li>
                     <li class="nav-item"><a class="nav-link <?php if($active=='plans'){echo 'active';} ?>" href="dashboard.php#planos"><i class="ri-shopping-cart-2-line me-1"></i>Assinar</a></li>
+                    <li class="nav-item"><a class="nav-link <?php if($active=='training'){echo 'active';} ?>" href="treinamento.php"><i class="ri-play-circle-line me-1"></i>Treinamento</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-3 py-2 py-lg-0">
                 <?php echo i18n_switcher(); ?>

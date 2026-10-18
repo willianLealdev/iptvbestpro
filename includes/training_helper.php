@@ -4,7 +4,12 @@
  * Os vídeos ficam em assets/training/. Para adicionar um vídeo novo, coloque o arquivo lá e inclua na lista abaixo.
  */
 
-function training_videos(){
+// $set: 'reseller' (portal da revenda e admin) ou 'customer' (área do cliente)
+function training_videos($set = 'reseller'){
+    if ($set == 'customer') return array(
+        array('c01-ativando-o-aparelho.mp4', 'Ativando o seu aparelho', 'Do cadastro no site até o aparelho ativo com o código.'),
+        array('c02-adicionando-a-lista.mp4', 'Adicionando a sua lista', 'Como colocar a sua lista no aparelho pela área do cliente.'),
+    );
     return array(
         array('01-conhecendo-o-portal.mp4', 'Conhecendo o portal', 'Onde fica cada coisa no seu painel.'),
         array('02-comprando-creditos.mp4', 'Comprando créditos', 'Como comprar créditos e pagar o pedido.'),
@@ -36,17 +41,17 @@ function training_lang(){
 }
 
 // Só os vídeos que já existem no servidor
-function training_available($lang){
+function training_available($lang, $set = 'reseller'){
     $out = array();
-    foreach (training_videos() as $v) {
+    foreach (training_videos($set) as $v) {
         if (is_file(__DIR__.'/../assets/training/'.$lang.'/'.$v[0])) $out[] = $v;
     }
     return $out;
 }
 
-function training_render($prefix = ''){
+function training_render($prefix = '', $set = 'reseller'){
     $lang = training_lang();
-    $list = training_available($lang);
+    $list = training_available($lang, $set);
     if (!$list) { echo '<div class="alert alert-info">Os vídeos de treinamento ainda estão sendo preparados.</div>'; return; }
     $base = $prefix.'assets/training/'.$lang.'/';
     $langs = training_langs();

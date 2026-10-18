@@ -44,6 +44,30 @@ $trial_offer = trial_enabled($mysqli) && !trial_used_by_customer($mysqli, $cid);
 
 cl_header($customer, 'Minhas assinaturas', 'dashboard'); ?>
 
+<?php
+// Aparelho já ativado com assinatura deste cliente, mas sem nenhuma lista: mostra como colocar a lista
+$nolist = null;
+foreach ($subs as $s) {
+    if ((int)$s['device_pk'] <= 0 || (int)$s['code_used_at'] <= 0 || subscription_state($s) != 'active' || $s['device_mac'] == '') continue;
+    $dm = mysqli_real_escape_string($mysqli, $s['device_mac']);
+    $n = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_users WHERE device_id = '$dm' AND status = '1'"));
+    if ((int)$n['n'] == 0) { $nolist = $s; break; }
+}
+if ($nolist) { ?>
+<div class="cl-card p-4 mb-4" style="border:2px solid #3b6cf6;background:linear-gradient(135deg,#eef3ff,#ffffff);">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h2 class="cl-title fs-5 mb-1"><i class="ri-play-list-add-line" style="color:#3b6cf6;"></i> Falta só a sua lista</h2>
+            <p class="cl-muted mb-0">O seu aparelho já está ativo. Agora adicione a lista do seu fornecedor para começar a assistir.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="playlist.php?sub=<?php echo (int)$nolist['id']; ?>" class="btn cl-btn-green"><i class="ri-add-line"></i> Adicionar a lista</a>
+            <a href="treinamento.php" class="btn btn-outline-primary"><i class="ri-play-circle-line"></i> Ver como fazer</a>
+        </div>
+    </div>
+</div>
+<?php } ?>
+
 <?php if ($trial_offer) { ?>
 <div class="cl-card p-4 mb-4" style="border:2px solid #16a34a;background:linear-gradient(135deg,#f0fdf4,#ffffff);">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">

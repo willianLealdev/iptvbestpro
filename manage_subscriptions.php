@@ -48,7 +48,8 @@
     $keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
     $customer_filter = isset($_GET['customer']) ? (int)$_GET['customer'] : 0;
     $now = time();
-    $where = array();
+    // Ativações grátis (teste de 7 dias e código de teste das lojas) não são assinaturas pagas: não entram aqui
+    $where = array("s.is_trial = 0", "s.is_demo = 0");
     if($state == 'pending') $where[] = "s.status = 'pending'";
     if($state == 'cancelled') $where[] = "s.status = 'cancelled'";
     if($state == 'code') $where[] = "s.status = 'paid' AND s.code_used_at = 0";
@@ -73,7 +74,7 @@
         SUM(status = 'paid' AND code_used_at = 0) AS codes,
         COALESCE(SUM(IF(status = 'paid' AND currency = 'BRL' AND paid_at >= ".strtotime(date('Y-m-01'))." , amount, 0)), 0) AS month_brl,
         COALESCE(SUM(IF(status = 'paid' AND currency = 'USD' AND paid_at >= ".strtotime(date('Y-m-01'))." , amount, 0)), 0) AS month_usd
-        FROM tbl_subscriptions"));
+        FROM tbl_subscriptions WHERE is_trial = 0 AND is_demo = 0"));
 ?>
 
 <main id="nsofts_main">

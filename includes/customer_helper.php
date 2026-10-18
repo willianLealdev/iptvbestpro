@@ -460,5 +460,34 @@ function subscription_activate_device($mysqli, $data){
     if ($is_demo) demo_attach_playlist($mysqli, $device['device_id']);
 
     $device = devices_find($mysqli, $device['device_id'], $device['application_id']);
+    // Boas-vindas por e-mail: como colocar a lista + link do treinamento (teste grátis e assinatura)
+    if (empty($sub['is_demo'])) customer_welcome_mail($mysqli, $sub, $device, $expires, $is_trial);
     return array('ok' => true, 'msg' => ($is_trial ? 'Teste grátis ativado! Válido até ' : 'Assinatura ativada! Válida até ').date('d/m/Y', $expires).'.', 'device' => $device);
+}
+
+// E-mail enviado quando o cliente ativa o aparelho com o código: próximos passos para colocar a lista
+function customer_welcome_mail($mysqli, $sub, $device, $expires, $is_trial){
+    try {
+        require_once(__DIR__.'/account_auth.php');
+        require_once(__DIR__.'/brand_helper.php');
+        $name = htmlspecialchars($sub['customer_name']);
+        $portal = acc_area_url('customer', 'dashboard.php');
+        $train = acc_area_url('customer', 'treinamento.php');
+        $model = htmlspecialchars($device && $device['device_model'] != '' ? $device['device_model'] : ($device ? $device['device_id'] : ''));
+        $title = $is_trial ? __('Seu teste grátis começou!') : __('Seu aparelho está ativo!');
+        $html = acc_email_html($title, array(
+            __('Olá, {0}!', $name),
+            ($is_trial ? __('O seu teste grátis do {0} foi ativado no aparelho {1} e vale até {2}.', htmlspecialchars(brand_name()), $model, date('d/m/Y', $expires))
+                       : __('A sua assinatura do {0} foi ativada no aparelho {1} e vale até {2}.', htmlspecialchars(brand_name()), $model, date('d/m/Y', $expires))),
+            '<b>'.__('Agora falta só colocar a sua lista:').'</b><br>'
+                .'1. '.__('Entre na sua área do cliente:').' <a href="'.htmlspecialchars($portal).'" style="color:#2f6bff;">'.htmlspecialchars($portal).'</a><br>'
+                .'2. '.__('Em Minhas assinaturas, clique em "Playlists deste aparelho".').'<br>'
+                .'3. '.__('Adicione a lista do seu fornecedor (usuário e senha, ou o link da lista).').'<br>'
+                .'4. '.__('No app, aperte Atualizar: a lista aparece e é só assistir.'),
+            __('Tem dúvida? Assista ao vídeo de treinamento, mostrando passo a passo.'),
+        ), __('Ver o treinamento'), $train, __('Você recebeu este e-mail porque ativou um aparelho com o seu código.'));
+        acc_mail($sub['customer_email'], $sub['customer_name'], $title.' - '.brand_name(), $html);
+    } catch (\Throwable $e) {
+        error_log('[boas-vindas] '.$e->getMessage());
+    }
 }
