@@ -18,7 +18,7 @@
     $total_credit_share = resellers_total_credit_share($mysqli);
     // Uso do app pelo último acesso (sem os aparelhos de teste): ativados e aguardando ativação
     $usage = array();
-    foreach (array('using', 'idle', 'gone') as $uk) {
+    foreach (array('using', 'nolist', 'idle', 'gone') as $uk) {
         $usage[$uk] = array(
             'act'  => dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices d WHERE d.is_dev <> 1 AND d.package <> '' AND ".devices_usage_sql($uk)),
             'wait' => dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices d WHERE d.is_dev <> 1 AND d.package = '' AND ".devices_usage_sql($uk)),
@@ -164,11 +164,12 @@
         <!-- Uso do app (pelo último acesso) -->
         <div class="row g-4 mt-1">
             <?php foreach (array(
-                'using' => array('Usando o app', 'abriram nos últimos 3 dias', '#16c784', '#f3fdf7', '#ccf7dd', 'ri-checkbox-circle-fill'),
-                'idle'  => array('Parados', '4 a 15 dias sem abrir', '#f59e0b', '#fffbeb', '#fde68a', 'ri-pause-circle-fill'),
+                'using' => array('Usando o app', 'abriram nas últimas 24 horas, com lista', '#16c784', '#f3fdf7', '#ccf7dd', 'ri-checkbox-circle-fill'),
+                'nolist' => array('Abrem sem lista', 'abriram nas últimas 24 horas, sem nenhuma lista', '#3b6cf6', '#f7f9fe', '#e3eafd', 'ri-play-list-add-fill'),
+                'idle'  => array('Parados', '1 a 15 dias sem abrir', '#f59e0b', '#fffbeb', '#fde68a', 'ri-pause-circle-fill'),
                 'gone'  => array('Provavelmente removeram', 'mais de 15 dias sem abrir', '#ef4444', '#fef2f2', '#fecaca', 'ri-delete-bin-6-fill'),
             ) as $uk => $u) { ?>
-            <div class="col-md-4">
+            <div class="col-xl-3 col-md-6">
                 <div class="card dash-stat" style="--dash-color:<?php echo $u[2]; ?>; --dash-bg:<?php echo $u[3]; ?>; --dash-icon-bg:<?php echo $u[4]; ?>;">
                     <div class="card-body">
                         <div class="dash-stat__icon"><i class="<?php echo $u[5]; ?>"></i></div>

@@ -163,7 +163,7 @@
     $dir = (isset($_GET['dir']) && strtolower($_GET['dir']) == 'asc') ? 'ASC' : 'DESC';
 
     $tab = (isset($_GET['tab']) && in_array($_GET['tab'], array('dev', 'srv', 'wait'))) ? $_GET['tab'] : '';
-    $usage_filter = (isset($_GET['usage']) && in_array($_GET['usage'], array('using', 'idle', 'gone'))) ? $_GET['usage'] : '';
+    $usage_filter = (isset($_GET['usage']) && in_array($_GET['usage'], array('using', 'nolist', 'idle', 'gone'))) ? $_GET['usage'] : '';
     $origin_filter = (isset($_GET['origin']) && in_array($_GET['origin'], array('real', 'test', 'unknown'))) ? $_GET['origin'] : '';
     $now = time();
     // aparelhos ativados com o código de um servidor parceiro ficam numa aba só deles
@@ -228,7 +228,9 @@
     if($page > $last_page){ $page = $last_page; }
     $start = ($page - 1) * $limit;
 
-    $result = mysqli_query($mysqli, "SELECT d.*, COALESCE(NULLIF(d.app_name,''), NULLIF(d.application_id,''), '—') AS app_label
+    // pl_count = quantas listas o aparelho tem (app aberto sem lista não está assistindo nada)
+    $result = mysqli_query($mysqli, "SELECT d.*, COALESCE(NULLIF(d.app_name,''), NULLIF(d.application_id,''), '—') AS app_label,
+                                            (SELECT COUNT(*) FROM tbl_users u WHERE u.device_id = d.device_id AND u.status = '1') AS pl_count
                                      FROM tbl_devices d $where_sql
                                      ORDER BY ".$sortable[$sort]." $dir, d.id DESC LIMIT $start, $limit") or die(mysqli_error($mysqli));
 
@@ -402,8 +404,9 @@
                         <?php } ?>
                         <select name="usage" class="form-select dv-filter" onchange="this.form.submit()" title="Pelo último acesso: o app não avisa quando é removido">
                             <option value="">Todos os usos</option>
-                            <option value="using" <?php if($usage_filter == 'using'){ echo 'selected'; } ?>>Usando (até 3 dias)</option>
-                            <option value="idle" <?php if($usage_filter == 'idle'){ echo 'selected'; } ?>>Parados (4 a 15 dias)</option>
+                            <option value="using" <?php if($usage_filter == 'using'){ echo 'selected'; } ?>>Usando (abriu nas últimas 24 horas)</option>
+                            <option value="nolist" <?php if($usage_filter == 'nolist'){ echo 'selected'; } ?>>Abre o app, sem lista</option>
+                            <option value="idle" <?php if($usage_filter == 'idle'){ echo 'selected'; } ?>>Parados (1 a 15 dias sem abrir)</option>
                             <option value="gone" <?php if($usage_filter == 'gone'){ echo 'selected'; } ?>>Provavelmente removeram (mais de 15 dias)</option>
                         </select>
                         <?php if($origin_filter != ''){ ?><input type="hidden" name="origin" value="<?php echo htmlspecialchars($origin_filter); ?>"><?php } ?>
@@ -493,7 +496,9 @@
                                                 <img src="<?php echo htmlspecialchars(brand_logo_url()); ?>" alt="" onerror="this.style.visibility='hidden'">
                                                 <span><?php echo htmlspecialchars($row['app_label']); ?></span>
                                             </span>
-                                            <?php $us = devices_usage_info($row['last_seen']); ?>
+                                            <?php $us = devices_usage_info($row['last_seen']);
+                                                  // abriu o app, mas sem nenhuma lista: não está assistindo
+                                                  if ($us[0] == 'using' && (int)$row['pl_count'] == 0) $us = array('nolist', 'Abre o app, sem lista', 'us-idle', 'ri-play-list-add-line'); ?>
                                             <br><span class="dv-usage <?php echo $us[2]; ?>" title="Último acesso: <?php echo (int)$row['last_seen'] > 0 ? date('d/m/Y H:i', $row['last_seen']) : '—'; ?>"><i class="<?php echo $us[3]; ?>"></i> <?php echo $us[1]; ?></span>
                                         </td>
                                         <?php if($tab == 'wait'){ $oi = devices_origin_info($row['origin']); ?>
