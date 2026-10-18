@@ -32,12 +32,10 @@ try {
     if (time() - (int)panel_config_get($mysqli, 'devices_cleanup_at', '0') >= 3600) {
         panel_config_set($mysqli, 'devices_cleanup_at', (string)time());
         $cl = devices_auto_cleanup($mysqli);
-        if ($cl['waiting'] || $cl['trial']) echo date('Y-m-d H:i:s')." [devices-cleanup] nao_ativados=".$cl['waiting']." testes_vencidos=".$cl['trial']."
-";
+        if ($cl['waiting'] || $cl['trial']) echo date('Y-m-d H:i:s')." [devices-cleanup] nao_ativados=".$cl['waiting']." testes_vencidos=".$cl['trial']."\n";
     }
 } catch (\Throwable $e) {
-    echo date('Y-m-d H:i:s').' [devices-cleanup] erro: '.$e->getMessage()."
-";
+    echo date('Y-m-d H:i:s').' [devices-cleanup] erro: '.$e->getMessage()."\n";
 }
 
 // Alertas por e-mail: DNS que caiu ou voltou (admin e revendedor dono)
