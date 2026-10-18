@@ -1825,4 +1825,8 @@ return array(
   'E-mails que recebem os alertas' => array('pt' => 'E-mails que recebem os alertas', 'en' => 'E-mails that receive the alerts', 'es' => 'Correos que reciben las alertas'),
   'Só estes e-mails recebem. Se deixar vazio, recebe o Super Admin:' => array('pt' => 'Só estes e-mails recebem. Se deixar vazio, recebe o Super Admin:', 'en' => 'Only these e-mails receive alerts. If left empty, the Super Admin receives them:', 'es' => 'Solo estos correos reciben. Si se deja vacío, recibe el Super Admin:'),
   'Aceita, mas vencido/desativado' => array('pt' => 'Aceita, mas vencido/desativado', 'en' => 'Accepted, but expired/disabled', 'es' => 'Acepta, pero vencido/desactivado'),
+  'Grátis (teste de 7 dias)' => array('pt' => 'Grátis (teste de 7 dias)', 'en' => 'Free (7-day trial)', 'es' => 'Gratis (prueba de 7 días)'),
+  'Grátis (teste das lojas)' => array('pt' => 'Grátis (teste das lojas)', 'en' => 'Free (store review code)', 'es' => 'Gratis (prueba de las tiendas)'),
+  'Manual (confirmado no painel)' => array('pt' => 'Manual (confirmado no painel)', 'en' => 'Manual (confirmed in the panel)', 'es' => 'Manual (confirmado en el panel)'),
+  'Grátis (testes)' => array('pt' => 'Grátis (testes)', 'en' => 'Free (trials)', 'es' => 'Gratis (pruebas)'),
 );

@@ -14,11 +14,13 @@
     }
 
     resellers_migrate($mysqli);
+    require_once("includes/customer_helper.php");
+    customers_migrate($mysqli); // colunas is_trial, is_demo e days das assinaturas
     payments_migrate($mysqli);
 
     /* ---------- Filtros ---------- */
     $kind = (isset($_GET['kind']) && in_array($_GET['kind'], array('credit', 'sub'))) ? $_GET['kind'] : '';
-    $method = (isset($_GET['method']) && in_array($_GET['method'], array('mercadopago', 'stripe', 'apple', 'amazon', 'manual'))) ? $_GET['method'] : '';
+    $method = (isset($_GET['method']) && in_array($_GET['method'], array('mercadopago', 'stripe', 'apple', 'amazon', 'manual', 'free'))) ? $_GET['method'] : '';
     $period = (isset($_GET['period']) && in_array($_GET['period'], array('today', '7d', 'month', 'last_month', '30d', 'year', 'all', 'custom'))) ? $_GET['period'] : 'month';
     $q = isset($_GET['q']) ? mb_substr(trim(strip_tags($_GET['q'])), 0, 100) : '';
     $date_from = isset($_GET['from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['from']) ? $_GET['from'] : '';
@@ -43,7 +45,8 @@
     if ($t_from > 0) $w[] = "x.paid_at >= ".(int)$t_from;
     if ($t_to > 0) $w[] = "x.paid_at < ".(int)$t_to;
     if ($kind != '') $w[] = "x.kind = '$kind'";
-    if ($method == 'manual') $w[] = "x.method NOT IN ('mercadopago', 'stripe', 'apple', 'amazon')";
+    if ($method == 'manual') $w[] = "x.method NOT IN ('mercadopago', 'stripe', 'apple', 'amazon', 'trial', 'demo')";
+    elseif ($method == 'free') $w[] = "x.method IN ('trial', 'demo')";
     elseif ($method != '') $w[] = "x.method = '$method'";
     if ($q != '') {
         $qe = mysqli_real_escape_string($mysqli, $q);
@@ -52,13 +55,13 @@
     $where_sql = $w ? 'WHERE '.implode(' AND ', $w) : '';
 
     $union = "(
-        SELECT 'credit' AS kind, o.id AS order_id, o.paid_at, o.created_at, o.total AS amount, o.currency, o.credits AS qty, '' AS plan_name,
+        SELECT 'credit' AS kind, o.id AS order_id, o.paid_at, o.created_at, o.total AS amount, o.currency, o.credits AS qty, '' AS plan_name, 0 AS days,
                o.method, o.reference, o.reseller_id AS who_id, COALESCE(r.name, '') AS who_name, COALESCE(r.email, '') AS who_email, COALESCE(r.phone, '') AS who_phone
         FROM tbl_credit_orders o LEFT JOIN tbl_resellers r ON r.id = o.reseller_id
         WHERE o.status = 'paid'
         UNION ALL
-        SELECT 'sub' AS kind, s.id AS order_id, s.paid_at, s.created_at, s.amount, s.currency, s.months AS qty, s.plan_name,
-               s.method, s.reference, s.customer_id AS who_id, COALESCE(c.name, '') AS who_name, COALESCE(c.email, '') AS who_email, COALESCE(c.phone, '') AS who_phone
+        SELECT 'sub' AS kind, s.id AS order_id, s.paid_at, s.created_at, s.amount, s.currency, s.months AS qty, s.plan_name, s.days,
+               IF(s.is_trial = 1, 'trial', IF(s.is_demo = 1, 'demo', s.method)) AS method, s.reference, s.customer_id AS who_id, COALESCE(c.name, '') AS who_name, COALESCE(c.email, '') AS who_email, COALESCE(c.phone, '') AS who_phone
         FROM tbl_subscriptions s LEFT JOIN tbl_customers c ON c.id = s.customer_id
         WHERE s.status = 'paid'
     ) x";
@@ -68,7 +71,9 @@
         if ($m == 'stripe') return 'Cartão (Stripe)';
         if ($m == 'apple') return 'Apple (App Store)';
         if ($m == 'amazon') return 'Amazon (Appstore)';
-        return 'Manual';
+        if ($m == 'trial') return 'Grátis (teste de 7 dias)';
+        if ($m == 'demo') return 'Grátis (teste das lojas)';
+        return 'Manual (confirmado no painel)';
     }
 
     /* ---------- CSV ---------- */
@@ -85,7 +90,7 @@
                 $r['paid_at'] ? date('d/m/Y H:i', $r['paid_at']) : '',
                 $r['kind'] == 'credit' ? 'Créditos (revenda)' : 'Assinatura (cliente)',
                 $r['order_id'], $r['who_name'], $r['who_email'], $r['who_phone'],
-                $r['kind'] == 'credit' ? (int)$r['qty'].' créditos' : $r['plan_name'].' ('.(int)$r['qty'].' meses)',
+                $r['kind'] == 'credit' ? (int)$r['qty'].' créditos' : $r['plan_name'].' ('.((int)$r['days'] > 0 ? (int)$r['days'].' dias' : (int)$r['qty'].' meses').')',
                 number_format((float)$r['amount'], 2, ',', ''), $r['currency'], pm_method_label($r['method']), $r['reference'],
             ), ';');
         }
@@ -134,6 +139,7 @@
             .pm-pix { color: #0f766e; background: #f0fdfa; border-color: #ccfbf1; }
             .pm-card { color: #4338ca; background: #eef2ff; border-color: #e0e7ff; }
             .pm-manual { color: #8c8c8c; background: #fafafa; border-color: #f0f0f0; }
+            .pm-free { color: #389e0d; background: #f6ffed; border-color: #d9f7be; }
         </style>
 
         <div class="row g-3 mb-4">
@@ -181,7 +187,8 @@
                             <option value="stripe" <?php if ($method == 'stripe') echo 'selected'; ?>>Cartão (Stripe)</option>
                             <option value="apple" <?php if ($method == 'apple') echo 'selected'; ?>>Apple (App Store)</option>
                             <option value="amazon" <?php if ($method == 'amazon') echo 'selected'; ?>>Amazon (Appstore)</option>
-                            <option value="manual" <?php if ($method == 'manual') echo 'selected'; ?>>Manual</option>
+                            <option value="manual" <?php if ($method == 'manual') echo 'selected'; ?>>Manual (confirmado no painel)</option>
+                            <option value="free" <?php if ($method == 'free') echo 'selected'; ?>>Grátis (testes)</option>
                         </select>
                     </div>
                     <div class="col-12 col-md-auto d-flex gap-2">
@@ -196,7 +203,7 @@
                         <tbody>
                         <?php if ($result && mysqli_num_rows($result) > 0) { while ($r = mysqli_fetch_assoc($result)) {
                             $m = $r['method'];
-                            $m_cls = $m == 'mercadopago' ? 'pm-pix' : ($m == 'stripe' ? 'pm-card' : 'pm-manual');
+                            $m_cls = $m == 'mercadopago' ? 'pm-pix' : ($m == 'stripe' ? 'pm-card' : (in_array($m, array('trial', 'demo')) ? 'pm-free' : 'pm-manual'));
                             $who_link = $r['kind'] == 'credit' ? 'manage_resellers.php?keyword='.urlencode($r['who_email']) : 'manage_customers.php?keyword='.urlencode($r['who_email']); ?>
                             <tr>
                                 <td><?php echo $r['paid_at'] ? date('d/m/Y H:i', $r['paid_at']) : '—'; ?></td>
@@ -210,7 +217,7 @@
                                 </td>
                                 <td>
                                     <?php if ($r['kind'] == 'credit') { ?><b><?php echo (int)$r['qty']; ?></b> <?php echo (int)$r['qty'] == 1 ? 'crédito' : 'créditos'; ?>
-                                    <?php } else { ?><span translate="no"><?php echo htmlspecialchars($r['plan_name']); ?></span><br><small class="text-muted"><?php echo (int)$r['qty']; ?> meses</small><?php } ?>
+                                    <?php } else { ?><span translate="no"><?php echo htmlspecialchars($r['plan_name']); ?></span><br><small class="text-muted"><?php echo (int)$r['days'] > 0 ? (int)$r['days'].' dias' : (int)$r['qty'].((int)$r['qty'] == 1 ? ' mês' : ' meses'); ?></small><?php } ?>
                                 </td>
                                 <td class="fw-semibold"><?php echo money_currency($r['amount'], $r['currency']); ?></td>
                                 <td><span class="dv-badge <?php echo $m_cls; ?>"><?php echo pm_method_label($m); ?></span></td>
