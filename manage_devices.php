@@ -613,7 +613,7 @@
             <select name="package" class="form-select" required>
                 <?php foreach($packages as $k => $p){ ?>
                     <option value="<?php echo $k; ?>" <?php if($k == '1y'){ echo 'selected'; } ?>>
-                        <?php echo $p['label']; ?> — <?php echo $p['days'] > 0 ? $p['days'].' dias' : 'sem vencimento'; ?> · <?php echo $p['credits']; ?> crédito(s)
+                        <?php echo $p['label']; ?> — <?php echo $p['days'] > 0 ? $p['days'].' dias' : 'sem vencimento'; ?> · <?php echo $p['credits'] > 0 ? $p['credits'].' crédito(s)' : 'grátis, só 1 vez por aparelho'; ?>
                     </option>
                 <?php } ?>
             </select>

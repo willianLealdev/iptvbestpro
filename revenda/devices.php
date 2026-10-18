@@ -191,7 +191,7 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
                 <select name="package" id="activate_package" class="form-select form-select-lg">
                     <?php foreach ($packages as $k => $p) { ?>
                         <option value="<?php echo $k; ?>" data-credits="<?php echo $p['credits']; ?>" <?php if ($p['credits'] > (int)$reseller['credits']) { echo 'disabled'; } ?>>
-                            <?php echo $p['label']; ?> — <?php echo $p['credits']; ?> crédito<?php echo $p['credits'] > 1 ? 's' : ''; ?>
+                            <?php echo $p['label']; ?> — <?php echo $p['credits'] > 0 ? $p['credits'].' crédito'.($p['credits'] > 1 ? 's' : '') : 'grátis, só 1 vez por aparelho'; ?>
                         </option>
                     <?php } ?>
                 </select>

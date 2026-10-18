@@ -445,6 +445,8 @@ function devices_packages(){
             'class'   => 'pk-year',
         );
     }
+    // Teste grátis de 7 dias (sem crédito): só uma vez por aparelho, em aparelho que nunca foi ativado
+    $packages['trial'] = array('label' => 'Teste grátis 7 dias', 'years' => 0, 'days' => 7, 'credits' => 0, 'class' => 'pk-trial');
     return $packages;
 }
 
@@ -530,6 +532,14 @@ function devices_activate($mysqli, $device_pk, $package_key, $charge_reseller_id
     if ($device['owner'] == '' && devices_active_elsewhere($mysqli, $device['device_id'], $charge_reseller_id > 0 ? 'reseller' : 'admin', $charge_reseller_id, 0, $device_pk)) {
         return array('ok' => false, 'msg' => 'Este aparelho já está ativo com outro dono. Ele só pode ser ativado de novo depois que o cliente resetar a licença no app ou quando a ativação vencer.');
     }
+    // Teste grátis de 7 dias: só em aparelho sem ativação e que nunca usou teste (mesma regra do teste do site)
+    $is_trial = $package_key == 'trial';
+    if ($is_trial) {
+        require_once(__DIR__.'/customer_helper.php');
+        customers_migrate($mysqli);
+        if (devices_activation_status($device) == 'active') return array('ok' => false, 'msg' => 'O teste grátis é só para aparelho sem ativação. Este aparelho já está ativo.');
+        if (trial_used_by_device($mysqli, $device)) return array('ok' => false, 'msg' => 'Este aparelho já usou o teste grátis ou já foi ativado antes. Ative com um pacote de 1 ano.');
+    }
     $credits = 0;
     $activated_by = $actor_label;
     if ($charge_reseller_id > 0) {
@@ -539,14 +549,14 @@ function devices_activate($mysqli, $device_pk, $package_key, $charge_reseller_id
         $credits = (int)$pkg['credits'];
         $activated_by = $r['email'];
         $note = $pkg['label'].' · '.$device['device_id'];
-        if (resellers_add_credits($mysqli, $charge_reseller_id, -$credits, $note, 'activation', $admin_id) === false) {
+        if ($credits > 0 && resellers_add_credits($mysqli, $charge_reseller_id, -$credits, $note, 'activation', $admin_id) === false) {
             return array('ok' => false, 'msg' => 'Créditos insuficientes (precisa de '.$credits.').');
         }
     }
 
     $now = time();
     $was_valid = devices_activation_status($device) == 'active' && (int)$device['expires_at'] > $now;
-    $base = $was_valid ? (int)$device['expires_at'] : $now;
+    $base = ($was_valid && !$is_trial) ? (int)$device['expires_at'] : $now;
     $expires = $base + ($pkg['days'] * 86400);
     $activated_at = ($was_valid && (int)$device['activated_at'] > 0) ? (int)$device['activated_at'] : $now;
 
@@ -570,6 +580,13 @@ function devices_activate($mysqli, $device_pk, $package_key, $charge_reseller_id
         resellers_add_credits($mysqli, $charge_reseller_id, $credits, 'Estorno: falha na ativação', 'refund', $admin_id);
     }
     if (!$ok) return array('ok' => false, 'msg' => 'Erro ao salvar a ativação.');
+    if ($is_trial) {
+        // fica registrado de vez: o aparelho não ganha outro teste (nem resetando a licença)
+        $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_trial_devices (device_id, platform, device_model, ip_address, customer_id, used_at) VALUES (?,?,?,?,0,?)");
+        mysqli_stmt_bind_param($stmt, 'ssssi', $device['device_id'], $device['platform'], $device['device_model'], $device['ip_address'], $now);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+    }
     return array('ok' => true, 'msg' => 'Ativado por '.$pkg['label'].' — vence em '.date('d/m/Y', $expires).'.');
 }
 
