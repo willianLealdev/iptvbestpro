@@ -23,6 +23,7 @@ function playlists_migrate($mysqli){
         'dns_full_at'   => "INT(11) NOT NULL DEFAULT 0",       // última busca completa (lista numa porta: procura o servidor de verdade a cada 6 h)
         'dns_pin'       => "VARCHAR(191) NOT NULL DEFAULT ''",  // DNS escolhido no painel ("Usar este"): sempre volta para ele quando estiver no ar
         'dns_search_at' => "INT(11) NOT NULL DEFAULT 0",       // última busca em todos os DNS de uma lista caída (no máximo a cada 10 min)
+        'dns_fail_at'   => "INT(11) NOT NULL DEFAULT 0",       // quando o DNS em uso parou de responder (espera 1 min antes de procurar outro)
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_users` LIKE '$name'");
@@ -30,6 +31,8 @@ function playlists_migrate($mysqli){
             mysqli_query($mysqli, "ALTER TABLE `tbl_users` ADD `$name` $definition");
         }
     }
+    // Não existe mais DNS fixado: o sistema sempre escolhe sozinho (queda e migração de servidor)
+    mysqli_query($mysqli, "UPDATE tbl_users SET dns_pin = '' WHERE dns_pin <> ''");
 }
 
 // scheme://host[:porta] em minúsculas, sem barra final
@@ -307,6 +310,12 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
             playlist_set_dns_state($mysqli, $row['id'], $base, true, $find['ok'] && isset($find['probe']['server']) ? $find['probe']['server'] : (isset($cur[0]['server']) ? $cur[0]['server'] : null));
             $status = 'online';
             return $base;
+        }
+        // DNS em uso não respondeu (queda): espera até 1 minuto ele voltar antes de procurar outro
+        if (!$fresh && $cur[0]['result'] == 'unreachable') {
+            $fail = (int)(isset($row['dns_fail_at']) ? $row['dns_fail_at'] : 0);
+            if ($fail <= 0) { $fail = $now; mysqli_query($mysqli, "UPDATE tbl_users SET dns_fail_at = $now WHERE id = ".(int)$row['id']); }
+            if ($now - $fail < 60) return $curBase;
         }
     }
     // "Atualizar" no app: no máximo uma busca completa por lista a cada 2 minutos (não sobrecarrega os servidores)
@@ -751,7 +760,7 @@ function playlist_unpin_if_migrated($mysqli, $id, $find){
 function playlist_set_dns_state($mysqli, $id, $base, $online, $server = null){
     $now = time();
     $status = $online ? 'online' : 'offline';
-    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_users SET dns_base = ?, dns_status = ?, dns_checked_at = ?, dns_last_ok = IF(? = 'online', ?, dns_last_ok) WHERE id = ?");
+    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_users SET dns_base = ?, dns_status = ?, dns_checked_at = ?, dns_last_ok = IF(? = 'online', ?, dns_last_ok)".($online ? ", dns_fail_at = 0" : "")." WHERE id = ?");
     $id = (int)$id;
     mysqli_stmt_bind_param($stmt, 'ssisii', $base, $status, $now, $status, $now, $id);
     mysqli_stmt_execute($stmt);
@@ -804,8 +813,6 @@ function playlist_monitor_run($mysqli){
     foreach ($rows as $id => $r) {
         $norm = dns_normalize($r['dns_base']);
         $allowed = $scopes[(int)$r['scope']];
-        // DNS escolhido no painel: é ele que se testa (se caiu e a lista foi para outro, volta quando ele voltar)
-        if (!empty($r['dns_pin']) && isset($allowed[$r['dns_pin']])) $norm = $r['dns_pin'];
         // servidor atual aceita qualquer usuário: procura de novo o servidor certo da lista
         if (isset($allowed[$norm]) && !empty($allowed[$norm]['catch_all'])) { $failed[$id] = $r; continue; }
         // o DNS em uso é sempre testado (mesmo fora da lista da revenda): lista que conecta nunca é dada como caída
@@ -815,12 +822,13 @@ function playlist_monitor_run($mysqli){
     }
     $results = playlist_probe_tasks($tasks, 5, 20);
     $periodic = 0;
+    $down = array();
     foreach ($results as $id => $probe) {
         $stats['checked']++;
         if ($probe['result'] == 'ok' && empty($probe['active'])) {
             // login aceito mas vencido/desativado: provavelmente a lista foi migrada para outro servidor
-            // (procura no máximo a cada 30 min enquanto continuar assim, para não errar login demais)
-            if (time() - (int)$rows[$id]['dns_search_at'] >= 1800) { $failed[$id] = $rows[$id]; $failed[$id]['want_newest'] = 1; continue; }
+            // (procura no máximo a cada 10 min enquanto continuar assim, para não errar login demais)
+            if (time() - (int)$rows[$id]['dns_search_at'] >= 600) { $failed[$id] = $rows[$id]; $failed[$id]['want_newest'] = 1; continue; }
             playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true, isset($probe['server']) ? $probe['server'] : null);
             $stats['online']++;
             continue;
@@ -830,14 +838,8 @@ function playlist_monitor_run($mysqli){
             $allowed = $scopes[(int)$rows[$id]['scope']];
             $tn = dns_normalize($tasks[$id]['base']);
             if ($srv != '' && isset($allowed[$tn])) dns_note_real($mysqli, $allowed[$tn]['id'], $srv);
-            $pinned = !empty($rows[$id]['dns_pin']) && isset($allowed[$rows[$id]['dns_pin']]);
-            if ($pinned && (time() - (int)$rows[$id]['dns_full_at'] <= 1800 || $periodic >= 40)) {
-                playlist_set_dns_state($mysqli, $id, $allowed[$rows[$id]['dns_pin']]['base'], true, $srv);
-                $stats['online']++;
-                continue;
-            }
             // a cada 30 min, algumas por ciclo: confere se a lista foi migrada para outro servidor (com o antigo ainda aceitando o login)
-            if (($pinned || empty($rows[$id]['dns_pin'])) && time() - (int)$rows[$id]['dns_full_at'] > 1800 && $periodic < 40) {
+            if (time() - (int)$rows[$id]['dns_full_at'] > 1800 && $periodic < 40) {
                 $periodic++;
                 mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = ".time()." WHERE id = ".(int)$id);
                 $failed[$id] = $rows[$id];
@@ -846,10 +848,27 @@ function playlist_monitor_run($mysqli){
             }
             playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true, $srv);
             $stats['online']++;
+        } else if ($probe['result'] == 'unreachable') {
+            $down[$id] = $tasks[$id];
         } else {
             $failed[$id] = $rows[$id];
         }
     }
+    // DNS em uso não respondeu (queda): confere de novo a cada 10 s; só procura outro se não voltar em 1 minuto
+    for ($try = 0; $down && $try < 6; $try++) {
+        sleep(10);
+        foreach (playlist_probe_tasks($down, 5, 20) as $id => $probe) {
+            if ($probe['result'] == 'unreachable') continue;
+            unset($down[$id]);
+            if ($probe['result'] == 'ok') {
+                playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true, isset($probe['server']) ? $probe['server'] : null);
+                $stats['online']++;
+            } else {
+                $failed[$id] = $rows[$id];
+            }
+        }
+    }
+    foreach ($down as $id => $t) $failed[$id] = $rows[$id];
 
     // 2) Falhou: procura em todos os DNS cadastrados (lista que já estava caída: no máximo a cada 10 minutos,
     //    para não errar login demais — os servidores IPTV bloqueiam o IP que erra muito)
@@ -1022,13 +1041,11 @@ function playlist_handle_pin($mysqli, $device_id, $post){
     if (!$chosen) return array('ok' => false, 'msg' => 'Servidor não encontrado.');
     $probe = playlist_probe_parallel(array($chosen), $row['user_name'], $row['user_password'], 6);
     if ($probe[0]['result'] != 'ok') return array('ok' => false, 'msg' => 'O servidor "'.$chosen['title'].'" não aceitou este usuário agora.');
-    $stmt = mysqli_prepare($mysqli, "UPDATE tbl_users SET dns_pin = ? WHERE id = ?");
+    // sem fixar: o sistema continua trocando sozinho se o servidor cair ou a lista for migrada
     $pid = (int)$row['id'];
-    mysqli_stmt_bind_param($stmt, 'si', $chosen['norm'], $pid);
-    mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
+    mysqli_query($mysqli, "UPDATE tbl_users SET dns_pin = '', dns_full_at = ".time()." WHERE id = $pid");
     playlist_set_dns_state($mysqli, $pid, $chosen['base'], true, isset($probe[0]['server']) ? $probe[0]['server'] : '');
-    return array('ok' => true, 'msg' => 'A playlist agora usa o servidor "'.$chosen['title'].'". Se ele cair, troca sozinha e volta para ele quando voltar.');
+    return array('ok' => true, 'msg' => 'A playlist agora usa o servidor "'.$chosen['title'].'". Se ele cair ou a lista mudar de servidor, o sistema troca sozinho.');
 }
 
 /* ---------- Fonte de cada DNS: para onde ele aponta (aprende com os logins reais das playlists) ---------- */
