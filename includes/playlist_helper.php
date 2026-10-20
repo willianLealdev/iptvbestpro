@@ -202,10 +202,11 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
     $any_active = false;
     foreach ($list as $i => $d) if ($results[$i]['result'] == 'ok' && !empty($results[$i]['active'])) $any_active = true;
     if ($any_active) foreach ($list as $i => $d) if ($results[$i]['result'] == 'ok' && empty($results[$i]['active'])) $results[$i]['result'] = 'inactive';
-    // Ordem de escolha quando mais de um servidor aceita o mesmo usuário:
-    //  1º o servidor preferido (o da URL colada / o último que funcionou), se ele for confiável;
-    //  2º o servidor "de verdade": o endereço dele é o mesmo que o painel IPTV informa (os outros são só portas para ele);
-    //  3º qualquer um que aceite; por último os que aceitam qualquer usuário.
+    // Ordem de escolha quando mais de um DNS aceita o mesmo usuário:
+    //  1º o DNS preferido (o escolhido / o último que funcionou);
+    //  2º qualquer DNS que aceite; por último os que aceitam qualquer usuário.
+    // Nunca troca o DNS pelo "servidor de verdade" que o painel IPTV informa: o mesmo servidor atende várias IPTVs
+    // e quem define o conteúdo de cada uma é o DNS cadastrado.
     foreach (array(false, true) as $loose) {
         $pref = null; $native = null; $first = null;
         foreach ($list as $i => $d) {
@@ -215,13 +216,7 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
             $srv = isset($results[$i]['server']) ? $results[$i]['server'] : '';
             if ($native === null && $srv != '' && $srv == $d['norm']) $native = $i;
         }
-        // o servidor de hoje é só uma porta e existe um cadastrado que é o de verdade: usa o de verdade
-        // (menos quando o DNS foi escolhido no painel: aí vale a escolha)
-        if (!$hard_pref && $pref !== null && $native !== null && $pref != $native) {
-            $sp = isset($results[$pref]['server']) ? $results[$pref]['server'] : '';
-            if ($sp != '' && $sp != $list[$pref]['norm']) $pref = $native;
-        }
-        $winner = $pref !== null ? $pref : ($native !== null ? $native : $first);
+        $winner = $pref !== null ? $pref : $first;
         // Atualizar no app / verificação periódica: se outro servidor tem o usuário com vencimento bem mais longe
         // (a lista foi migrada ou renovada nele), usa esse — sem DNS escolhido no painel
         if ($newest && !$hard_pref && $winner !== null) {
@@ -786,12 +781,6 @@ function playlist_monitor_run($mysqli){
             if (!empty($rows[$id]['dns_pin']) && isset($allowed[$rows[$id]['dns_pin']])) {
                 playlist_set_dns_state($mysqli, $id, $allowed[$rows[$id]['dns_pin']]['base'], true, $srv);
                 $stats['online']++;
-                continue;
-            }
-            // a lista está numa "porta" (o servidor de verdade é outro): procura o de verdade, no máximo a cada 6 horas
-            if ($srv != '' && $srv != dns_normalize($rows[$id]['dns_base']) && (isset($allowed[$srv]) || time() - (int)$rows[$id]['dns_full_at'] > 21600)) {
-                mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = ".time()." WHERE id = ".(int)$id);
-                $failed[$id] = $rows[$id];
                 continue;
             }
             // a cada 3 horas, poucas por ciclo: confere se outro servidor tem esta lista mais nova (migração com o antigo ainda ativo)

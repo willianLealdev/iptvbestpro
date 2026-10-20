@@ -693,8 +693,9 @@
     xt('', {}, function (err, j) {
       if (err || !j || !j.user_info || String(j.user_info.auth) !== '1') { toast(t('list_err')); return playlists(); }
       S.login = j;
-      var si = j.server_info || {}, proto = si.server_protocol || 'http', port = proto === 'https' ? si.https_port : si.port;
-      S.base = si.url ? proto + '://' + si.url + (port ? ':' + port : '') : String(j._dns || pl.dns_base).replace(/\/+$/, '');
+      // sempre o DNS cadastrado no painel (o servidor informado no login atende várias IPTVs; quem define o conteúdo é o DNS)
+      S.base = String(pl.dns_base || j._dns || '').replace(/\/+$/, '');
+      if (!S.base) { var si = j.server_info || {}, proto = si.server_protocol || 'http', port = proto === 'https' ? si.https_port : si.port; S.base = proto + '://' + si.url + (port ? ':' + port : ''); }
       LS.set('bp_pl', String(pl.id));
       home();
       expiryNotice();
