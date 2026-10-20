@@ -538,6 +538,8 @@ else if($get_helper['helper_name']=="get_device_user"){
     $device_id=isset($get_helper['device_id']) ? trim($get_helper['device_id']) : '';
     // botão "Atualizar" do app: confere o servidor de cada lista do zero (sem o cache de 10 min)
     $fresh = !empty($get_helper['fresh']);
+    // o app Android troca de DNS sozinho quando o servidor falha no aparelho: o painel passa a seguir o DNS que o app usa
+    if (!empty($get_helper['cur_dns'])) playlist_app_report($mysqli, $device_id, isset($get_helper['pl_id']) ? $get_helper['pl_id'] : '', isset($get_helper['cur_user']) ? $get_helper['cur_user'] : '', $get_helper['cur_dns']);
 
     $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_users WHERE status='1' AND device_id = ? ORDER BY id DESC");
     mysqli_stmt_bind_param($stmt, 's', $device_id);

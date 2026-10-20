@@ -319,7 +319,7 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
         }
     }
     // "Atualizar" no app: no máximo uma busca completa por lista a cada 2 minutos (não sobrecarrega os servidores)
-    if ($fresh && !empty($row['dns_full_at']) && $now - (int)$row['dns_full_at'] < 120) return $row['dns_base'];
+    if ($fresh && !empty($row['dns_full_at']) && $now >= (int)$row['dns_full_at'] && $now - (int)$row['dns_full_at'] < 120) return $row['dns_base'];
     if ($fresh) mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = $now WHERE id = ".(int)$row['id']);
     // sem "Atualizar": servidor atual recusou → busca completa na hora, mas no máximo uma a cada 2 min por lista
     // (os servidores IPTV bloqueiam o IP que erra login demais)
@@ -750,6 +750,28 @@ function dns_rebase_playlists($mysqli, $old_base, $new_base){
         $n++;
     }
     return $n;
+}
+
+/**
+ * O app está usando outro DNS (trocou sozinho porque o servidor falhou no aparelho): o painel passa a usar esse DNS.
+ * Só aceita DNS cadastrado no painel (nunca o endereço do servidor) e que não recuse o login.
+ * Depois disso a conferência de migração deixa a lista nesse DNS por 24 h (não volta sozinha para o que falha no aparelho).
+ */
+function playlist_app_report($mysqli, $device_id, $pl_id, $user, $cur_dns){
+    $norm = dns_normalize($cur_dns);
+    if ($norm == '' || $device_id == '') return;
+    $did = mysqli_real_escape_string($mysqli, $device_id);
+    $where = (int)$pl_id > 0 ? "id = ".(int)$pl_id : "user_name = '".mysqli_real_escape_string($mysqli, (string)$user)."'";
+    $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM tbl_users WHERE status = '1' AND source = 'account' AND device_id = '$did' AND $where ORDER BY id DESC LIMIT 1"));
+    if (!$row || dns_normalize($row['dns_base']) == $norm) return;
+    $chosen = null;
+    foreach (dns_list_for_admin($mysqli, $device_id) as $d) if ($d['norm'] == $norm) { $chosen = $d; break; }
+    if (!$chosen) return;
+    $probe = playlist_probe_parallel(array($chosen), $row['user_name'], $row['user_password'], 4);
+    if ($probe[0]['result'] == 'auth_fail') return;
+    playlist_set_dns_state($mysqli, $row['id'], $chosen['base'], true, isset($probe[0]['server']) ? $probe[0]['server'] : null);
+    mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = ".(time() + 86400).", dns_pin = '' WHERE id = ".(int)$row['id']);
+    dns_share_with_device_owner($mysqli, $chosen['id'], $device_id);
 }
 
 // Lista migrada (usuário criado depois em outro servidor): o DNS fixado deixa de valer e o painel segue o servidor novo
