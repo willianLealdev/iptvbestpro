@@ -177,9 +177,6 @@ function playlist_list_render($playlists, $hidden_html, $allow_pin = true){
                         <div class="pl-item__name"><?php echo htmlspecialchars(isset($p['playlist_name']) && $p['playlist_name'] != '' ? $p['playlist_name'] : $p['user_name']); ?></div>
                         <?php if (!empty($p['dns_base']) && (!isset($p['source']) || $p['source'] == 'account')) { global $mysqli; ?>
                             <div class="pl-item__dns"><i class="ri-server-line"></i> DNS: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $p['dns_base'])); ?></b>
-                                <?php if (!empty($p['dns_server']) && $p['dns_server'] != dns_normalize($p['dns_base'])) { ?>
-                                    <span title="O DNS é uma porta: os canais vêm deste servidor">→ servidor: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $p['dns_server'])); ?></b></span>
-                                <?php } ?>
                                 <?php if ($allow_pin) { $q = $qs; $q['pl_check'] = (int)$p['id']; ?>
                                     <a class="pl-srv-link" href="<?php echo htmlspecialchars($self.'?'.http_build_query($q)); ?>"><i class="ri-route-line"></i> Servidores</a>
                                 <?php } ?></div>
@@ -191,7 +188,7 @@ function playlist_list_render($playlists, $hidden_html, $allow_pin = true){
                                         $txt = $c['result'] == 'ok' ? (isset($c['active']) && !$c['active'] ? 'Aceita, mas vencido/desativado' : 'Aceita') : ($c['result'] == 'auth_fail' ? 'Recusou' : 'Não respondeu'); ?>
                                         <div class="pl-srv__row <?php echo $c['result'] == 'ok' ? 'is-ok' : ''; ?>">
                                             <span class="pl-srv__name"><?php echo htmlspecialchars(html_entity_decode($c['title'], ENT_QUOTES, 'UTF-8')); ?><?php if ($is_cur) { ?> <small>(em uso)</small><?php } ?></span>
-                                            <span class="pl-srv__res"><?php echo $txt; ?><?php if ($c['result'] == 'ok' && $c['server'] != '' && $c['server'] != $c['norm']) { ?> · aponta para <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $c['server'])); ?></b><?php } ?><?php if ($c['catch_all']) { ?> · aceita qualquer usuário<?php } ?></span>
+                                            <span class="pl-srv__res"><?php echo $txt; ?><?php if ($c['catch_all']) { ?> · aceita qualquer usuário<?php } ?></span>
                                             <?php if ($c['result'] == 'ok' && !$is_cur) { ?>
                                                 <form method="post" class="m-0"><?php echo $hidden_html; ?>
                                                     <input type="hidden" name="playlist_id" value="<?php echo (int)$p['id']; ?>">
