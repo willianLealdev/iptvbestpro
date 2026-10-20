@@ -193,6 +193,27 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
     dns_health_migrate($mysqli);
     dns_catch_all_refresh($mysqli); // só testa os servidores que não foram verificados nas últimas 6 horas
     $list = dns_list_active($mysqli, $scope);
+    $scope = (int)$scope;
+    // Lista de revenda que não conecta em nenhuma DNS dela: procura também nas DNS do admin
+    // (as mesmas que o app testa sozinho quando o servidor cai); a que aceitar fica ligada à revenda
+    $extra = array();
+    if ($scope > 0) {
+        $k = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT kind FROM tbl_resellers WHERE id = $scope"));
+        if (!($k && isset($k['kind']) && $k['kind'] == 'server')) {
+            $seen = array();
+            foreach ($list as $d) $seen[(int)$d['id']] = 1;
+            foreach (dns_list_active($mysqli, 0) as $d) if (!isset($seen[(int)$d['id']])) $extra[] = $d;
+        }
+    }
+    $find = playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm, $timeout, $hard_pref, $newest);
+    if ($find['ok'] || !$extra) return $find;
+    $more = playlist_find_dns_in($mysqli, $extra, $username, $password, $prefer_norm, $timeout, $hard_pref, $newest);
+    if (!$more['ok']) return $list ? $find : $more;
+    mysqli_query($mysqli, "INSERT IGNORE INTO tbl_dns_share (dns_id, reseller_id, created_at) VALUES (".(int)$more['dns']['id'].", $scope, ".time().")");
+    return $more;
+}
+
+function playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm, $timeout, $hard_pref, $newest){
     if (!$list) return array('ok' => false, 'msg' => 'Nenhum servidor DNS ativo. Cadastre em Servidores DNS.', 'dns' => null, 'probe' => null);
 
     $results = playlist_probe_parallel($list, $username, $password, $timeout);
