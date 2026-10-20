@@ -177,7 +177,9 @@ function playlist_probe_result($body, $code){
         }
         // usuário migrado de servidor: no antigo ele continua existindo, mas vencido/desativado (Expired, Disabled, Banned)
         $active = ($status === '' || strcasecmp($status, 'Active') === 0) && ($exp === null || $exp <= 0 || $exp > time());
-        return array('result' => 'ok', 'exp_date' => $exp, 'status' => $status, 'server' => $server, 'active' => $active);
+        // quando o usuário foi criado neste servidor: na migração ele é criado de novo no servidor novo
+        $created = isset($json['user_info']['created_at']) ? (int)$json['user_info']['created_at'] : 0;
+        return array('result' => 'ok', 'exp_date' => $exp, 'status' => $status, 'server' => $server, 'active' => $active, 'created_at' => $created);
     }
     // o servidor respondeu e recusou o usuário (o XUI devolve 404 para usuário que não existe nele)
     if (is_array($json) || ($code >= 200 && $code < 500)) return array('result' => 'auth_fail', 'exp_date' => null, 'status' => '');
@@ -238,14 +240,17 @@ function playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm
             if ($native === null && $srv != '' && $srv == $d['norm']) $native = $i;
         }
         $winner = $pref !== null ? $pref : $first;
-        // Atualizar no app / verificação periódica: se outro servidor tem o usuário com vencimento bem mais longe
-        // (a lista foi migrada ou renovada nele), usa esse — sem DNS escolhido no painel
+        // Atualizar no app / verificação periódica: a lista foi migrada mesmo com o servidor antigo ainda aceitando o login.
+        // Vai para o servidor onde o usuário foi criado por último (a migração cria o usuário de novo no servidor novo)
+        // ou onde o vencimento está bem mais longe (renovado lá) — sem DNS escolhido no painel
         if ($newest && !$hard_pref && $winner !== null) {
             $expOf = function ($r) { return (empty($r['exp_date']) || (int)$r['exp_date'] <= 0) ? PHP_INT_MAX : (int)$r['exp_date']; };
+            $crOf = function ($r) { return isset($r['created_at']) ? (int)$r['created_at'] : 0; };
             $best = $winner;
             foreach ($list as $i => $d) {
                 if ($results[$i]['result'] != 'ok' || !empty($d['catch_all']) != $loose) continue;
-                if ($expOf($results[$i]) > $expOf($results[$best]) + 86400) $best = $i;
+                if ($crOf($results[$i]) > 0 && $crOf($results[$i]) > $crOf($results[$best]) + 3600) $best = $i;
+                else if (abs($crOf($results[$i]) - $crOf($results[$best])) <= 3600 && $expOf($results[$i]) > $expOf($results[$best]) + 86400) $best = $i;
             }
             $winner = $best;
         }
@@ -804,8 +809,8 @@ function playlist_monitor_run($mysqli){
                 $stats['online']++;
                 continue;
             }
-            // a cada 3 horas, poucas por ciclo: confere se outro servidor tem esta lista mais nova (migração com o antigo ainda ativo)
-            if (empty($rows[$id]['dns_pin']) && time() - (int)$rows[$id]['dns_full_at'] > 10800 && $periodic < 25) {
+            // a cada 30 min, algumas por ciclo: confere se a lista foi migrada para outro servidor (com o antigo ainda aceitando o login)
+            if (empty($rows[$id]['dns_pin']) && time() - (int)$rows[$id]['dns_full_at'] > 1800 && $periodic < 40) {
                 $periodic++;
                 mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = ".time()." WHERE id = ".(int)$id);
                 $failed[$id] = $rows[$id];
