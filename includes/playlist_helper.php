@@ -182,7 +182,9 @@ function playlist_probe_result($body, $code){
         $active = ($status === '' || strcasecmp($status, 'Active') === 0) && ($exp === null || $exp <= 0 || $exp > time());
         // quando o usuário foi criado neste servidor: na migração ele é criado de novo no servidor novo
         $created = isset($json['user_info']['created_at']) ? (int)$json['user_info']['created_at'] : 0;
-        return array('result' => 'ok', 'exp_date' => $exp, 'status' => $status, 'server' => $server, 'active' => $active, 'created_at' => $created);
+        // conexões abertas agora: o servidor onde o cliente está assistindo tem 1 ou mais
+        $cons = isset($json['user_info']['active_cons']) ? (int)$json['user_info']['active_cons'] : 0;
+        return array('result' => 'ok', 'exp_date' => $exp, 'status' => $status, 'server' => $server, 'active' => $active, 'created_at' => $created, 'cons' => $cons);
     }
     // o servidor respondeu e recusou o usuário (o XUI devolve 404 para usuário que não existe nele)
     if (is_array($json) || ($code >= 200 && $code < 500)) return array('result' => 'auth_fail', 'exp_date' => null, 'status' => '');
@@ -251,7 +253,15 @@ function playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm
             $expOf = function ($r) { return (empty($r['exp_date']) || (int)$r['exp_date'] <= 0) ? PHP_INT_MAX : (int)$r['exp_date']; };
             $crOf = function ($r) { return isset($r['created_at']) ? (int)$r['created_at'] : 0; };
             $best = $winner;
+            // o cliente está assistindo por outro DNS (o app trocou sozinho no aparelho): o painel passa a usar esse
+            $consOf = function ($r) { return isset($r['cons']) ? (int)$r['cons'] : 0; };
+            $watch = null;
             foreach ($list as $i => $d) {
+                if ($results[$i]['result'] != 'ok' || !empty($d['catch_all']) != $loose) continue;
+                if ($consOf($results[$i]) > 0 && ($watch === null || $consOf($results[$i]) > $consOf($results[$watch]))) $watch = $i;
+            }
+            if ($watch !== null && $consOf($results[$winner]) == 0) { $winner = $watch; $best = $watch; $migrated = true; }
+            else foreach ($list as $i => $d) {
                 if ($results[$i]['result'] != 'ok' || !empty($d['catch_all']) != $loose) continue;
                 if ($crOf($results[$i]) > 0 && $crOf($results[$i]) > $crOf($results[$best]) + 3600) { $best = $i; $migrated = true; }
                 else if (!$hard_pref && abs($crOf($results[$i]) - $crOf($results[$best])) <= 3600 && $expOf($results[$i]) > $expOf($results[$best]) + 86400) $best = $i;
