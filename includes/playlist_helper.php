@@ -276,9 +276,10 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
     $status = isset($row['dns_status']) ? (string)$row['dns_status'] : '';
     // Playlist cadastrada por URL: o servidor é o da própria URL, sem troca automática
     if (isset($row['source']) && $row['source'] != 'account') { $status = ''; return $row['dns_base']; }
-    // O monitor (a cada 5 min) mantém dns_base atualizado. Só testa aqui se a verificação estiver atrasada
-    // ou se o cliente apertou "Atualizar" no app ($fresh: procura em todos os servidores agora).
-    $stale_after = 600;
+    // Tempo real: toda consulta do app (a cada 1 min na tela inicial) confere o servidor atual com 1 login só;
+    // se ele recusou, venceu ou desativou o usuário (lista migrada), procura em todos na hora e troca.
+    // $fresh = botão "Atualizar" no app: procura em todos os servidores agora.
+    $stale_after = 45;
     $now = time();
     if (!$fresh && !empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < $stale_after) return $row['dns_base'];
 
@@ -287,15 +288,30 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
     $catch = dns_list_catch_all_norms($mysqli);
     if (!$fresh && $pin == '' && trim((string)$row['dns_base']) != '' && empty($catch[dns_normalize($row['dns_base'])])) {
         $cur = playlist_probe_parallel(array(array('base' => rtrim(trim((string)$row['dns_base']), '/'))), $row['user_name'], $row['user_password'], 4);
-        if ($cur[0]['result'] == 'ok' && !empty($cur[0]['active'])) {
+        // ainda aceita: continua nele, mas com o app aberto confere a cada 10 min se a lista foi migrada
+        // para outro servidor (o antigo pode continuar aceitando o login depois da migração)
+        $mig = $now - (int)(isset($row['dns_full_at']) ? $row['dns_full_at'] : 0) >= 600;
+        if ($cur[0]['result'] == 'ok' && !empty($cur[0]['active']) && !$mig) {
             playlist_set_dns_state($mysqli, $row['id'], $row['dns_base'], true, isset($cur[0]['server']) ? $cur[0]['server'] : null);
             $status = 'online';
             return $row['dns_base'];
+        }
+        if ($cur[0]['result'] == 'ok' && !empty($cur[0]['active'])) {
+            mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = $now WHERE id = ".(int)$row['id']);
+            $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']), false, true);
+            $base = $find['ok'] ? $find['dns']['base'] : $row['dns_base'];
+            playlist_set_dns_state($mysqli, $row['id'], $base, true, $find['ok'] && isset($find['probe']['server']) ? $find['probe']['server'] : (isset($cur[0]['server']) ? $cur[0]['server'] : null));
+            $status = 'online';
+            return $base;
         }
     }
     // "Atualizar" no app: no máximo uma busca completa por lista a cada 2 minutos (não sobrecarrega os servidores)
     if ($fresh && !empty($row['dns_full_at']) && $now - (int)$row['dns_full_at'] < 120) return $row['dns_base'];
     if ($fresh) mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = $now WHERE id = ".(int)$row['id']);
+    // sem "Atualizar": servidor atual recusou → busca completa na hora, mas no máximo uma a cada 2 min por lista
+    // (os servidores IPTV bloqueiam o IP que erra login demais)
+    if (!$fresh && !empty($row['dns_search_at']) && $now - (int)$row['dns_search_at'] < 120) return $row['dns_base'];
+    if (!$fresh) mysqli_query($mysqli, "UPDATE tbl_users SET dns_search_at = $now WHERE id = ".(int)$row['id']);
     $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], $pin != '' ? $pin : dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '', true);
     $base = $find['ok'] ? $find['dns']['base'] : $row['dns_base'];
     playlist_set_dns_state($mysqli, $row['id'], $base, $find['ok'], $find['ok'] && isset($find['probe']['server']) ? $find['probe']['server'] : null);
