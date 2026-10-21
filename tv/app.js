@@ -700,7 +700,9 @@
       LS.set('bp_pl', String(pl.id));
       // Servidor informado no login: só é usado se o DNS não tocar no navegador (alguns DNS redirecionam o vídeo para um servidor http sem CORS)
       var si2 = j.server_info || {}, pr2 = si2.server_protocol || 'http', po2 = pr2 === 'https' ? si2.https_port : si2.port;
-      S.alt = si2.url ? pr2 + '://' + si2.url + (po2 ? ':' + po2 : '') : ''; S.altTried = false;
+      // página https: o servidor também em https (http é bloqueado pelo navegador)
+      if (location.protocol === 'https:' && si2.url) { pr2 = 'https'; po2 = si2.https_port && String(si2.https_port) !== '443' ? si2.https_port : ''; }
+      S.alt = si2.url ? pr2 + '://' + si2.url + (po2 && !(pr2 === 'http' && String(po2) === '80') ? ':' + po2 : '') : ''; S.altTried = false;
       // O app roda em https: o navegador bloqueia vídeo http (conteúdo misto, fica a tela preta). Se o mesmo DNS responde em https, usa https
       httpsBase(S.base, function (b) {
         S.base = b;
