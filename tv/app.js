@@ -394,7 +394,8 @@
     try { var q = qrcode(0, 'M'); q.addData(text); q.make(); return '<div class="qr">' + q.createImgTag(8, 0) + '</div>'; } catch (e) { return ''; }
   }
   /* ---------------- vídeo: player da TV ou, se ela não tocar HLS, o hls.js ---------------- */
-  var NATIVE_HLS = !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl');
+  // Edge/Chrome no Windows ganharam player HLS nativo que toca o som mas não mostra a imagem nesses canais: lá usa sempre o hls.js
+  var NATIVE_HLS = !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl') && !(IS_WIN || /Windows NT/i.test(UA));
   function loadHls(cb) {
     if (window.Hls) return cb();
     var sc = document.createElement('script'); sc.src = SRV + '/tv/hls.light.min.js'; sc.onload = cb; sc.onerror = cb; document.body.appendChild(sc);
