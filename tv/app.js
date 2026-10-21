@@ -452,6 +452,7 @@
           // queda de rede ou falha de vídeo: tenta se recuperar sozinho (sem recarregar o canal) antes de desistir
           var rec = { net: 0, media: 0 };
           h.on(Hls.Events.ERROR, function (ev, d) {
+            if (d) v._dbg = d.type + '/' + d.details + (d.response && d.response.code !== undefined ? ' ' + d.response.code : '');
             if (!d || !d.fatal) return;
             if (d.type === Hls.ErrorTypes.NETWORK_ERROR && rec.net < 3) { rec.net++; try { h.startLoad(); } catch (e) {} return; }
             if (d.type === Hls.ErrorTypes.MEDIA_ERROR && rec.media < 2) { rec.media++; try { h.recoverMediaError(); } catch (e) {} return; }
@@ -1030,6 +1031,12 @@
     markPlaying(); loadEpg(c);
     if (L.full) zapBanner((L.playIdx + 1) + '  ·  ' + c.name);
   }
+  // Windows: mostra o motivo da falha na tela (ajuda a achar o problema)
+  function diagText(v) {
+    if (!IS_WIN || !v) return '';
+    var host = String(v._url || '').replace(/^https?:\/\//, '').split('/')[0];
+    return ' [' + (v._hls ? 'hls.js ' + (v._dbg || '') : 'nativo ' + (v.error ? 'erro ' + v.error.code + ' ' + (v.error.message || '') : '')) + ' · ' + host + ']';
+  }
   function onLiveError() {
     var m = $('pvmsg'); if (!m) return;
     var au = L.video ? altUrl(L.video._url || '') : '';
@@ -1038,8 +1045,9 @@
       L.video._triedHls = true; setSrc(L.video, L.video._url, onLiveError, true); return;
     }
     L.err++;
-    if (L.err <= 2) { m.textContent = t('reconnect'); m.classList.remove('hide'); setTimeout(function () { if (S.screen === 'live') startLive(); }, 2500); }
-    else { m.textContent = t('ch_off'); m.classList.remove('hide'); }
+    if (IS_WIN) { try { console.log('[play] ' + diagText(L.video)); } catch (e) {} }
+    if (L.err <= 2) { m.textContent = t('reconnect') + diagText(L.video); m.classList.remove('hide'); setTimeout(function () { if (S.screen === 'live') startLive(); }, 2500); }
+    else { m.textContent = t('ch_off') + diagText(L.video); m.classList.remove('hide'); }
   }
   function loadEpg(c) {
     var box = $('epg'); if (!box) return;
