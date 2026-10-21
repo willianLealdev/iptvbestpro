@@ -55,7 +55,8 @@ $pl = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
 mysqli_stmt_close($stmt);
 if (!$pl) tvx_out(404, array('error' => 'playlist_not_found'));
 
-$base = rtrim(playlist_current_dns($mysqli, $pl), '/');
+// DNS já conferido pelo painel (consulta do app a cada 1 min + monitor): aqui não procura servidor, senão cada pedido da lista demora e estoura o tempo
+$base = rtrim((string)$pl['dns_base'], '/');
 if (!preg_match('#^https?://#i', $base)) $base = 'http://'.$base;
 
 // Só parâmetros conhecidos da API Xtream
