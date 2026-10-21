@@ -1040,7 +1040,7 @@
   function diagText(v) {
     if (!IS_WIN || !v) return '';
     var host = String(v._url || '').replace(/^https?:\/\//, '').split('/')[0];
-    return ' [v30 ' + (NATIVE_HLS ? 'hls-nativo=sim ' : 'hls-nativo=nao ') + 'pronto=' + v.readyState + ' rede=' + v.networkState + ' ' + (v._hls ? 'hls.js ' + (v._dbg || '') : 'nativo ' + (v.error ? 'erro ' + v.error.code + ' ' + (v.error.message || '') : '')) + ' · ' + host + ']';
+    return ' [v31 ' + (NATIVE_HLS ? 'hls-nativo=sim ' : 'hls-nativo=nao ') + 'pronto=' + v.readyState + ' rede=' + v.networkState + ' ' + (v._hls ? 'hls.js ' + (v._dbg || '') : 'nativo ' + (v.error ? 'erro ' + v.error.code + ' ' + (v.error.message || '') : '')) + ' · ' + host + ']';
   }
   function onLiveError() {
     var m = $('pvmsg'); if (!m) return;
@@ -1351,7 +1351,11 @@
     PL.video.addEventListener('timeupdate', function () { var v = PL.video; if (!v || !v.duration) return; $('ptr').style.width = (v.currentTime / v.duration * 100) + '%'; $('ptm').textContent = fmtTime(v.currentTime) + ' / ' + fmtTime(v.duration); });
     PL.video.addEventListener('playing', function () { $('pmsg').classList.add('hide'); });
     function verr() {
-      var au = altUrl(url); if (au) { url = au; PL.video._triedHls = false; setSrc(PL.video, url, verr); return; }
+      // página https: o vídeo do filme/episódio termina num endereço http que o navegador bloqueia → o painel entrega o vídeo por https (tv_vod.php)
+      if (location.protocol === 'https:' && url.indexOf('/tv_vod.php') < 0 && S.pl) {
+        url = SRV + '/tv_vod.php?d=' + encodeURIComponent(DID) + '&a=' + encodeURIComponent(APP_ID) + '&p=' + encodeURIComponent(S.pl.id) + '&t=' + type + '&i=' + encodeURIComponent(id) + '&e=' + encodeURIComponent(ext || 'mp4');
+        PL.video._triedHls = false; setSrc(PL.video, url, verr); return;
+      }
       var m0 = $('pmsg'); if (!m0) return;
       if (PL.video && !PL.video._hls && !PL.video._triedHls && playerPref() === 'auto' && /\.m3u8(\?|$)/i.test(url)) { PL.video._triedHls = true; setSrc(PL.video, url, verr, true); return; }
       errs++; var m = m0; if (errs <= 1) { m.textContent = t('reconnect'); m.classList.remove('hide'); setTimeout(function () { if (PL.video) setSrc(PL.video, url, verr); }, 2500); } else { m.textContent = t('play_err'); m.classList.remove('hide'); } }
