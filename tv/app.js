@@ -698,9 +698,24 @@
       S.base = String(pl.dns_base || j._dns || '').replace(/\/+$/, '');
       if (!S.base) { var si = j.server_info || {}, proto = si.server_protocol || 'http', port = proto === 'https' ? si.https_port : si.port; S.base = proto + '://' + si.url + (port ? ':' + port : ''); }
       LS.set('bp_pl', String(pl.id));
-      home();
-      expiryNotice();
+      // Servidor informado no login: só é usado se o DNS não tocar no navegador (alguns DNS redirecionam o vídeo para um servidor http sem CORS)
+      var si2 = j.server_info || {}, pr2 = si2.server_protocol || 'http', po2 = pr2 === 'https' ? si2.https_port : si2.port;
+      S.alt = si2.url ? pr2 + '://' + si2.url + (po2 ? ':' + po2 : '') : ''; S.altTried = false;
+      // O app roda em https: o navegador bloqueia vídeo http (conteúdo misto, fica a tela preta). Se o mesmo DNS responde em https, usa https
+      httpsBase(S.base, function (b) {
+        S.base = b;
+        home();
+        expiryNotice();
+      });
     });
+  }
+  function httpsBase(base, cb) {
+    var m = /^http:\/\/([^\/:]+)(?::(\d+))?$/i.exec(base || '');
+    if (location.protocol !== 'https:' || !m || !window.fetch) return cb(base);
+    var up = 'https://' + m[1] + (m[2] && m[2] !== '80' ? ':' + m[2] : ''), done = false;
+    function fin(b) { if (!done) { done = true; cb(b); } }
+    var tm = setTimeout(function () { fin(base); }, 4000);
+    fetch(up + '/player_api.php', { mode: 'no-cors', cache: 'no-store' }).then(function () { clearTimeout(tm); fin(up); }, function () { clearTimeout(tm); fin(base); });
   }
   function playlists() {
     var rows = '';
@@ -993,6 +1008,11 @@
     var pid = L.playIdx >= 0 && L.playList[L.playIdx] ? String(L.playList[L.playIdx].stream_id) : '';
     for (var i = 0; i < rows.length; i++) { var c = L.chans[+rows[i].getAttribute('data-i')]; rows[i].classList.toggle('sel', !!c && String(c.stream_id) === pid); }
   }
+  // Navegador (https) não toca o vídeo do DNS: troca uma vez para o servidor informado no login e devolve o novo link (ou '')
+  function altUrl(url) {
+    if (location.protocol !== 'https:' || !S.alt || S.altTried || !S.base || S.alt === S.base || String(url).indexOf(S.base) !== 0) return '';
+    S.altTried = true; var nu = S.alt + String(url).slice(S.base.length); S.base = S.alt; return nu;
+  }
   function liveUrl(c) { var u = S.login.user_info; return S.base + '/live/' + encodeURIComponent(u.username) + '/' + encodeURIComponent(u.password) + '/' + c.stream_id + '.m3u8'; }
   function playChan(i) {
     L.playList = L.chans.slice(0); L.playIdx = i; L.err = 0;
@@ -1010,6 +1030,8 @@
   }
   function onLiveError() {
     var m = $('pvmsg'); if (!m) return;
+    var au = L.video ? altUrl(L.video._url || '') : '';
+    if (au) { L.video._triedHls = false; setSrc(L.video, au, onLiveError); return; }
     if (L.video && !L.video._hls && !L.video._triedHls && playerPref() === 'auto' && /\.m3u8(\?|$)/i.test(L.video._url || '')) {
       L.video._triedHls = true; setSrc(L.video, L.video._url, onLiveError, true); return;
     }
@@ -1314,6 +1336,7 @@
     PL.video.addEventListener('timeupdate', function () { var v = PL.video; if (!v || !v.duration) return; $('ptr').style.width = (v.currentTime / v.duration * 100) + '%'; $('ptm').textContent = fmtTime(v.currentTime) + ' / ' + fmtTime(v.duration); });
     PL.video.addEventListener('playing', function () { $('pmsg').classList.add('hide'); });
     function verr() {
+      var au = altUrl(url); if (au) { url = au; PL.video._triedHls = false; setSrc(PL.video, url, verr); return; }
       var m0 = $('pmsg'); if (!m0) return;
       if (PL.video && !PL.video._hls && !PL.video._triedHls && playerPref() === 'auto' && /\.m3u8(\?|$)/i.test(url)) { PL.video._triedHls = true; setSrc(PL.video, url, verr, true); return; }
       errs++; var m = m0; if (errs <= 1) { m.textContent = t('reconnect'); m.classList.remove('hide'); setTimeout(function () { if (PL.video) setSrc(PL.video, url, verr); }, 2500); } else { m.textContent = t('play_err'); m.classList.remove('hide'); } }
