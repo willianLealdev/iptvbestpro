@@ -123,7 +123,7 @@
             );
         }
         $sql = "SELECT * FROM tbl_smtp_settings WHERE id='1'";
-        $res = mysqli_query($mysqli, $sql) or die(mysqli_error($mysqli));
+        $res = mysqli_query($mysqli, $sql) or die(db_fail($mysqli));
         if (mysqli_num_rows($res) > 0) {
             $update = Update('tbl_smtp_settings', $data, "WHERE id = '1'");
         } else {

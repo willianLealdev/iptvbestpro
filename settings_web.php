@@ -16,7 +16,7 @@
     $settings_data=mysqli_fetch_assoc($result);
     
     $sql_query="SELECT * FROM tbl_sidebar ORDER BY tbl_sidebar.`id` DESC";
-    $result_data=mysqli_query($mysqli,$sql_query) or die(mysqli_error($mysqli));
+    $result_data=mysqli_query($mysqli,$sql_query) or die(db_fail($mysqli));
 
     if(isset($_POST['submit_general'])){
         

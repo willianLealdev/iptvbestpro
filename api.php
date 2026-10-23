@@ -181,7 +181,7 @@ if($get_helper['helper_name']=="app_details"){
 	$data_arr= array();
     
     $sql="SELECT * FROM tbl_settings WHERE id='1'";
-    $result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
+    $result = mysqli_query($mysqli,$sql) or die(db_fail($mysqli));
     while($data = mysqli_fetch_assoc($result)){
         
         // App Details
@@ -294,7 +294,7 @@ if($get_helper['helper_name']=="app_details"){
 	$data_arr = array();
 	
     $sql="SELECT * FROM tbl_advertisement WHERE id='1'";
-    $result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
+    $result = mysqli_query($mysqli,$sql) or die(db_fail($mysqli));
     while($data = mysqli_fetch_assoc($result)){
         
         $data_arr['ad_status'] = $data['ad_status'];
@@ -358,7 +358,7 @@ if($get_helper['helper_name']=="app_details"){
 	$col_reseller = mysqli_query($mysqli, "SHOW COLUMNS FROM tbl_xui_dns LIKE 'reseller_id'");
 	$dns_public_where = ($col_reseller && mysqli_num_rows($col_reseller) > 0) ? " AND tbl_xui_dns.reseller_id = 0" : "";
 	$sql="SELECT * FROM tbl_xui_dns WHERE tbl_xui_dns.status='1'".$dns_public_where." ORDER BY tbl_xui_dns.id DESC";
-	$result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
+	$result = mysqli_query($mysqli,$sql) or die(db_fail($mysqli));
     if(mysqli_num_rows($result) > 0){
         while ($data2 = mysqli_fetch_assoc($result)){
             
@@ -377,7 +377,7 @@ if($get_helper['helper_name']=="app_details"){
 	
 	// DNS unificado: a opção "1-Stream" do app usa a mesma lista de servidores do Xtream Codes
 	$sql="SELECT * FROM tbl_xui_dns WHERE tbl_xui_dns.status='1'".$dns_public_where." ORDER BY tbl_xui_dns.id DESC";
-    $result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
+    $result = mysqli_query($mysqli,$sql) or die(db_fail($mysqli));
     if(mysqli_num_rows($result) > 0){
         while ($data3 = mysqli_fetch_assoc($result)){
             
@@ -395,7 +395,7 @@ if($get_helper['helper_name']=="app_details"){
 	$data_arr = array();
 	
 	$sql="SELECT * FROM tbl_xui_dns_block WHERE tbl_xui_dns_block.status='1' ORDER BY tbl_xui_dns_block.id DESC";
-    $result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
+    $result = mysqli_query($mysqli,$sql) or die(db_fail($mysqli));
     if(mysqli_num_rows($result) > 0){
         while ($data4 = mysqli_fetch_assoc($result)){
             $data_arr['dns_base'] = $data4['dns_base'];
@@ -409,7 +409,7 @@ if($get_helper['helper_name']=="app_details"){
 	$data_arr = array();
 	
 	$sql="SELECT * FROM tbl_custom_ads WHERE tbl_custom_ads.status='1' AND tbl_custom_ads.ads_type ='popup' ORDER BY RAND() DESC LIMIT 1";
-    $result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
+    $result = mysqli_query($mysqli,$sql) or die(db_fail($mysqli));
     if(mysqli_num_rows($result) > 0){
         while ($data5 = mysqli_fetch_assoc($result)){
             
@@ -429,7 +429,7 @@ if($get_helper['helper_name']=="app_details"){
 	$data_arr = array();
 	
 	$sql="SELECT * FROM tbl_notification WHERE tbl_notification.`id` ORDER BY tbl_notification.`id` DESC";
-    $result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
+    $result = mysqli_query($mysqli,$sql) or die(db_fail($mysqli));
     if(mysqli_num_rows($result) > 0){
         while ($data6 = mysqli_fetch_assoc($result)){
             
@@ -494,7 +494,7 @@ else if($get_helper['helper_name']=="get_interstitial") {
 	$jsonObj= array();	
 
     $sql="SELECT * FROM tbl_custom_ads WHERE tbl_custom_ads.status='1' AND tbl_custom_ads.ads_type ='interstitial' ORDER BY RAND() DESC LIMIT 1";
-	$result = mysqli_query($mysqli,$sql) or die(mysqli_error($mysqli));
+	$result = mysqli_query($mysqli,$sql) or die(db_fail($mysqli));
 	if(mysqli_num_rows($result) > 0){
 	    while($data = mysqli_fetch_assoc($result)){
           	$row['ads_image'] = $file_path.'images/'.$data['ads_image'];

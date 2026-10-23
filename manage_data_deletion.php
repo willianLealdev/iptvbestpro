@@ -22,7 +22,7 @@
         $start = 0; 
     } 
     $sql_query="SELECT * FROM tbl_policy_deletion ORDER BY tbl_policy_deletion.`id` DESC LIMIT $start, $limit"; 
-    $result=mysqli_query($mysqli,$sql_query) or die(mysqli_error($mysqli));
+    $result=mysqli_query($mysqli,$sql_query) or die(db_fail($mysqli));
     
 ?>
 

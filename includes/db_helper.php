@@ -53,4 +53,10 @@ if ($mysqli->connect_errno) {
     	define("PROFILE_IMG",$profile_details['image']);
     }
 }
+
+// Erro de banco: grava no log do servidor e mostra mensagem genérica (nunca o texto do erro SQL na tela)
+function db_fail($mysqli){
+    error_log('[db] '.mysqli_error($mysqli));
+    return 'Erro no banco de dados. Tente novamente.';
+}
 ?>

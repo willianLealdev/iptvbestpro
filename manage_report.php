@@ -25,7 +25,7 @@
     require_once("includes/support_helper.php");
     support_migrate($mysqli);
     $sql_query="SELECT tbl_reports.*, r.name AS reseller_name FROM tbl_reports LEFT JOIN tbl_resellers r ON r.id = tbl_reports.reseller_id ORDER BY tbl_reports.`id` DESC LIMIT $start, $limit"; 
-    $result=mysqli_query($mysqli,$sql_query) or die(mysqli_error($mysqli));
+    $result=mysqli_query($mysqli,$sql_query) or die(db_fail($mysqli));
 ?>
 
 <!-- Start: main -->

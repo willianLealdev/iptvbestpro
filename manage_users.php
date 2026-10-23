@@ -19,7 +19,7 @@
     if(!isset($_GET['keyword'])){
         $query = "SELECT COUNT(*) as num FROM $tableName";
     } else {
-        $keyword=addslashes(trim($_GET['keyword']));
+        $keyword=mysqli_real_escape_string($mysqli, trim($_GET['keyword']));
         $query = "SELECT COUNT(*) as num FROM $tableName WHERE (`user_name` LIKE '%$keyword%'  OR `device_id` LIKE '%$keyword%')";
         $targetpage = "manage_users.php?keyword=".$_GET['keyword'];
     }
@@ -42,7 +42,7 @@
     } else {
         $sql_query="SELECT * FROM tbl_users WHERE (`user_name` LIKE '%$keyword%' OR `device_id` LIKE '%$keyword%') ORDER BY tbl_users.`id` DESC LIMIT $start, $limit"; 
     }
-    $result=mysqli_query($mysqli,$sql_query) or die(mysqli_error($mysqli));
+    $result=mysqli_query($mysqli,$sql_query) or die(db_fail($mysqli));
     
 ?>
 

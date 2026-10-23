@@ -23,7 +23,7 @@
     } 
     
     $sql_query="SELECT * FROM tbl_notification ORDER BY tbl_notification.`id` DESC LIMIT $start, $limit"; 
-    $result=mysqli_query($mysqli,$sql_query) or die(mysqli_error($mysqli));
+    $result=mysqli_query($mysqli,$sql_query) or die(db_fail($mysqli));
 ?>
 
 <!-- Start: main -->

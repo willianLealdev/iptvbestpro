@@ -43,38 +43,67 @@ $url = $base.'/'.$type.'/'.rawurlencode($pl['user_name']).'/'.rawurlencode($pl['
 @set_time_limit(0);
 ignore_user_abort(false);
 
+require_once(__DIR__."/includes/net_guard.php");
+
 $hdrs = array();
 $sent = false;
 $req = array();
 if (!empty($_SERVER['HTTP_RANGE']) && preg_match('/^bytes=\d*-\d*(,\s*\d*-\d*)*$/', $_SERVER['HTTP_RANGE'])) $req[] = 'Range: '.$_SERVER['HTTP_RANGE'];
 
-$ch = curl_init($url);
-curl_setopt_array($ch, array(
-    CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 6,
-    CURLOPT_CONNECTTIMEOUT => 12, CURLOPT_TIMEOUT => 0,
-    CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => 0,
-    CURLOPT_USERAGENT => 'IPTVSmartersPlayer',
-    CURLOPT_HTTPHEADER => $req,
-    CURLOPT_HEADERFUNCTION => function ($ch, $line) use (&$hdrs) {
-        if (stripos($line, 'HTTP/') === 0) $hdrs = array(); // novo bloco (redirecionamento): guarda só o último
-        else if (strpos($line, ':') !== false) { list($k, $v) = explode(':', $line, 2); $hdrs[strtolower(trim($k))] = trim($v); }
-        return strlen($line);
-    },
-    CURLOPT_WRITEFUNCTION => function ($ch, $data) use (&$hdrs, &$sent) {
-        $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        if ($code >= 300 && $code < 400) return strlen($data); // corpo do redirecionamento: ignora
-        if (!$sent) {
-            $sent = true;
-            http_response_code($code);
-            foreach (array('content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified') as $h) if (isset($hdrs[$h])) header($h.': '.$hdrs[$h]);
-            if (!isset($hdrs['accept-ranges']) && $code == 200) header('Accept-Ranges: none');
+// Redirecionamentos seguidos à mão: cada endereço do caminho precisa ser público (proteção contra SSRF) e o IP é fixado
+// na conexão (evita troca de DNS no meio do caminho)
+$err = 0;
+for ($hop = 0; $hop < 7 && !$sent; $hop++) {
+    if (!net_url_is_public($url)) tvv_fail(403, 'blocked_address');
+    $pu = parse_url($url);
+    $port = isset($pu['port']) ? (int)$pu['port'] : (strtolower($pu['scheme']) === 'https' ? 443 : 80);
+    $ip = net_public_ip($pu['host']);
+    $loc = '';
+    $ch = curl_init($url);
+    curl_setopt_array($ch, array(
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+        CURLOPT_RESOLVE => array($pu['host'].':'.$port.':'.$ip),
+        CURLOPT_CONNECTTIMEOUT => 12, CURLOPT_TIMEOUT => 0,
+        CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => 0,
+        CURLOPT_USERAGENT => 'IPTVSmartersPlayer',
+        CURLOPT_HTTPHEADER => $req,
+        CURLOPT_HEADERFUNCTION => function ($ch, $line) use (&$hdrs, &$loc) {
+            if (stripos($line, 'HTTP/') === 0) { $hdrs = array(); $loc = ''; }
+            else if (strpos($line, ':') !== false) {
+                list($k, $v) = explode(':', $line, 2); $k = strtolower(trim($k)); $hdrs[$k] = trim($v);
+                if ($k === 'location') $loc = trim($v);
+            }
+            return strlen($line);
+        },
+        CURLOPT_WRITEFUNCTION => function ($ch, $data) use (&$hdrs, &$sent) {
+            $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            if ($code >= 300 && $code < 400) return strlen($data); // corpo do redirecionamento: ignora
+            if (!$sent) {
+                $sent = true;
+                http_response_code($code);
+                foreach (array('content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified') as $h) if (isset($hdrs[$h])) header($h.': '.$hdrs[$h]);
+                if (!isset($hdrs['accept-ranges']) && $code == 200) header('Accept-Ranges: none');
+            }
+            echo $data;
+            flush();
+            return connection_aborted() ? 0 : strlen($data);
+        },
+    ));
+    curl_exec($ch);
+    $err = curl_errno($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    if ($sent) break;
+    if ($code >= 300 && $code < 400 && $loc !== '') {
+        // Location relativo vira absoluto
+        if (!preg_match('#^https?://#i', $loc)) {
+            $root = $pu['scheme'].'://'.$pu['host'].(isset($pu['port']) ? ':'.$pu['port'] : '');
+            $loc = $loc[0] === '/' ? $root.$loc : $root.rtrim(dirname(isset($pu['path']) ? $pu['path'] : '/'), '/').'/'.$loc;
         }
-        echo $data;
-        flush();
-        return connection_aborted() ? 0 : strlen($data);
-    },
-));
-curl_exec($ch);
-$err = curl_errno($ch);
-curl_close($ch);
+        $url = $loc;
+        continue;
+    }
+    break;
+}
 if (!$sent) tvv_fail($err ? 502 : 404, $err ? 'upstream_error' : 'no_content');

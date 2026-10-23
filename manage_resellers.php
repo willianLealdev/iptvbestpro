@@ -65,7 +65,7 @@
             FROM tbl_resellers r $where_sql
             ORDER BY ".$sortable[$sort]." $dir, r.id DESC
             LIMIT $start, $limit";
-    $result = mysqli_query($mysqli, $sql) or die(mysqli_error($mysqli));
+    $result = mysqli_query($mysqli, $sql) or die(db_fail($mysqli));
 
     function rs_url($changes = array()){
         $params = array_merge($_GET, $changes);

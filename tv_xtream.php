@@ -9,6 +9,7 @@
 require_once("includes/db_helper.php");
 require_once("includes/reseller_helper.php");
 require_once("includes/playlist_helper.php");
+require_once("includes/net_guard.php");
 
 while (ob_get_level() > 0) ob_end_clean();
 header('Access-Control-Allow-Origin: *');
@@ -58,6 +59,7 @@ if (!$pl) tvx_out(404, array('error' => 'playlist_not_found'));
 // DNS já conferido pelo painel (consulta do app a cada 1 min + monitor): aqui não procura servidor, senão cada pedido da lista demora e estoura o tempo
 $base = rtrim((string)$pl['dns_base'], '/');
 if (!preg_match('#^https?://#i', $base)) $base = 'http://'.$base;
+if (!net_url_is_public($base)) tvx_out(403, array('error' => 'blocked_address')); // só servidores públicos da internet (proteção SSRF)
 
 // Só parâmetros conhecidos da API Xtream
 $q = array('username' => $pl['user_name'], 'password' => $pl['user_password']);
@@ -79,9 +81,14 @@ if (is_file($cache_file) && (time() - filemtime($cache_file)) < $ttl) {
     curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 3,
         CURLOPT_CONNECTTIMEOUT => 12, CURLOPT_TIMEOUT => 45, CURLOPT_ENCODING => '', CURLOPT_USERAGENT => 'IPTVSmartersPlayer',
         CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => 0));
+    curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+    curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
     $body = curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $pip = (string)curl_getinfo($ch, CURLINFO_PRIMARY_IP);
     curl_close($ch);
+    // o servidor que respondeu (depois de redirecionamentos) também precisa ser público
+    if ($pip !== '' && !net_ip_is_public($pip)) tvx_out(403, array('error' => 'blocked_address'));
     if ($body === false || $code >= 400 || $body === '') tvx_out(502, array('error' => 'server_unreachable'));
     if (json_decode($body) === null) tvx_out(502, array('error' => 'invalid_response'));
     @file_put_contents($cache_file, $body, LOCK_EX);

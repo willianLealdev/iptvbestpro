@@ -232,7 +232,7 @@
     $result = mysqli_query($mysqli, "SELECT d.*, COALESCE(NULLIF(d.app_name,''), NULLIF(d.application_id,''), '—') AS app_label,
                                             (SELECT COUNT(*) FROM tbl_users u WHERE u.device_id = d.device_id AND u.status = '1') AS pl_count
                                      FROM tbl_devices d $where_sql
-                                     ORDER BY ".$sortable[$sort]." $dir, d.id DESC LIMIT $start, $limit") or die(mysqli_error($mysqli));
+                                     ORDER BY ".$sortable[$sort]." $dir, d.id DESC LIMIT $start, $limit") or die(db_fail($mysqli));
 
     $apps = array();
     $res = mysqli_query($mysqli, "SELECT DISTINCT COALESCE(NULLIF(app_name,''), application_id) AS a FROM tbl_devices WHERE COALESCE(NULLIF(app_name,''), application_id) <> '' ORDER BY a");

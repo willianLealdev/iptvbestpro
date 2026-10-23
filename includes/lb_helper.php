@@ -25,7 +25,7 @@ function Insert($table, $data){
 
     //echo "INSERT INTO $table(".implode(",",$fields).") VALUES ('".implode("','", $values )."');";
     //exit;  
-    mysqli_query($mysqli, "INSERT INTO $table(" . implode(",", $fields) . ") VALUES ('" . implode("','", $values) . "');") or die(mysqli_error($mysqli));
+    mysqli_query($mysqli, "INSERT INTO $table(" . implode(",", $fields) . ") VALUES ('" . implode("','", $values) . "');") or die(db_fail($mysqli));
 }
 
 // Update Data, Where clause is left optional
@@ -178,7 +178,8 @@ function user_info($user_id,$field_name) {
 }
 
 function cleanInput($inputText){
-    return addslashes(trim($inputText));
+    global $mysqli;
+    return mysqli_real_escape_string($mysqli, trim($inputText));
 }
 
 function thousandsNumberFormat($num){
