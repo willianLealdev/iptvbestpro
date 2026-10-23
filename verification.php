@@ -101,7 +101,7 @@ exit;
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Envato Username</label>
                                 <div class="col-sm-10">
-                                     <input type="text" name="envato_buyer_name" class="form-control" placeholder="Enter your envato user name" value="<?php echo $settings_row['envato_buyer_name'];?>" autocomplete="off" required>
+                                     <input type="text" name="envato_buyer_name" class="form-control" placeholder="Enter your envato user name" value="<?php echo htmlspecialchars((string)($settings_row['envato_buyer_name']), ENT_QUOTES, 'UTF-8');?>" autocomplete="off" required>
                                 </div>
                             </div>
                             
@@ -124,7 +124,7 @@ exit;
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Android Package Name</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="envato_package_name"class="form-control" placeholder="Enter your android application id" value="<?php echo $settings_row['envato_package_name'];?>" autocomplete="off" required>
+                                    <input type="text" name="envato_package_name"class="form-control" placeholder="Enter your android application id" value="<?php echo htmlspecialchars((string)($settings_row['envato_package_name']), ENT_QUOTES, 'UTF-8');?>" autocomplete="off" required>
                                     <small id="sh-text1" class="form-text text-muted">(More info in Android Doc)</small>
                                 </div>
                             </div>

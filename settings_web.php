@@ -162,21 +162,21 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Site Name</label>
                                         <div class="col-sm-10">
-                                           <input type="text" name="site_name" id="site_name" value="<?= $settings_data['site_name']?>"  class="form-control">
+                                           <input type="text" name="site_name" id="site_name" value="<?= htmlspecialchars((string)($settings_data['site_name']), ENT_QUOTES, 'UTF-8') ?>"  class="form-control">
                                         </div>
                                     </div>
                                     
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Site Description</label>
                                         <div class="col-sm-10">
-                                            <textarea rows="3" name="site_description" class="form-control" required=""><?php echo stripslashes($settings_data['site_description']); ?></textarea>
+                                            <textarea rows="3" name="site_description" class="form-control" required=""><?php echo htmlspecialchars((string)(stripslashes($settings_data['site_description'])), ENT_QUOTES, 'UTF-8'); ?></textarea>
                                         </div>
                                     </div>
                                     
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Site Keywords</label>
                                         <div class="col-sm-10">
-                                            <input type="text" name="site_keywords" id="site_keywords" value="<?php echo $settings_data['site_keywords']; ?>"  class="form-control" required="required">
+                                            <input type="text" name="site_keywords" id="site_keywords" value="<?php echo htmlspecialchars((string)($settings_data['site_keywords']), ENT_QUOTES, 'UTF-8'); ?>"  class="form-control" required="required">
                                         </div>
                                     </div>
                                     
@@ -229,7 +229,7 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Copyright Text</label>
                                         <div class="col-sm-10">
-                                            <input type="text" name="copyright_text" id="copyright_text" value="<?php echo $settings_data['copyright_text']; ?>"  class="form-control" required="required">
+                                            <input type="text" name="copyright_text" id="copyright_text" value="<?php echo htmlspecialchars((string)($settings_data['copyright_text']), ENT_QUOTES, 'UTF-8'); ?>"  class="form-control" required="required">
                                         </div>
                                     </div>
                                     
@@ -266,7 +266,7 @@
                                         <?php $i=0; while($row=mysqli_fetch_array($result_data)) { ?>
                                             <div class="col-lg-3 col-sm-6">
                                                 <div class="nsofts-card-light p-3">
-                                                    <h5 class="mb-2"><?php echo $row['sidebar_title'];?></h5></p>
+                                                    <h5 class="mb-2"><?php echo htmlspecialchars((string)($row['sidebar_title']), ENT_QUOTES, 'UTF-8');?></h5></p>
                                                     <div class="d-flex">
                                                         <a href="create_sidebar.php?sidebar_id=<?php echo $row['id'];?>" class="btn btn-outline-primary rounded-pill me-2 btn-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">
                                                             <i class="ri-pencil-line"></i>
@@ -294,12 +294,12 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Page title</label>
                                         <div class="col-sm-10">
-                                           <input type="text" name="privacy_page_title" id="privacy_page_title" value="<?= $settings_data['privacy_page_title']?>"  class="form-control">
+                                           <input type="text" name="privacy_page_title" id="privacy_page_title" value="<?= htmlspecialchars((string)($settings_data['privacy_page_title']), ENT_QUOTES, 'UTF-8') ?>"  class="form-control">
                                         </div>
                                     </div>
                                     <div>
                                         <textarea name="privacy_content" id="privacy_content" rows="5" class="nsofts-editor mb-4">
-                                           <?php echo stripslashes($settings_data['privacy_content']); ?>
+                                           <?php echo htmlspecialchars((string)(stripslashes($settings_data['privacy_content'])), ENT_QUOTES, 'UTF-8'); ?>
                                         </textarea>
                                     </div>
                                     <button type="submit" name="submit_privacy" class="btn btn-primary" style="min-width: 120px;">Save</button>
@@ -313,12 +313,12 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Page title</label>
                                         <div class="col-sm-10">
-                                           <input type="text" name="terms_of_use_page_title" id="terms_of_use_page_title" value="<?= $settings_data['terms_of_use_page_title']?>"  class="form-control">
+                                           <input type="text" name="terms_of_use_page_title" id="terms_of_use_page_title" value="<?= htmlspecialchars((string)($settings_data['terms_of_use_page_title']), ENT_QUOTES, 'UTF-8') ?>"  class="form-control">
                                         </div>
                                     </div>
                                     <div>
                                         <textarea name="terms_of_use_content" id="terms_of_use_content" rows="5" class="nsofts-editor mb-4">
-                                           <?php echo stripslashes($settings_data['terms_of_use_content']); ?>
+                                           <?php echo htmlspecialchars((string)(stripslashes($settings_data['terms_of_use_content'])), ENT_QUOTES, 'UTF-8'); ?>
                                         </textarea>
                                     </div>
                                     <button type="submit" name="submit_terms" class="btn btn-primary" style="min-width: 120px;">Save</button>

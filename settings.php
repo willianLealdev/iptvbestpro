@@ -179,7 +179,7 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Site name</label>
                                         <div class="col-sm-10">
-                                            <input type="text" class="form-control" name="app_name" id="app_name" value="<?php echo $settings_data['app_name']?>" required="required">
+                                            <input type="text" class="form-control" name="app_name" id="app_name" value="<?php echo htmlspecialchars((string)($settings_data['app_name']), ENT_QUOTES, 'UTF-8')?>" required="required">
                                         </div>
                                     </div>
                                     <div class="mb-3 row">
@@ -244,14 +244,14 @@
                                             <div class="mb-3 row">
                                                 <label for="" class="col-sm-2 col-form-label">SMTP Host</label>
                                                 <div class="col-sm-10">
-                                                    <input type="text" name="smtp_host[]" class="form-control col-md-7" value="<?= $row['smtp_ghost'] ?>" placeholder="mail.example.in" <?php if ($row['smtp_type'] == 'gmail') {echo 'required';} ?>> 
+                                                    <input type="text" name="smtp_host[]" class="form-control col-md-7" value="<?= htmlspecialchars((string)($row['smtp_ghost']), ENT_QUOTES, 'UTF-8') ?>" placeholder="mail.example.in" <?php if ($row['smtp_type'] == 'gmail') {echo 'required';} ?>> 
                                                 </div>
                                             </div>
                                             
                                             <div class="mb-3 row">
                                                 <label for="" class="col-sm-2 col-form-label">Email</label>
                                                 <div class="col-sm-10">
-                                                    <input type="text" name="smtp_email[]" class="form-control col-md-7" value="<?= $row['smtp_gemail'] ?>" placeholder="info@example.com" <?php if ($row['smtp_type'] == 'gmail') { echo 'required';} ?>>
+                                                    <input type="text" name="smtp_email[]" class="form-control col-md-7" value="<?= htmlspecialchars((string)($row['smtp_gemail']), ENT_QUOTES, 'UTF-8') ?>" placeholder="info@example.com" <?php if ($row['smtp_type'] == 'gmail') { echo 'required';} ?>>
                                                 </div>
                                             </div>
                                             
@@ -284,14 +284,14 @@
                                             <div class="mb-3 row">
                                                 <label for="" class="col-sm-2 col-form-label">SMTP Host</label>
                                                 <div class="col-sm-10">
-                                                    <input type="text" name="smtp_host[]" id="smtp_host" class="form-control col-md-7" value="<?= $row['smtp_host'] ?>" placeholder="mail.example.in" <?php if ($row['smtp_type'] == 'server') { echo 'required';} ?>>
+                                                    <input type="text" name="smtp_host[]" id="smtp_host" class="form-control col-md-7" value="<?= htmlspecialchars((string)($row['smtp_host']), ENT_QUOTES, 'UTF-8') ?>" placeholder="mail.example.in" <?php if ($row['smtp_type'] == 'server') { echo 'required';} ?>>
                                                 </div>
                                             </div>
                                             
                                             <div class="mb-3 row">
                                                 <label for="" class="col-sm-2 col-form-label">Email</label>
                                                 <div class="col-sm-10">
-                                                    <input type="text" name="smtp_email[]" id="smtp_email" class="form-control col-md-7" value="<?= $row['smtp_email'] ?>" placeholder="info@example.com" <?php if ($row['smtp_type'] == 'server') { echo 'required';} ?>>
+                                                    <input type="text" name="smtp_email[]" id="smtp_email" class="form-control col-md-7" value="<?= htmlspecialchars((string)($row['smtp_email']), ENT_QUOTES, 'UTF-8') ?>" placeholder="info@example.com" <?php if ($row['smtp_type'] == 'server') { echo 'required';} ?>>
                                                 </div>
                                             </div>
                                             

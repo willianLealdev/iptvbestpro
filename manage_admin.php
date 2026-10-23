@@ -68,7 +68,7 @@
                 <div class="d-flex mt-2 mt-md-0">
                     <form method="get" id="searchForm" action="" class="me-2">
                         <div class="input-group">
-                            <input type="text" id="search_input" class="form-control" placeholder="Search here..." name="keyword" value="<?php if(isset($_GET['keyword'])){ echo $_GET['keyword'];} ?>" required="required">
+                            <input type="text" id="search_input" class="form-control" placeholder="Search here..." name="keyword" value="<?php if(isset($_GET['keyword'])){ echo htmlspecialchars((string)($_GET['keyword']), ENT_QUOTES, 'UTF-8');} ?>" required="required">
                             <button class="btn btn-outline-default d-inline-flex align-items-center" type="search">
                                 <i class="ri-search-2-line"></i>
                             </button>

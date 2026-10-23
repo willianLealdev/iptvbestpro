@@ -173,7 +173,7 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Email</label>
                                         <div class="col-sm-10">
-                                            <input type="text" class="form-control" name="app_email" id="app_email" value="<?php echo $settings_data['app_email']?>" >
+                                            <input type="text" class="form-control" name="app_email" id="app_email" value="<?php echo htmlspecialchars((string)($settings_data['app_email']), ENT_QUOTES, 'UTF-8')?>" >
                                         </div>
                                     </div>
                                     <div class="mb-3 row">
@@ -203,7 +203,7 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Description</label>
                                         <div class="col-sm-10">
-                                            <textarea name="app_description" id="app_description" class="form-control" ><?php echo stripslashes($settings_data['app_description']); ?></textarea>
+                                            <textarea name="app_description" id="app_description" class="form-control" ><?php echo htmlspecialchars((string)(stripslashes($settings_data['app_description'])), ENT_QUOTES, 'UTF-8'); ?></textarea>
                                         </div>
                                     </div>
                                     <button type="submit" name="submit_general" class="btn btn-primary" style="min-width: 120px;">Save</button>
@@ -420,13 +420,13 @@
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Description</label>
                                         <div class="col-sm-10">
-                                            <textarea name="app_update_desc"  class="form-control"><?php echo stripslashes($settings_data['app_update_desc']); ?></textarea>
+                                            <textarea name="app_update_desc"  class="form-control"><?php echo htmlspecialchars((string)(stripslashes($settings_data['app_update_desc'])), ENT_QUOTES, 'UTF-8'); ?></textarea>
                                         </div>
                                     </div>
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">App Link</label>
                                         <div class="col-sm-10">
-                                            <input type="text" name="app_redirect_url" id="app_redirect_url" required="" class="form-control" value="<?php echo $settings_data['app_redirect_url'];?>">
+                                            <input type="text" name="app_redirect_url" id="app_redirect_url" required="" class="form-control" value="<?php echo htmlspecialchars((string)($settings_data['app_redirect_url']), ENT_QUOTES, 'UTF-8');?>">
                                         </div>
                                     </div>
                                     <button type="submit" name="app_update_submit" class="btn btn-primary" style="min-width: 120px;">Save</button>

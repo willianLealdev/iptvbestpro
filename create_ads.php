@@ -141,7 +141,7 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">URL</label>
                                 <div class="col-sm-10">
-                                     <input type="text" name="ads_redirect_url" class="form-control" value="<?php if(isset($_GET['ads_id'])){echo $row['ads_redirect_url'];}?>" required>
+                                     <input type="text" name="ads_redirect_url" class="form-control" value="<?php if(isset($_GET['ads_id'])){echo htmlspecialchars((string)($row['ads_redirect_url']), ENT_QUOTES, 'UTF-8');}?>" required>
                                 </div>
                             </div>
                             

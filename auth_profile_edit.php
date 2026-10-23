@@ -99,14 +99,14 @@
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">username</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="username" value="<?php echo $row['username'];?>" class="form-control" autocomplete="off" required>
+                                    <input type="text" name="username" value="<?php echo htmlspecialchars((string)($row['username']), ENT_QUOTES, 'UTF-8');?>" class="form-control" autocomplete="off" required>
                                 </div>
                             </div>
                             
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">Email</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="email" value="<?= $row['email']?>" class="form-control" autocomplete="off" required>
+                                    <input type="text" name="email" value="<?= htmlspecialchars((string)($row['email']), ENT_QUOTES, 'UTF-8') ?>" class="form-control" autocomplete="off" required>
                                 </div>
                             </div>
                             

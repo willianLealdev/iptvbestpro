@@ -254,7 +254,7 @@
                             <div style="max-height: 380px; overflow-y: auto;">
                                 <?php foreach ($by_country as $c) { ?>
                                     <div class="dash-country">
-                                        <img class="dash-country__flag" src="https://flagcdn.com/w40/<?php echo strtolower($c['code']); ?>.png" alt="" loading="lazy">
+                                        <img class="dash-country__flag" src="https://flagcdn.com/w40/<?php echo preg_replace('/[^a-z]/', '', strtolower($c['code'])); ?>.png" alt="" loading="lazy">
                                         <span class="dash-country__name" data-country="<?php echo htmlspecialchars($c['code']); ?>"><?php echo htmlspecialchars($c['name'] != '' ? $c['name'] : $c['code']); ?></span>
                                         <span class="dash-country__num"><?php echo thousandsNumberFormat($c['value']); ?></span>
                                     </div>
@@ -298,7 +298,7 @@
                                             <td><i class="<?php echo $p['icon']; ?>" style="color: <?php echo $p['color']; ?>"></i> <?php echo $p['label']; ?></td>
                                             <td>
                                                 <?php if ($d['country_code'] != '') { ?>
-                                                    <img class="dash-country__flag" src="https://flagcdn.com/w40/<?php echo strtolower($d['country_code']); ?>.png" alt="" loading="lazy">
+                                                    <img class="dash-country__flag" src="https://flagcdn.com/w40/<?php echo preg_replace('/[^a-z]/', '', strtolower($d['country_code'])); ?>.png" alt="" loading="lazy">
                                                     <span data-country="<?php echo htmlspecialchars($d['country_code']); ?>"><?php echo htmlspecialchars($d['country_code']); ?></span>
                                                 <?php } else { ?>
                                                     <span class="text-muted">—</span>

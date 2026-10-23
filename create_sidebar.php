@@ -223,14 +223,14 @@
                             <div id="html_code_display" class="mb-3 row" <?php if(isset($_GET['sidebar_id'])){ if($row['sidebar_type']!='html_code'){?>style="display:none;"<?php }} else {?>style="display:none;"<?php }?>>
                                 <label class="col-sm-2 col-form-label">HTML Code</label>
                                 <div class="col-sm-10">
-                                    <textarea class="form-control"  name="sidebar_html" cols="30" rows="15"><?php if(isset($_GET['sidebar_id'])){echo $row['sidebar_html'];}?></textarea>
+                                    <textarea class="form-control"  name="sidebar_html" cols="30" rows="15"><?php if(isset($_GET['sidebar_id'])){echo htmlspecialchars((string)($row['sidebar_html']), ENT_QUOTES, 'UTF-8');}?></textarea>
                                 </div>
                             </div>
                             
                             <div id="img_url_display" class="mb-3 row" <?php if(isset($_GET['sidebar_id'])){ if($row['sidebar_type']!='img_type'){?>style="display:none;"<?php }}else{?>style="display:none;"<?php }?>>
                                 <label class="col-sm-2 col-form-label">Click URL</label>
                                 <div class="col-sm-10">
-                                    <input type="text" name="sidebar_image_link" id="sidebar_image_link" value="<?php if(isset($_GET['sidebar_id'])){echo $row['sidebar_image_link'];}?>" class="form-control">
+                                    <input type="text" name="sidebar_image_link" id="sidebar_image_link" value="<?php if(isset($_GET['sidebar_id'])){echo htmlspecialchars((string)($row['sidebar_image_link']), ENT_QUOTES, 'UTF-8');}?>" class="form-control">
                                 </div>
                             </div>
                             
