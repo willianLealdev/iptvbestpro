@@ -18,7 +18,15 @@ FROM composer:2 AS mailer
 WORKDIR /mail
 RUN composer require phpmailer/phpmailer:^6.9 chillerlan/php-qrcode:^5.0 --no-interaction --no-progress --no-plugins --optimize-autoloader --ignore-platform-req=ext-gd
 
-FROM php:8.2-apache
+# PHP fixo na versão com as correções de segurança mais recentes (8.2.35, 21/10/2026). Para atualizar no futuro: troque a versão e a data abaixo.
+FROM php:8.2.35-apache
+
+# Atualiza os pacotes do sistema (Apache, OpenSSL, curl...) a cada build; mudar a data força refazer esta etapa mesmo com cache
+ARG SECURITY_REBUILD=2026-10-22
+RUN echo "rebuild $SECURITY_REBUILD" \
+    && apt-get update \
+    && apt-get -y --no-install-recommends upgrade \
+    && rm -rf /var/lib/apt/lists/*
 
 # Extensões exigidas pelo painel (mysqli, pdo, curl, gd, exif)
 RUN apt-get update \
