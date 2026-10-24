@@ -36,7 +36,7 @@ $platforms = array(
     array('live', 'play', 'Google Play', 'https://play.google.com/store/apps/details?id=com.iptvbestpro.app'),
     array('live', 'amazon', 'Amazon Appstore', ''),
     array('live', 'aptoide', 'Aptoide', ''),
-    array('live', 'huawei', 'Huawei AppGallery', ''), // link direto: https://appgallery.huawei.com/app/C119440311 (mostrava 'No apps' em 24/10; recolocar quando a página pública abrir)
+    array('live', 'huawei', 'Huawei AppGallery', 'https://appgallery.huawei.com/app/C119440311'),
     array('soon', 'samsung', 'Samsung Smart TV', ''),
     array('soon', 'lg', 'LG Smart TV', ''),
     array('soon', 'whale', 'Whale TV', ''),
