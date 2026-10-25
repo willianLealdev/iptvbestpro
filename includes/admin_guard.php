@@ -60,7 +60,7 @@ $__guard_type = isset($_SESSION['admin_type']) ? (int)$_SESSION['admin_type'] : 
 // 5) Permissões por página (as checagens originais das páginas tinham falha e não bloqueavam ninguém)
 $__super_only = array('manage_admin.php', 'auth_profile.php', 'settings_api.php', 'verification.php', 'settings_payments.php', 'manage_translations.php');
 $__no_editor = array('settings.php', 'settings_app.php', 'settings_app_ui.php', 'settings_ads.php', 'settings_web.php', 'settings_xui.php',
-                     'settings_stream.php', 'settings_theme.php', 'manage_users.php', 'create_user.php', 'manage_resellers.php', 'create_reseller.php',
+                     'settings_stream.php', 'settings_theme.php', 'manage_users.php', 'create_user.php', 'manage_resellers.php', 'create_reseller.php', 'manage_reseller_themes.php',
                      'manage_credit_orders.php', 'manage_customers.php', 'manage_subscriptions.php', 'manage_sub_plans.php', 'manage_dns_resellers.php',
                      'notification_onesignal.php', 'manage_movie_ui.php', 'manage_data_deletion.php', 'manage_notification.php', 'create_ads.php',
                      'manage_ads.php', 'create_sidebar.php');

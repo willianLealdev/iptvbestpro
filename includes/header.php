@@ -157,7 +157,7 @@ $mysqli->set_charset("utf8mb4");
                 </li>
 
                 <?php if(isset($_SESSION['admin_type']) && $_SESSION['admin_type'] != 0){
-                    $rs_menu_open = in_array($currentFile, array("manage_resellers.php", "create_reseller.php", "manage_credit_orders.php", "manage_servers.php"));
+                    $rs_menu_open = in_array($currentFile, array("manage_resellers.php", "create_reseller.php", "manage_credit_orders.php", "manage_servers.php", "manage_reseller_themes.php"));
                     $rs_pending_orders = 0;
                     $rs_tbl = mysqli_query($mysqli, "SHOW TABLES LIKE 'tbl_credit_orders'");
                     if($rs_tbl && mysqli_num_rows($rs_tbl) > 0){
@@ -175,6 +175,9 @@ $mysqli->set_charset("utf8mb4");
                         </li>
                         <li>
                             <a href="manage_servers.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_servers.php") { ?>active<?php } ?>">Servidores</a>
+                        </li>
+                        <li>
+                            <a href="manage_reseller_themes.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_reseller_themes.php") { ?>active<?php } ?>">Temas das revendas</a>
                         </li>
                         <li>
                             <a href="manage_credit_orders.php" class="nsofts-submenu__link <?php if ($currentFile == "manage_credit_orders.php") { ?>active<?php } ?>">Pedidos de Créditos<?php if($rs_pending_orders > 0){ ?> (<?php echo $rs_pending_orders; ?>)<?php } ?></a>
