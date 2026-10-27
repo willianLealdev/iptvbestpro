@@ -59,9 +59,18 @@
         <div class="card-body p-4">
             <div class="privacyHeader mb-2">
                 <h2>Terms & Conditions for <?php echo APP_NAME;?></h2>
-                <p>Updated <?php echo date('D m, Y ');?></p>
+                <p>Updated October 27, 2026</p>
             </div>
-            <?=stripslashes($settings_details['app_terms'])?>
+            <?php
+            // Texto do painel; se estiver vazio, usa os termos padrão (inglês, português e espanhol)
+            $tt_text = stripslashes((string)$settings_details['app_terms']);
+            if (trim(strip_tags($tt_text)) === '') {
+                require_once('includes/terms_default.php');
+                echo terms_default_html(APP_NAME, 'https://iptvbestpro.com');
+            } else {
+                echo $tt_text;
+            }
+            ?>
         </div>
     </main>
     <!-- End: 404 -->
