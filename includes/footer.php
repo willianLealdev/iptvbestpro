@@ -135,5 +135,33 @@
         <?php unset($_SESSION['class']);?>
     <?php } ?>
 
+    <script>
+    // Tabelas largas: barra de rolagem também EM CIMA (sincronizada com a de baixo), para não precisar descer a página
+    (function () {
+        function setup(box) {
+            if (box.dataset.topScroll) return;
+            box.dataset.topScroll = '1';
+            var top = document.createElement('div');
+            var inner = document.createElement('div');
+            top.className = 'tr-topscroll';
+            top.style.cssText = 'overflow-x:auto;overflow-y:hidden;height:16px;margin-bottom:2px;display:none';
+            inner.style.cssText = 'height:1px';
+            top.appendChild(inner);
+            box.parentNode.insertBefore(top, box);
+            function size() {
+                inner.style.width = box.scrollWidth + 'px';
+                top.style.display = box.scrollWidth > box.clientWidth + 2 ? 'block' : 'none';
+            }
+            top.addEventListener('scroll', function () { if (box.scrollLeft !== top.scrollLeft) box.scrollLeft = top.scrollLeft; });
+            box.addEventListener('scroll', function () { if (top.scrollLeft !== box.scrollLeft) top.scrollLeft = box.scrollLeft; });
+            window.addEventListener('resize', size);
+            if (window.ResizeObserver) { var ro = new ResizeObserver(size); ro.observe(box); if (box.firstElementChild) ro.observe(box.firstElementChild); }
+            size();
+            setTimeout(size, 500);
+        }
+        function run() { document.querySelectorAll('.table-responsive').forEach(setup); }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+    })();
+    </script>
 </body>
 </html>
