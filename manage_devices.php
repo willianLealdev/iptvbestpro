@@ -92,8 +92,29 @@
         header("Location:".$back_url);
         exit;
     }
+    // Executa uma ação em massa numa lista de ids (em pedaços, para aguentar milhares de aparelhos de uma vez)
+    function dv_bulk_apply($mysqli, $act, $idList){
+        @set_time_limit(600);
+        ignore_user_abort(true); // se a conexão cair no meio, termina o trabalho mesmo assim
+        $n = count($idList);
+        foreach(array_chunk($idList, 500) as $chunk){
+            $in = implode(',', array_map('intval', $chunk));
+            if($act == 'dev' || $act == 'real'){
+                mysqli_query($mysqli, "UPDATE tbl_devices SET is_dev = ".($act == 'dev' ? 1 : 2)." WHERE id IN ($in)");
+            } else if($act == 'deactivate'){
+                foreach($chunk as $one){ devices_deactivate($mysqli, (int)$one); }
+            } else if($act == 'delete'){
+                devices_purge($mysqli, $in); // apaga os aparelhos e todas as listas deles
+            }
+        }
+        if($act == 'dev')  return $n.' dispositivo(s) movido(s) para Dispositivos dev.';
+        if($act == 'real') return $n.' dispositivo(s) movido(s) para a lista de dispositivos reais.';
+        if($act == 'deactivate') return $n.' dispositivo(s) desativado(s).';
+        return $n.' dispositivo(s) excluído(s).';
+    }
     // Ações em massa (caixinhas da lista): mover para dev / reais, desativar ou excluir vários de uma vez
-    if(isset($_POST['bulk_action'])){
+    // ("selecionar todos de todas as páginas" é tratado mais abaixo, depois dos filtros)
+    if(isset($_POST['bulk_action']) && empty($_POST['select_all'])){
         $ids = isset($_POST['ids']) ? implode(',', array_filter(array_map('intval', explode(',', (string)$_POST['ids'])))) : '';
         $n = $ids != '' ? count(explode(',', $ids)) : 0;
         $act = (string)$_POST['bulk_action'];
@@ -105,15 +126,8 @@
             exit;
         } else if($n == 0){
             dev_flash(false, 'Nenhum dispositivo selecionado.');
-        } else if($act == 'dev' || $act == 'real'){
-            mysqli_query($mysqli, "UPDATE tbl_devices SET is_dev = ".($act == 'dev' ? 1 : 2)." WHERE id IN ($ids)");
-            dev_flash(true, $act == 'dev' ? $n.' dispositivo(s) movido(s) para Dispositivos dev.' : $n.' dispositivo(s) movido(s) para a lista de dispositivos reais.');
-        } else if($act == 'deactivate'){
-            foreach(explode(',', $ids) as $one){ devices_deactivate($mysqli, (int)$one); }
-            dev_flash(true, $n.' dispositivo(s) desativado(s).');
-        } else if($act == 'delete'){
-            devices_purge($mysqli, $ids); // apaga os aparelhos e todas as listas deles
-            dev_flash(true, $n.' dispositivo(s) excluído(s).');
+        } else if(in_array($act, array('dev', 'real', 'deactivate', 'delete'), true)){
+            dev_flash(true, dv_bulk_apply($mysqli, $act, explode(',', $ids)));
         }
         header("Location:".$back_url);
         exit;
@@ -222,7 +236,29 @@
     $total_rows = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_devices d $where_sql"));
     $total_rows = (int)$total_rows['num'];
 
-    $limit = 20;
+    // Ação em massa em TODOS os resultados do filtro (todas as páginas). Confere se a lista ainda tem a quantidade que o admin viu.
+    if(isset($_POST['bulk_action']) && !empty($_POST['select_all'])){
+        $act = (string)$_POST['bulk_action'];
+        $expect = isset($_POST['expect']) ? (int)$_POST['expect'] : 0;
+        if(!in_array($act, array('dev', 'real', 'deactivate', 'delete'), true)){
+            dev_flash(false, 'Ação inválida.');
+        } else if($expect <= 0 || $expect != $total_rows){
+            dev_flash(false, 'A lista mudou desde que você selecionou ('.$expect.' → '.$total_rows.'). Nada foi alterado: selecione de novo.');
+        } else {
+            $all_ids = array();
+            $ir = mysqli_query($mysqli, "SELECT d.id FROM tbl_devices d $where_sql LIMIT 100000");
+            while($ir && $one = mysqli_fetch_assoc($ir)){ $all_ids[] = (int)$one['id']; }
+            dev_flash(true, count($all_ids) ? dv_bulk_apply($mysqli, $act, $all_ids) : 'Nenhum dispositivo.');
+        }
+        $keep = $_GET;
+        unset($keep['page']);
+        header("Location:manage_devices.php".(count($keep) ? '?'.http_build_query($keep) : ''));
+        exit;
+    }
+
+    // Quantos por página (20 é o padrão; 50, 100, 200 ou 500 para limpar mais rápido)
+    $per_ok = array(20, 50, 100, 200, 500);
+    $limit = (isset($_GET['per']) && in_array((int)$_GET['per'], $per_ok, true)) ? (int)$_GET['per'] : 20;
     $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
     $last_page = max(1, (int)ceil($total_rows / $limit));
     if($page > $last_page){ $page = $last_page; }
@@ -431,7 +467,13 @@
 
                 <form method="post" id="dvBulkForm" class="dv-bulk">
                     <input type="hidden" name="ids" id="dvBulkIds">
+                    <input type="hidden" name="select_all" id="dvSelectAll" value="">
+                    <input type="hidden" name="expect" id="dvExpect" value="">
                     <b><span id="dvBulkCount">0</span> selecionado(s)</b>
+                    <span id="dvAllWrap" style="display:none">
+                        <button type="button" class="btn btn-sm btn-warning" id="dvPickAll"><i class="ri-checkbox-multiple-line"></i> Selecionar os <?php echo (int)$total_rows; ?> de todas as páginas</button>
+                    </span>
+                    <span id="dvAllOn" class="badge bg-warning text-dark" style="display:none">Todos os <?php echo (int)$total_rows; ?> resultados (todas as páginas) estão selecionados</span>
                     <?php if($tab == 'dev'){ ?>
                         <button type="submit" name="bulk_action" value="real" class="btn btn-sm btn-outline-primary"><i class="ri-user-line"></i> Mover para dispositivos reais</button>
                     <?php } else { ?>
@@ -570,7 +612,14 @@
                         </table>
                     </div>
                     <div class="dv-footer">
-                        <span>Total: <?php echo thousandsNumberFormat($total_rows); ?></span>
+                        <span>Total: <?php echo thousandsNumberFormat($total_rows); ?>
+                            &nbsp;·&nbsp; Mostrar
+                            <select class="form-select form-select-sm d-inline-block w-auto" onchange="location.href=this.value">
+                                <?php foreach($per_ok as $pp){ ?>
+                                    <option value="<?php echo htmlspecialchars(dv_url(array('per' => $pp == 20 ? '' : $pp, 'page' => ''))); ?>" <?php if($pp == $limit){ echo 'selected'; } ?>><?php echo $pp; ?></option>
+                                <?php } ?>
+                            </select> por página
+                        </span>
                         <?php if($last_page > 1){ ?>
                             <ul class="pagination pagination-sm mb-0">
                                 <li class="page-item <?php if($page <= 1){ echo 'disabled'; } ?>"><a class="page-link" href="<?php echo htmlspecialchars(dv_url(array('page' => $page - 1))); ?>">‹</a></li>
@@ -592,7 +641,18 @@
     var form = document.getElementById('dvBulkForm'), all = document.getElementById('dvCheckAll');
     if (!form || !all) return;
     var boxes = function () { return Array.prototype.slice.call(document.querySelectorAll('.dv-row-check')); };
+    var TOTAL = <?php echo (int)$total_rows; ?>, pickAll = document.getElementById('dvPickAll'), allOn = document.getElementById('dvAllOn'), allWrap = document.getElementById('dvAllWrap');
+    var selectAll = document.getElementById('dvSelectAll'), expectEl = document.getElementById('dvExpect');
+    function setAll(on) {
+        selectAll.value = on ? '1' : '';
+        expectEl.value = on ? TOTAL : '';
+        allOn.style.display = on ? '' : 'none';
+        allWrap.style.display = 'none';
+        if (on) document.getElementById('dvBulkCount').textContent = TOTAL;
+    }
     function sync() {
+        if (selectAll.value === '1' && boxes().every(function (b) { return b.checked; })) { form.classList.add('show'); return; }
+        selectAll.value = ''; expectEl.value = ''; allOn.style.display = 'none';
         var sel = boxes().filter(function (b) { return b.checked; });
         boxes().forEach(function (b) { b.closest('tr').classList.toggle('dv-selected', b.checked); });
         document.getElementById('dvBulkCount').textContent = sel.length;
@@ -600,12 +660,21 @@
         form.classList.toggle('show', sel.length > 0);
         all.checked = sel.length > 0 && sel.length === boxes().length;
         all.indeterminate = sel.length > 0 && sel.length < boxes().length;
+        // página inteira marcada e existem mais resultados em outras páginas: oferece selecionar todos
+        allWrap.style.display = (sel.length > 0 && sel.length === boxes().length && TOTAL > boxes().length) ? '' : 'none';
     }
+    pickAll.addEventListener('click', function () { setAll(true); });
     all.addEventListener('change', function () { boxes().forEach(function (b) { b.checked = all.checked; }); sync(); });
     document.addEventListener('change', function (e) { if (e.target.classList && e.target.classList.contains('dv-row-check')) sync(); });
-    document.getElementById('dvBulkClear').addEventListener('click', function () { boxes().forEach(function (b) { b.checked = false; }); sync(); });
+    document.getElementById('dvBulkClear').addEventListener('click', function () { selectAll.value = ''; boxes().forEach(function (b) { b.checked = false; }); sync(); });
     form.querySelectorAll('button[data-confirm]').forEach(function (b) {
-        b.addEventListener('click', function (e) { if (!confirm(b.getAttribute('data-confirm'))) e.preventDefault(); });
+        b.addEventListener('click', function (e) {
+            var many = selectAll.value === '1';
+            var msg = many ? b.getAttribute('data-confirm').replace('selecionados', 'TODOS os ' + TOTAL + ' (de todas as páginas)') : b.getAttribute('data-confirm');
+            if (!confirm(msg)) { e.preventDefault(); return; }
+            // exclusão em massa de várias páginas: pede para digitar a palavra, para não clicar sem querer
+            if (many && b.value === 'delete' && (prompt('Vai excluir ' + TOTAL + ' dispositivos e as listas deles. Digite EXCLUIR para confirmar:') || '').trim().toUpperCase() !== 'EXCLUIR') e.preventDefault();
+        });
     });
 })();
 </script>
