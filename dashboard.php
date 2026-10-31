@@ -12,8 +12,10 @@
 
     $today_start = devices_today_start();
 
-    $total_today     = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices WHERE first_seen >= ".$today_start);
-    $total_devices   = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices");
+    $dv_vis = devices_visible_sql(); // só ativados ou com código digitado (quem só baixou o app não conta)
+    // "Ativados hoje" = ativações feitas hoje (não conta quem só baixou ou abriu o app)
+    $total_today     = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices WHERE package <> '' AND activated_at >= ".$today_start);
+    $total_devices   = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices WHERE $dv_vis");
     $total_resellers = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_resellers");
     $total_credit_share = resellers_total_credit_share($mysqli);
     // Uso do app pelo último acesso (sem os aparelhos de teste): ativados e aguardando ativação
@@ -21,20 +23,20 @@
     foreach (array('using', 'nolist', 'idle', 'gone') as $uk) {
         $usage[$uk] = array(
             'act'  => dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices d WHERE d.is_dev <> 1 AND d.package <> '' AND ".devices_usage_sql($uk)),
-            'wait' => dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices d WHERE d.is_dev <> 1 AND d.package = '' AND ".devices_usage_sql($uk)),
+            'wait' => 0,
         );
     }
 
     // Dispositivos por App
     $by_app = array();
     $res = mysqli_query($mysqli, "SELECT COALESCE(NULLIF(app_name,''), NULLIF(application_id,''), 'Desconhecido') AS app, COUNT(*) AS num
-                                  FROM tbl_devices GROUP BY app ORDER BY num DESC");
+                                  FROM tbl_devices WHERE $dv_vis GROUP BY app ORDER BY num DESC");
     while($r = mysqli_fetch_assoc($res)){ $by_app[] = array('label' => $r['app'], 'value' => (int)$r['num']); }
 
     // Dispositivos por Plataforma (todas as plataformas aparecem, mesmo com 0)
     $platforms = devices_platform_labels();
     $by_platform = array_fill_keys(array_keys($platforms), 0);
-    $res = mysqli_query($mysqli, "SELECT platform, COUNT(*) AS num FROM tbl_devices GROUP BY platform");
+    $res = mysqli_query($mysqli, "SELECT platform, COUNT(*) AS num FROM tbl_devices WHERE $dv_vis GROUP BY platform");
     while($r = mysqli_fetch_assoc($res)){
         $key = isset($platforms[$r['platform']]) ? $r['platform'] : 'android';
         $by_platform[$key] += (int)$r['num'];
@@ -44,14 +46,14 @@
     // Dispositivos por País
     $by_country = array();
     $res = mysqli_query($mysqli, "SELECT country_code, MAX(country_name) AS country_name, COUNT(*) AS num
-                                  FROM tbl_devices WHERE country_code <> '' GROUP BY country_code ORDER BY num DESC");
+                                  FROM tbl_devices WHERE $dv_vis AND country_code <> '' GROUP BY country_code ORDER BY num DESC");
     while($r = mysqli_fetch_assoc($res)){
         $by_country[] = array('code' => $r['country_code'], 'name' => $r['country_name'], 'value' => (int)$r['num']);
     }
-    $total_unknown_country = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices WHERE country_code = ''");
+    $total_unknown_country = dash_count($mysqli, "SELECT COUNT(*) as num FROM tbl_devices WHERE $dv_vis AND country_code = ''");
 
     // Últimas instalações
-    $result_recent = mysqli_query($mysqli, "SELECT * FROM tbl_devices ORDER BY first_seen DESC LIMIT 8");
+    $result_recent = mysqli_query($mysqli, "SELECT * FROM tbl_devices WHERE $dv_vis ORDER BY first_seen DESC LIMIT 8");
 
     $sql_reports="SELECT * FROM tbl_reports ORDER BY tbl_reports.`id` DESC LIMIT 10";
     $result_reports=mysqli_query($mysqli,$sql_reports);
@@ -175,10 +177,9 @@
                         <div class="dash-stat__icon"><i class="<?php echo $u[5]; ?>"></i></div>
                         <div>
                             <div class="dash-stat__label"><?php echo $u[0]; ?> <small class="text-muted fw-normal">· <?php echo $u[1]; ?></small></div>
-                            <div class="dash-stat__value"><?php echo thousandsNumberFormat($usage[$uk]['act'] + $usage[$uk]['wait']); ?></div>
+                            <div class="dash-stat__value"><?php echo thousandsNumberFormat($usage[$uk]['act']); ?></div>
                             <div class="small">
-                                <a href="manage_devices.php?usage=<?php echo $uk; ?>">Ativados: <b><?php echo thousandsNumberFormat($usage[$uk]['act']); ?></b></a>
-                                · <a href="manage_devices.php?tab=wait&amp;usage=<?php echo $uk; ?>">Aguardando ativação: <b><?php echo thousandsNumberFormat($usage[$uk]['wait']); ?></b></a>
+                                <a href="manage_devices.php?usage=<?php echo $uk; ?>">Ver os dispositivos ativados</a>
                             </div>
                         </div>
                     </div>

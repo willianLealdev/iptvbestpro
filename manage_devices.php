@@ -176,7 +176,7 @@
     $sort = (isset($_GET['sort']) && isset($sortable[$_GET['sort']])) ? $_GET['sort'] : 'seen';
     $dir = (isset($_GET['dir']) && strtolower($_GET['dir']) == 'asc') ? 'ASC' : 'DESC';
 
-    $tab = (isset($_GET['tab']) && in_array($_GET['tab'], array('dev', 'srv', 'wait'))) ? $_GET['tab'] : '';
+    $tab = (isset($_GET['tab']) && in_array($_GET['tab'], array('dev', 'srv'))) ? $_GET['tab'] : '';
     $usage_filter = (isset($_GET['usage']) && in_array($_GET['usage'], array('using', 'nolist', 'idle', 'gone'))) ? $_GET['usage'] : '';
     $origin_filter = (isset($_GET['origin']) && in_array($_GET['origin'], array('real', 'test', 'unknown'))) ? $_GET['origin'] : '';
     $now = time();
@@ -186,16 +186,17 @@
     $srv_sql = "(d.owner = 'reseller' AND d.reseller_id IN (SELECT id FROM tbl_resellers WHERE kind = 'server'))";
     // Dispositivos = já ativados; Aguardando ativação = abriram o app mas ainda não foram ativados (ao ativar, passam sozinhos para Dispositivos)
     $tab_sql = array(
-        ''     => "d.is_dev <> 1 AND NOT $srv_sql AND d.package <> ''",
-        'wait' => "d.is_dev <> 1 AND NOT $srv_sql AND d.package = ''",
+        // só aparece quem foi ativado ou digitou um código; quem só baixou o app não entra na lista
+        ''     => "d.is_dev <> 1 AND NOT $srv_sql AND ".devices_visible_sql('d'),
+        'wait' => "d.is_dev <> 1 AND NOT $srv_sql AND d.package = '' AND d.owner = ''",
         'srv'  => "d.is_dev <> 1 AND $srv_sql",
-        'dev'  => "d.is_dev = 1",
+        'dev'  => "d.is_dev = 1 AND ".devices_visible_sql('d'),
     );
     $where = array($tab_sql[$tab]);
     $dev_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['dev']))['n'];
     $srv_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['srv']))['n'];
     $real_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['']))['n'];
-    $wait_count = (int)mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS n FROM tbl_devices d WHERE ".$tab_sql['wait']))['n'];
+    $wait_count = 0; // quem só baixou o app não aparece mais (some sozinho em 2 dias)
     // Aparelhos antigos (de antes da origem existir): descobre a empresa dona do IP aos poucos (200 por vez)
     $bf = mysqli_query($mysqli, "SELECT id, ip_address, device_model FROM tbl_devices WHERE origin = '' AND ip_address <> '' ORDER BY last_seen DESC LIMIT 200");
     while($bf && $b = mysqli_fetch_assoc($bf)){
@@ -383,7 +384,6 @@
             <div class="card-body p-4">
                 <div class="dv-tabs">
                     <a href="manage_devices.php" class="<?php echo $tab == '' ? 'active' : ''; ?>"><i class="ri-device-line"></i>Dispositivos <span class="dv-count"><?php echo thousandsNumberFormat($real_count); ?></span></a>
-                    <a href="manage_devices.php?tab=wait" class="<?php echo $tab == 'wait' ? 'active' : ''; ?>"><i class="ri-time-line"></i>Aguardando ativação <span class="dv-count"><?php echo thousandsNumberFormat($wait_count); ?></span></a>
                     <a href="manage_devices.php?tab=srv" class="<?php echo $tab == 'srv' ? 'active' : ''; ?>"><i class="ri-server-line"></i>Servidores <span class="dv-count"><?php echo thousandsNumberFormat($srv_count); ?></span></a>
                     <a href="manage_devices.php?tab=dev" class="<?php echo $tab == 'dev' ? 'active' : ''; ?>"><i class="ri-bug-line"></i>Dispositivos dev <span class="dv-count"><?php echo thousandsNumberFormat($dev_count); ?></span></a>
                 </div>

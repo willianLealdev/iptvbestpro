@@ -717,17 +717,32 @@ function devices_take_over($mysqli, $device_pk, $owner, $reseller_id, $customer_
  * Retorna array('waiting' => n, 'trial' => n).
  */
 define('DEVICES_WAIT_DELETE_DAYS', 15);
+define('DEVICES_UNLINKED_DELETE_DAYS', 2);
+// Só aparece no painel quem foi ativado ou digitou um código (da revenda, do cliente ou do admin).
+// Quem só baixou/abriu o app e não digitou nada (curiosos, lojas, robôs) fica de fora e some sozinho em 2 dias.
+function devices_visible_sql($alias = ''){
+    $a = $alias != '' ? $alias.'.' : '';
+    return "(".$a."package <> '' OR ".$a."owner <> '')";
+}
 define('DEVICES_TRIAL_DELETE_DAYS', 30);
 function devices_auto_cleanup($mysqli){
     $now = time();
     $cut = $now - DEVICES_WAIT_DELETE_DAYS * 86400;
     $tcut = $now - DEVICES_TRIAL_DELETE_DAYS * 86400;
     $out = array('waiting' => 0, 'trial' => 0);
+    // 1) só baixou/abriu o app e nunca digitou código: some depois de 2 dias sem abrir
+    $ucut = $now - DEVICES_UNLINKED_DELETE_DAYS * 86400;
+    $ids = array();
+    $res = mysqli_query($mysqli, "SELECT id FROM tbl_devices WHERE package = '' AND owner = '' AND activated_at = 0
+                                  AND ((last_seen > 0 AND last_seen < $ucut) OR (last_seen = 0 AND first_seen > 0 AND first_seen < $ucut)) LIMIT 2000");
+    while ($res && $r = mysqli_fetch_assoc($res)) $ids[] = (int)$r['id'];
+    if ($ids) $out['waiting'] += devices_purge($mysqli, $ids);
+    // 2) digitou código de revenda mas ainda não foi ativado: sai depois de 15 dias sem abrir
     $ids = array();
     $res = mysqli_query($mysqli, "SELECT id FROM tbl_devices WHERE package = '' AND activated_at = 0
                                   AND ((last_seen > 0 AND last_seen < $cut) OR (last_seen = 0 AND first_seen > 0 AND first_seen < $cut)) LIMIT 1000");
     while ($res && $r = mysqli_fetch_assoc($res)) $ids[] = (int)$r['id'];
-    if ($ids) $out['waiting'] = devices_purge($mysqli, $ids);
+    if ($ids) $out['waiting'] += devices_purge($mysqli, $ids);
     $ids = array();
     $res = mysqli_query($mysqli, "SELECT id FROM tbl_devices WHERE package = 'trial' AND expires_at > 0 AND expires_at < $tcut LIMIT 1000");
     while ($res && $r = mysqli_fetch_assoc($res)) $ids[] = (int)$r['id'];
