@@ -265,6 +265,33 @@
     if($page > $last_page){ $page = $last_page; }
     $start = ($page - 1) * $limit;
 
+    // Aviso "possível aparelho resetado": o celular foi resetado de fábrica e ganhou um ID novo. Compara aparelhos com o mesmo
+    // modelo, plataforma e internet (IP): um já ativado e outro que chegou depois (ou o contrário).
+    function dv_reset_hints($mysqli, $rows){
+        $hints = array();
+        $ids = array();
+        foreach($rows as $r){ if($r['ip_address'] != '' && $r['device_model'] != ''){ $ids[] = (int)$r['id']; } }
+        if(!$ids){ return $hints; }
+        $now = time();
+        $q = mysqli_query($mysqli, "SELECT a.id AS aid, a.package AS a_pkg, a.activated_at AS a_act, a.first_seen AS a_first,
+                                           b.device_id AS b_did, b.package AS b_pkg, b.activated_at AS b_act, b.first_seen AS b_first, b.customer_name AS b_name
+                                    FROM tbl_devices a JOIN tbl_devices b
+                                      ON b.id <> a.id AND b.device_id <> a.device_id AND b.platform = a.platform AND b.device_model = a.device_model AND b.ip_address = a.ip_address
+                                    WHERE a.id IN (".implode(',', $ids).") AND b.first_seen > ".($now - 120 * 86400)." ORDER BY b.first_seen DESC LIMIT 800");
+        while($q && $x = mysqli_fetch_assoc($q)){
+            $aid = (int)$x['aid'];
+            if(isset($hints[$aid])){ continue; }
+            $a_active = $x['a_pkg'] != '' && (int)$x['a_act'] > 0;
+            $b_active = $x['b_pkg'] != '' && (int)$x['b_act'] > 0;
+            if($a_active && !$b_active && (int)$x['b_first'] > (int)$x['a_first']){
+                $hints[$aid] = 'Pode ter sido resetado: apareceu um aparelho novo igual (mesmo modelo e internet) em '.date('d/m', (int)$x['b_first']).' — ID '.$x['b_did'];
+            } else if(!$a_active && $b_active && (int)$x['b_first'] < (int)$x['a_first']){
+                $hints[$aid] = 'Possível aparelho resetado: igual ao de '.($x['b_name'] != '' ? $x['b_name'] : 'outro cliente').' (ativado em '.date('d/m/Y', (int)$x['b_act']).', ID '.$x['b_did'].')';
+            }
+        }
+        return $hints;
+    }
+
     // pl_count = quantas listas o aparelho tem (app aberto sem lista não está assistindo nada)
     $result = mysqli_query($mysqli, "SELECT d.*, COALESCE(NULLIF(d.app_name,''), NULLIF(d.application_id,''), '—') AS app_label,
                                             (SELECT COUNT(*) FROM tbl_users u WHERE u.device_id = d.device_id AND u.status = '1') AS pl_count
@@ -509,8 +536,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                            <?php if(mysqli_num_rows($result) > 0){ ?>
-                                <?php $i = 0; while($row = mysqli_fetch_assoc($result)){ $i++;
+                            <?php
+                                $dv_rows = array();
+                                while($rr = mysqli_fetch_assoc($result)){ $dv_rows[] = $rr; }
+                                $dv_hints = dv_reset_hints($mysqli, $dv_rows);
+                            ?>
+                            <?php if(count($dv_rows) > 0){ ?>
+                                <?php $i = 0; foreach($dv_rows as $row){ $i++;
                                     $status = devices_activation_status($row);
                                     $pkg = devices_package_info($row['package']); $owner_label = devices_owner_label($mysqli, $row); ?>
                                     <tr>
@@ -523,6 +555,7 @@
                                         <td>
                                             <span><?php echo htmlspecialchars($row['device_id']); ?></span>
                                             <i class="ri-file-copy-line dv-copy" data-copy="<?php echo htmlspecialchars($row['device_id']); ?>" title="Copiar"></i>
+                                            <?php if(isset($dv_hints[(int)$row['id']])){ ?><br><small class="text-warning fw-semibold" style="display:inline-block;max-width:260px;white-space:normal"><i class="ri-error-warning-line"></i> <?php echo htmlspecialchars($dv_hints[(int)$row['id']]); ?></small><?php } ?>
                                             <?php if($row['device_model'] != '' || $row['country_code'] != ''){ ?><br><small class="dv-muted"><?php echo htmlspecialchars($row['device_model']); ?></small><?php echo devices_flag($row['country_code'], $row['country_name']); ?><?php } ?>
                                         </td>
                                         <td>

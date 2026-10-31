@@ -230,10 +230,27 @@ function subscription_state_badge($state){
 function trial_enabled($mysqli){ return panel_config_get($mysqli, 'trial_on', '1') == '1'; }
 function trial_days($mysqli){ return max(1, min(30, (int)panel_config_get($mysqli, 'trial_days', '7'))); }
 
-// O cliente já pegou o teste grátis? (1 por conta)
+// E-mail "normalizado": jose.silva@gmail.com, josesilva@gmail.com e josesilva+2@gmail.com são a mesma caixa de entrada
+function email_norm($email){
+    $email = strtolower(trim((string)$email));
+    if (strpos($email, '@') === false) return $email;
+    list($local, $domain) = explode('@', $email, 2);
+    $local = preg_replace('/\+.*$/', '', $local);
+    if ($domain == 'googlemail.com') $domain = 'gmail.com';
+    if ($domain == 'gmail.com') $local = str_replace('.', '', $local);
+    return $local.'@'.$domain;
+}
+
+// O cliente já pegou o teste grátis? (1 por conta, e nenhuma outra conta com o mesmo e-mail disfarçado)
 function trial_used_by_customer($mysqli, $customer_id){
     $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions WHERE customer_id = ".(int)$customer_id." AND is_trial = 1"));
-    return (int)$r['num'] > 0;
+    if ((int)$r['num'] > 0) return true;
+    $me = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT email FROM tbl_customers WHERE id = ".(int)$customer_id));
+    if (!$me || $me['email'] == '') return false;
+    $mine = email_norm($me['email']);
+    $q = mysqli_query($mysqli, "SELECT DISTINCT c.email FROM tbl_customers c JOIN tbl_subscriptions s ON s.customer_id = c.id WHERE s.is_trial = 1 AND c.id <> ".(int)$customer_id);
+    while ($q && $o = mysqli_fetch_assoc($q)) { if (email_norm($o['email']) === $mine) return true; }
+    return false;
 }
 
 // O aparelho já teve teste grátis ou qualquer ativação antes? (o teste é só para aparelho novo)
@@ -248,6 +265,18 @@ function trial_used_by_device($mysqli, $device){
     $t = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
     mysqli_stmt_close($stmt);
     if ((int)$t['num'] > 0) return true;
+    // celular resetado em outra internet da mesma rede (mesmo bloco de IP, ex.: 187.10.20.x), mesmo modelo e plataforma, nos últimos 90 dias
+    $ipv = (string)$device['ip_address'];
+    if ($device['device_model'] != '' && preg_match('/^\d+\.\d+\.\d+\.\d+$/', $ipv)) {
+        $pre = substr($ipv, 0, strrpos($ipv, '.')).'.%';
+        $since90 = time() - 90 * 86400;
+        $stmt = mysqli_prepare($mysqli, "SELECT COUNT(*) AS num FROM tbl_trial_devices WHERE used_at > ? AND platform = ? AND device_model = ? AND ip_address LIKE ?");
+        mysqli_stmt_bind_param($stmt, 'isss', $since90, $device['platform'], $device['device_model'], $pre);
+        mysqli_stmt_execute($stmt);
+        $t2 = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+        mysqli_stmt_close($stmt);
+        if ((int)$t2['num'] > 0) return true;
+    }
     $did = mysqli_real_escape_string($mysqli, $device['device_id']);
     $r = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions s JOIN tbl_devices d ON d.id = s.device_pk WHERE s.is_trial = 1 AND d.device_id = '$did'"));
     if ((int)$r['num'] > 0) return true;
