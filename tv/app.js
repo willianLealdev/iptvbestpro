@@ -881,7 +881,7 @@
     if (u && !/^https?:\/\//.test(u)) u = 'http://' + u;
     return u.replace(/^(http:\/\/[^\/]+):80$/, '$1').replace(/^(https:\/\/[^\/]+):443$/, '$1');
   }
-  function serverCheck() {
+  function serverCheck(now) {
     if (!S.pl || !S.login) return;
     api('get_device_user', {}, function (err, arr) {
       if (err || !arr || !S.pl) return;
@@ -891,7 +891,24 @@
       else if (normDns(cur.dns_base) !== normDns(S.pl.dns_base) || cur.user_name !== S.pl.user_name || cur.user_password !== S.pl.user_password) S.pendingPl = cur;
       else return;
       if (S.screen === 'home') applyPendingPl();
+      else if (now) { // o vídeo não volta: troca de lista na hora, sem esperar o cliente voltar para a tela inicial
+        S.failing = false; stopPreview(); var pl = $('player'); if (pl && pl.parentNode) pl.parentNode.removeChild(pl);
+        applyPendingPl();
+      }
     });
+  }
+  // Vídeo (canal, filme ou episódio) não volta: pergunta ao painel a cada ~20 s enquanto continuar falhando.
+  // Se outra lista do aparelho conecta, o painel entrega essa lista e o app entra nela sozinho.
+  var failIv = null, failAt = 0;
+  function playbackFailed() {
+    S.failing = true;
+    if (!failIv) failIv = setInterval(function () {
+      if (!S.failing) { clearInterval(failIv); failIv = null; return; }
+      playbackFailed();
+    }, 25000);
+    if (!S.pl || !S.login || Date.now() - failAt < 20000) return;
+    failAt = Date.now();
+    serverCheck(true);
   }
   function applyPendingPl() {
     var np = S.pendingPl; S.pendingPl = null;
@@ -951,7 +968,7 @@
     S.screen = 'live'; clock(); every(clock, 20000);
     L.video = $('vid');
     L.video.addEventListener('error', onLiveError);
-    L.video.addEventListener('playing', function () { L.err = 0; var m = $('pvmsg'); if (m) m.classList.add('hide'); });
+    L.video.addEventListener('playing', function () { L.err = 0; S.failing = false; var m = $('pvmsg'); if (m) m.classList.add('hide'); });
     if (L.cats) { renderCats(); resumeLast(); return; }
     $('lst').innerHTML = '<div class="empty">' + esc(t('loading')) + '</div>';
     xt('get_live_categories', {}, function (err, j) {
@@ -1052,7 +1069,7 @@
     L.err++;
     if (IS_WIN) { try { console.log('[play] ' + diagText(L.video)); } catch (e) {} }
     if (L.err <= 2) { m.textContent = t('reconnect') + diagText(L.video); m.classList.remove('hide'); setTimeout(function () { if (S.screen === 'live') startLive(); }, 2500); }
-    else { m.textContent = t('ch_off') + diagText(L.video); m.classList.remove('hide'); }
+    else { m.textContent = t('ch_off') + diagText(L.video); m.classList.remove('hide'); playbackFailed(); }
   }
   function loadEpg(c) {
     var box = $('epg'); if (!box) return;
@@ -1349,7 +1366,7 @@
     function save() { var v = PL.video; if (!v || !v.duration) return; if (v.currentTime > v.duration - 15) LS.del(key); else if (v.currentTime > 5) LS.set(key, String(Math.floor(v.currentTime))); }
     PL.video.addEventListener('loadedmetadata', function () { if (startAt > 0 && !seeked) { seeked = true; try { PL.video.currentTime = startAt; } catch (e) {} } });
     PL.video.addEventListener('timeupdate', function () { var v = PL.video; if (!v || !v.duration) return; $('ptr').style.width = (v.currentTime / v.duration * 100) + '%'; $('ptm').textContent = fmtTime(v.currentTime) + ' / ' + fmtTime(v.duration); });
-    PL.video.addEventListener('playing', function () { $('pmsg').classList.add('hide'); });
+    PL.video.addEventListener('playing', function () { S.failing = false; $('pmsg').classList.add('hide'); });
     function verr() {
       // página https: o vídeo do filme/episódio termina num endereço http que o navegador bloqueia → o painel entrega o vídeo por https (tv_vod.php)
       if (location.protocol === 'https:' && url.indexOf('/tv_vod.php') < 0 && S.pl) {
@@ -1358,7 +1375,7 @@
       }
       var m0 = $('pmsg'); if (!m0) return;
       if (PL.video && !PL.video._hls && !PL.video._triedHls && playerPref() === 'auto' && /\.m3u8(\?|$)/i.test(url)) { PL.video._triedHls = true; setSrc(PL.video, url, verr, true); return; }
-      errs++; var m = m0; if (errs <= 1) { m.textContent = t('reconnect'); m.classList.remove('hide'); setTimeout(function () { if (PL.video) setSrc(PL.video, url, verr); }, 2500); } else { m.textContent = t('play_err'); m.classList.remove('hide'); } }
+      errs++; var m = m0; if (errs <= 1) { m.textContent = t('reconnect'); m.classList.remove('hide'); setTimeout(function () { if (PL.video) setSrc(PL.video, url, verr); }, 2500); } else { m.textContent = t('play_err'); m.classList.remove('hide'); playbackFailed(); } }
     PL.video.addEventListener('error', verr);
     setSrc(PL.video, url, verr);
     showBar();
