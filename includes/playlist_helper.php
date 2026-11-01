@@ -283,6 +283,45 @@ function playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm
 }
 
 /**
+ * Aparelho com 2 ou mais listas (usuário/senha): quando uma lista cai, o app passa para a próxima lista que conecta
+ * (playlist_apply_fallback). Por isso, enquanto OUTRA lista do aparelho conecta no próprio servidor dela, a lista caída
+ * NÃO procura em outros servidores (isso geraria login errado em todos os servidores e eles bloqueiam o IP do painel).
+ * Só quando nenhuma lista do aparelho conecta é que a busca em todos os DNS volta a acontecer.
+ */
+function playlist_siblings($mysqli, $row){
+    static $cache = array();
+    $did = (string)$row['device_id'];
+    if (!isset($cache[$did])) {
+        $list = array();
+        $stmt = mysqli_prepare($mysqli, "SELECT id, user_name, user_password, dns_base, dns_status, dns_checked_at FROM tbl_users WHERE status = '1' AND source = 'account' AND device_id = ?");
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 's', $did);
+            mysqli_stmt_execute($stmt);
+            $res = mysqli_stmt_get_result($stmt);
+            while ($res && $r = mysqli_fetch_assoc($res)) $list[] = $r;
+            mysqli_stmt_close($stmt);
+        }
+        $cache[$did] = $list;
+    }
+    $out = array();
+    foreach ($cache[$did] as $r) if ((int)$r['id'] != (int)$row['id']) $out[] = $r;
+    return $out;
+}
+
+// Alguma outra lista do aparelho conecta (ativa) no próprio servidor dela? (no máximo 1 login por lista)
+function playlist_sibling_ok($mysqli, $row){
+    $catch = dns_list_catch_all_norms($mysqli);
+    foreach (playlist_siblings($mysqli, $row) as $sib) {
+        if ($sib['dns_status'] == 'online' && time() - (int)$sib['dns_checked_at'] < 120) return true;
+        $base = rtrim(trim((string)$sib['dns_base']), '/');
+        if ($base == '' || !empty($catch[dns_normalize($base)])) continue;
+        $p = playlist_probe_parallel(array(array('base' => $base)), $sib['user_name'], $sib['user_password'], 4);
+        if ($p[0]['result'] == 'ok' && !empty($p[0]['active'])) return true;
+    }
+    return false;
+}
+
+/**
  * Failover para o app: devolve o DNS que funciona AGORA para esta playlist.
  * Usa cache curto; se o último servidor parar de aceitar (queda ou migração), procura em todos e atualiza.
  */
@@ -307,6 +346,7 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
         // ainda aceita: continua nele, mas com o app aberto confere a cada 10 min se a lista foi migrada
         // para outro servidor (o antigo pode continuar aceitando o login depois da migração)
         $mig = $now - (int)(isset($row['dns_full_at']) ? $row['dns_full_at'] : 0) >= 600;
+        if ($mig && count(playlist_siblings($mysqli, $row)) > 0) $mig = false; // aparelho com várias listas: sem busca de migração (evita login errado nos outros servidores)
         if ($cur[0]['result'] == 'ok' && !empty($cur[0]['active']) && !$mig) {
             playlist_set_dns_state($mysqli, $row['id'], $curBase, true, isset($cur[0]['server']) ? $cur[0]['server'] : null);
             $status = 'online';
@@ -327,6 +367,13 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
             if ($fail <= 0) { $fail = $now; mysqli_query($mysqli, "UPDATE tbl_users SET dns_fail_at = $now WHERE id = ".(int)$row['id']); }
             if ($now - $fail < 60) return $curBase;
         }
+    }
+    // Esta lista não conecta. Se o aparelho tem outra lista que conecta, não procura em outros servidores: o app passa para essa lista.
+    // ("Atualizar" no app continua procurando em todos os servidores, porque foi o cliente que pediu.)
+    if (!$fresh && playlist_sibling_ok($mysqli, $row)) {
+        playlist_set_dns_state($mysqli, $row['id'], $row['dns_base'], false);
+        $status = 'offline';
+        return $row['dns_base'];
     }
     // "Atualizar" no app: no máximo uma busca completa por lista a cada 2 minutos (não sobrecarrega os servidores)
     if ($fresh && !empty($row['dns_full_at']) && $now >= (int)$row['dns_full_at'] && $now - (int)$row['dns_full_at'] < 120) return $row['dns_base'];
@@ -855,12 +902,18 @@ function playlist_monitor_run($mysqli){
     $results = playlist_probe_tasks($tasks, 5, 20);
     $periodic = 0;
     $down = array();
+    // listas de cada aparelho: aparelho com 2 ou mais listas troca de lista em vez de procurar em outros servidores
+    $perDev = array();
+    foreach ($rows as $rid => $rr) $perDev[$rr['device_id']][] = $rid;
+    $okIds = array();
     foreach ($results as $id => $probe) {
         $stats['checked']++;
+        $multiHere = count($perDev[$rows[$id]['device_id']]) > 1;
         if ($probe['result'] == 'ok' && empty($probe['active'])) {
             // login aceito mas vencido/desativado: provavelmente a lista foi migrada para outro servidor
             // (procura no máximo a cada 10 min enquanto continuar assim, para não errar login demais)
-            if (time() - (int)$rows[$id]['dns_search_at'] >= 600) { $failed[$id] = $rows[$id]; $failed[$id]['want_newest'] = 1; continue; }
+            // aparelho com várias listas: a decisão (trocar de lista ou procurar em outros servidores) é tomada no passo 2
+            if ($multiHere || time() - (int)$rows[$id]['dns_search_at'] >= 600) { $failed[$id] = $rows[$id]; $failed[$id]['want_newest'] = 1; $failed[$id]['inactive'] = 1; continue; }
             playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true, isset($probe['server']) ? $probe['server'] : null);
             $stats['online']++;
             continue;
@@ -870,8 +923,10 @@ function playlist_monitor_run($mysqli){
             $allowed = $scopes[(int)$rows[$id]['scope']];
             $tn = dns_normalize($tasks[$id]['base']);
             if ($srv != '' && isset($allowed[$tn])) dns_note_real($mysqli, $allowed[$tn]['id'], $srv);
+            $okIds[$id] = true;
             // a cada 30 min, algumas por ciclo: confere se a lista foi migrada para outro servidor (com o antigo ainda aceitando o login)
-            if (time() - (int)$rows[$id]['dns_full_at'] > 1800 && $periodic < 40) {
+            // (aparelho com várias listas não faz essa busca: ela gera login errado nos outros servidores)
+            if (!$multiHere && time() - (int)$rows[$id]['dns_full_at'] > 1800 && $periodic < 40) {
                 $periodic++;
                 mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = ".time()." WHERE id = ".(int)$id);
                 $failed[$id] = $rows[$id];
@@ -893,6 +948,7 @@ function playlist_monitor_run($mysqli){
             if ($probe['result'] == 'unreachable') continue;
             unset($down[$id]);
             if ($probe['result'] == 'ok') {
+                $okIds[$id] = true;
                 playlist_set_dns_state($mysqli, $id, $rows[$id]['dns_base'], true, isset($probe['server']) ? $probe['server'] : null);
                 $stats['online']++;
             } else {
@@ -906,6 +962,14 @@ function playlist_monitor_run($mysqli){
     //    para não errar login demais — os servidores IPTV bloqueiam o IP que erra muito)
     foreach ($failed as $id => $r) {
         if (!$scopes[(int)$r['scope']]) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
+        // aparelho com várias listas: se outra lista dele conecta, esta fica fora do ar (o app passa para a outra) e NÃO procura em outros servidores
+        if (count($perDev[$r['device_id']]) > 1) {
+            $sibOk = false;
+            foreach ($perDev[$r['device_id']] as $sid) { if ($sid != $id && !empty($okIds[$sid])) { $sibOk = true; break; } }
+            if ($sibOk) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
+        }
+        // vencida/desativada e nenhuma outra lista conecta: procura no máximo a cada 10 min (como antes)
+        if (!empty($r['inactive']) && time() - (int)$r['dns_search_at'] < 600) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], true); $stats['online']++; continue; }
         if (empty($r['want_newest']) && $r['dns_status'] == 'offline' && time() - (int)$r['dns_search_at'] < 600) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
         mysqli_query($mysqli, "UPDATE tbl_users SET dns_search_at = ".time()." WHERE id = ".(int)$id);
         $pin = !empty($r['dns_pin']) ? $r['dns_pin'] : '';
