@@ -887,6 +887,31 @@ document.addEventListener('click', function (e) {
 });
 </script>
 
+<script>
+// Pesquisar: filtra sozinho enquanto digita (espera 350 ms após a última tecla) e devolve o cursor ao campo
+(function () {
+    var inp = document.querySelector('.dv-search input[name="keyword"]');
+    if (!inp) return;
+    var t = null;
+    try {
+        if (sessionStorage.getItem('dvSearchFocus') === '1') {
+            sessionStorage.removeItem('dvSearchFocus');
+            inp.focus();
+            var n = inp.value.length;
+            inp.setSelectionRange(n, n);
+        }
+    } catch (e) {}
+    var last = inp.value;
+    inp.addEventListener('input', function () {
+        clearTimeout(t);
+        t = setTimeout(function () {
+            if (inp.value === last) return;
+            try { sessionStorage.setItem('dvSearchFocus', '1'); } catch (e) {}
+            inp.form.submit();
+        }, 350);
+    });
+})();
+</script>
 <?php require_once("includes/devices_live.php"); devices_live_script("devices_sig"); ?>
 
 <?php include("includes/footer.php");?>
