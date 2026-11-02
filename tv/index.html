@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>IPTV Best Pro TV</title>
+<script>
+// Titan OS e Whale TV (navegador da TV): esta página é https e o navegador bloqueia o vídeo dos servidores IPTV que são só http.
+// Nelas abre a cópia sem https (tv.iptvbestpro.com), onde o vídeo http toca. &https=1 mantém o https (teste).
+(function () {
+  try {
+    var q = location.search, ua = navigator.userAgent;
+    if (location.protocol === 'https:' && location.hostname === 'iptvbestpro.com' && !/[?&]https=1/.test(q) &&
+        (/[?&]p=(titan|whale)/i.test(q) || /TitanOS\/|WhaleTV|Whale ?OS|Zeasn/i.test(ua))) {
+      location.replace('http://tv.iptvbestpro.com' + location.pathname + q);
+    }
+  } catch (e) {}
+})();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#070b18">
 <link rel="icon" href="icons/icon-192.png">
