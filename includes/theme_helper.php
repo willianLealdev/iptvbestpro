@@ -440,6 +440,7 @@ function theme_for_device($mysqli, $device_id, $application_id, $base_url){
     if (!$dev || (int)$dev['reseller_id'] <= 0) return null;
 
     $rid = (int)$dev['reseller_id'];
+    if (function_exists('reseller_brand_owner')) $rid = reseller_brand_owner($mysqli, $rid); // sub-revenda sem permissão de marca usa a marca de quem está acima
     $row = theme_reseller_row($mysqli, $rid);
     if ((int)$row['enabled'] != 1) return null;
     $brand = $row['brand_name'] != '' ? $row['brand_name'] : (defined('APP_NAME') ? APP_NAME : '');

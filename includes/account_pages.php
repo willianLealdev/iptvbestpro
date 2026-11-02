@@ -134,6 +134,8 @@ function accp_reset_page($mysqli, $cfg){
             mysqli_stmt_close($stmt);
             // quem redefiniu pelo e-mail provou que o e-mail é válido
             if ($cfg['type'] != 'admin') mysqli_query($mysqli, "UPDATE `$table` SET email_verified = 1 WHERE id = ".(int)$id);
+            // sub-revenda que criou a senha pelo link do e-mail não precisa trocar de novo no primeiro acesso
+            if ($table == 'tbl_resellers') mysqli_query($mysqli, "UPDATE tbl_resellers SET must_change = 0 WHERE id = ".(int)$id);
             $row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT email FROM `$table` WHERE id = ".(int)$id));
             if ($row) acc_clear_fails($mysqli, $cfg['scope'], $row['email']);
             accp_result($cfg, true, 'Senha alterada', 'Sua nova senha foi salva. Agora é só entrar com ela.', 'Entrar', $cfg['login']);

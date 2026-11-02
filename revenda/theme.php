@@ -6,6 +6,16 @@ require_once(__DIR__."/../includes/theme_form.php");
 $reseller = rv_require_login($mysqli);
 $rid = (int)$reseller['id'];
 $scope = $rid;
+// sub-revenda sem permissão de marca: usa a marca da revenda acima (não edita nada aqui)
+if (reseller_brand_owner($mysqli, $rid) != $rid) {
+    $up = reseller_find($mysqli, reseller_brand_owner($mysqli, $rid));
+    rv_header($mysqli, $reseller, 'Minha Marca', 'theme'); ?>
+    <div class="rv-card p-4">
+        <h2 class="rv-title fs-5 mb-2"><i class="ri-lock-line me-1"></i>A marca é da sua revenda</h2>
+        <p class="mb-0 rv-muted">Os seus clientes veem a marca de <b><?php echo rv_e($up ? $up['name'] : 'quem criou o seu acesso'); ?></b>. Se você precisa ter a sua própria marca, peça para essa revenda liberar essa opção para você.</p>
+    </div>
+<?php rv_footer(); exit;
+}
 theme_saved_migrate($mysqli);
 
 $allowed = theme_reseller_allowed($mysqli);

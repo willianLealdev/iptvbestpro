@@ -101,8 +101,9 @@ function posters_scope_for_device($mysqli, $device_id, $application_id){
     $dev = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
     mysqli_stmt_close($stmt);
     if (!$dev || (int)$dev['reseller_id'] <= 0) return 0;
-    $row = theme_reseller_row($mysqli, $dev['reseller_id']);
-    return (int)$row['enabled'] == 1 ? (int)$dev['reseller_id'] : 0;
+    $owner = function_exists('reseller_brand_owner') ? reseller_brand_owner($mysqli, (int)$dev['reseller_id']) : (int)$dev['reseller_id'];
+    $row = theme_reseller_row($mysqli, $owner);
+    return (int)$row['enabled'] == 1 ? $owner : 0;
 }
 
 // Pôsteres que o app deste aparelho deve mostrar

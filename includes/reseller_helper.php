@@ -44,12 +44,19 @@ function resellers_migrate($mysqli){
         'country_code'    => "CHAR(2) NOT NULL DEFAULT ''",
         'last_ip'         => "VARCHAR(45) NOT NULL DEFAULT ''",
         'training_seen'   => "TINYINT(1) NOT NULL DEFAULT 0", // já abriu o Treinamento (some a janela de boas-vindas)
+        'parent_id'       => "INT(11) NOT NULL DEFAULT 0",   // sub-revenda: id da revenda que a criou (0 = revenda principal)
+        'can_brand'       => "TINYINT(1) NOT NULL DEFAULT 0", // sub-revenda: 1 = pode ter a própria marca; 0 = usa a marca de quem está acima
+        'must_change'     => "TINYINT(1) NOT NULL DEFAULT 0", // sub-revenda criada com senha provisória: 1 = precisa trocar a senha no primeiro acesso
     );
     foreach ($extra as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_resellers` LIKE '$name'");
         if ($col && mysqli_num_rows($col) == 0) {
             mysqli_query($mysqli, "ALTER TABLE `tbl_resellers` ADD `$name` $definition");
         }
+    }
+    $idx = mysqli_query($mysqli, "SHOW INDEX FROM `tbl_resellers` WHERE Key_name = 'idx_parent'");
+    if ($idx && mysqli_num_rows($idx) == 0) {
+        mysqli_query($mysqli, "ALTER TABLE `tbl_resellers` ADD KEY `idx_parent` (`parent_id`)");
     }
     $idx = mysqli_query($mysqli, "SHOW INDEX FROM `tbl_resellers` WHERE Key_name = 'uq_reseller_code'");
     if ($idx && mysqli_num_rows($idx) == 0) {
@@ -292,7 +299,7 @@ function resellers_total_credit_share($mysqli){
 }
 
 function credit_type_label($type){
-    $labels = array('admin' => 'Ajuste do admin', 'purchase' => 'Compra', 'activation' => 'Ativação', 'refund' => 'Estorno');
+    $labels = array('admin' => 'Ajuste do admin', 'purchase' => 'Compra', 'activation' => 'Ativação', 'refund' => 'Estorno', 'transfer_in' => 'Recebido de revenda', 'transfer_out' => 'Enviado a sub-revenda');
     return isset($labels[$type]) ? $labels[$type] : $type;
 }
 
@@ -382,8 +389,9 @@ function credit_orders_create($mysqli, $reseller_id, $credits){
     $min = max(1, (int)panel_config_get($mysqli, 'credit_min', '1'));
     if ($credits < $min || $credits > 10000) return false;
     $reseller_id = (int)$reseller_id;
-    $reseller = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT currency FROM tbl_resellers WHERE id = $reseller_id"));
+    $reseller = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT currency, parent_id FROM tbl_resellers WHERE id = $reseller_id"));
     if (!$reseller) return false;
+    if ((int)$reseller['parent_id'] > 0) return false; // sub-revenda compra da revenda acima (transferência de créditos)
     $currency = reseller_currency($reseller);
     $unit = credit_price($mysqli, $currency);
     if ($unit <= 0) return false;
@@ -805,4 +813,157 @@ function devices_link($mysqli, $data){
         $device = devices_find($mysqli, $device_id, $application_id);
     }
     return array('ok' => true, 'msg' => 'Dispositivo vinculado. Aguarde a ativação pelo seu revendedor.', 'device' => $device);
+}
+
+
+/* ---------- Sub-revendas (cada revenda pode criar outras abaixo dela, sem limite de níveis) ---------- */
+
+define('SUB_MAX_DEPTH', 30); // trava de segurança ao subir a corrente de pais
+
+function reseller_is_sub($reseller){
+    return is_array($reseller) && isset($reseller['parent_id']) && (int)$reseller['parent_id'] > 0;
+}
+
+function reseller_find($mysqli, $id){
+    $id = (int)$id;
+    if ($id <= 0) return null;
+    $res = mysqli_query($mysqli, "SELECT * FROM tbl_resellers WHERE id = $id");
+    $row = $res ? mysqli_fetch_assoc($res) : null;
+    return $row ?: null;
+}
+
+/**
+ * Quem manda na marca deste revendedor: ele mesmo (revenda principal, ou sub com permissão de marca)
+ * ou o primeiro acima dele na corrente que tenha essa permissão.
+ */
+function reseller_brand_owner($mysqli, $reseller_id){
+    $start = (int)$reseller_id;
+    $id = $start;
+    for ($i = 0; $i < SUB_MAX_DEPTH && $id > 0; $i++) {
+        $res = mysqli_query($mysqli, "SELECT parent_id, can_brand FROM tbl_resellers WHERE id = $id");
+        $row = $res ? mysqli_fetch_assoc($res) : null;
+        if (!$row) return $start;
+        if ((int)$row['parent_id'] == 0 || (int)$row['can_brand'] == 1) return $id;
+        $id = (int)$row['parent_id'];
+    }
+    return $start;
+}
+
+// Sub-revendas diretas de uma revenda, com quantidade de aparelhos e de subs abaixo de cada uma
+function subs_list($mysqli, $parent_id){
+    $parent_id = (int)$parent_id;
+    $out = array();
+    $res = mysqli_query($mysqli, "SELECT r.*,
+            (SELECT COUNT(*) FROM tbl_devices d WHERE d.owner = 'reseller' AND d.reseller_id = r.id) AS dev_total,
+            (SELECT COUNT(*) FROM tbl_resellers c WHERE c.parent_id = r.id) AS sub_total
+        FROM tbl_resellers r WHERE r.parent_id = $parent_id ORDER BY r.id DESC");
+    while ($res && ($row = mysqli_fetch_assoc($res))) $out[] = $row;
+    return $out;
+}
+
+// Senha provisória legível (sem letras que se confundem: 0/O, 1/l/I)
+function subs_temp_password(){
+    $alphabet = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $out = '';
+    for ($i = 0; $i < 10; $i++) $out .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+    return $out;
+}
+
+/**
+ * Cria uma sub-revenda abaixo de $parent (mesma regra em todos os níveis).
+ * A sub recebe um e-mail com uma senha provisória e é obrigada a trocá-la no primeiro acesso.
+ * Retorna array('ok' => bool, 'msg' => texto, 'id' => novo id).
+ */
+function subs_create($mysqli, $parent, $name, $email, $phone, $can_brand){
+    require_once(__DIR__.'/account_auth.php');
+    acc_migrate($mysqli);
+    $name = mb_substr(trim(strip_tags((string)$name)), 0, 120);
+    $email = mb_strtolower(trim((string)$email));
+    $phone = mb_substr(preg_replace('/[^0-9+()\- ]/', '', (string)$phone), 0, 30);
+    if ($name == '') return array('ok' => false, 'msg' => 'Informe o nome.', 'id' => 0);
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return array('ok' => false, 'msg' => 'Informe um e-mail válido.', 'id' => 0);
+    if (strlen(preg_replace('/\D/', '', $phone)) < 8) return array('ok' => false, 'msg' => 'Informe o telefone (com DDD).', 'id' => 0);
+    if (!$parent || (int)$parent['status'] != 1) return array('ok' => false, 'msg' => 'Sua conta não pode criar sub-revendas agora.', 'id' => 0);
+
+    $stmt = mysqli_prepare($mysqli, "SELECT id FROM tbl_resellers WHERE email = ?");
+    mysqli_stmt_bind_param($stmt, 's', $email);
+    mysqli_stmt_execute($stmt);
+    $exists = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    if ($exists) return array('ok' => false, 'msg' => 'Já existe uma conta com este e-mail.', 'id' => 0);
+
+    $code = activation_code_generate($mysqli);
+    if ($code === false) return array('ok' => false, 'msg' => 'Não foi possível gerar o código. Tente de novo.', 'id' => 0);
+    $temp = subs_temp_password();
+    $hash = password_hash($temp, PASSWORD_DEFAULT);
+    $now = time();
+    $parent_id = (int)$parent['id'];
+    $brand = $can_brand ? 1 : 0;
+    $currency = isset($parent['currency']) && $parent['currency'] != '' ? $parent['currency'] : 'BRL';
+    $remark = 'Sub-revenda de '.mb_substr($parent['name'], 0, 60).' (#'.$parent_id.')';
+    $kind = 'reseller';
+    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_resellers (name, email, phone, password, code, credits, status, remark, currency, email_verified, created_at, updated_at, kind, parent_id, can_brand, must_change) VALUES (?,?,?,?,?,0,1,?,?,1,?,?,?,?,?,1)");
+    mysqli_stmt_bind_param($stmt, 'sssssssiisii', $name, $email, $phone, $hash, $code, $remark, $currency, $now, $now, $kind, $parent_id, $brand);
+    $ok = mysqli_stmt_execute($stmt);
+    $new_id = (int)mysqli_insert_id($mysqli);
+    mysqli_stmt_close($stmt);
+    if (!$ok || !$new_id) return array('ok' => false, 'msg' => 'Não foi possível criar a sub-revenda. Tente de novo.', 'id' => 0);
+
+    $login_url = acc_area_url('reseller', 'index.php');
+    $html = acc_email_html(__('Seu acesso de revenda'), array(
+        __('Olá, {0}!', htmlspecialchars($name)),
+        __('{0} criou o seu acesso de revenda no {1}.', htmlspecialchars($parent['name']), htmlspecialchars(brand_name())),
+        __('E-mail de acesso: {0}', '<b>'.htmlspecialchars($email).'</b>'),
+        __('Senha provisória: {0}', '<b style="font-size:18px;letter-spacing:1px;">'.htmlspecialchars($temp).'</b>'),
+        __('No primeiro acesso o sistema vai pedir para você criar uma senha nova.'),
+    ), __('Entrar no painel'), $login_url, __('Se você não esperava este e-mail, pode ignorá-lo.'));
+    $sent = acc_mail($email, $name, __('Seu acesso de revenda').' - '.brand_name(), $html);
+    return array('ok' => true, 'msg' => $sent ? 'Sub-revenda criada. Enviamos um e-mail para '.$email.' com a senha provisória.' : 'Sub-revenda criada, mas o e-mail não pôde ser enviado. Peça para ela usar "Esqueci a senha" com o e-mail '.$email.'.', 'id' => $new_id);
+}
+
+/**
+ * Passa créditos da revenda para uma sub-revenda direta ($direction = 'give') ou traz de volta ('take').
+ * Os créditos saem do saldo de uma e entram no da outra (não são criados). Atômico.
+ */
+function subs_transfer($mysqli, $parent_id, $sub_id, $amount, $direction){
+    $parent_id = (int)$parent_id;
+    $sub_id = (int)$sub_id;
+    $amount = (int)$amount;
+    if ($amount <= 0) return array('ok' => false, 'msg' => 'Informe uma quantidade maior que zero.');
+    if ($parent_id <= 0 || $sub_id <= 0 || $parent_id == $sub_id) return array('ok' => false, 'msg' => 'Sub-revenda inválida.');
+
+    mysqli_begin_transaction($mysqli);
+    $ids = array($parent_id, $sub_id);
+    sort($ids);
+    $res = mysqli_query($mysqli, "SELECT id, name, parent_id, credits FROM tbl_resellers WHERE id IN (".$ids[0].",".$ids[1].") ORDER BY id FOR UPDATE");
+    $rows = array();
+    while ($res && ($r = mysqli_fetch_assoc($res))) $rows[(int)$r['id']] = $r;
+    if (count($rows) != 2 || (int)$rows[$sub_id]['parent_id'] != $parent_id) {
+        mysqli_rollback($mysqli);
+        return array('ok' => false, 'msg' => 'Esta sub-revenda não é sua.');
+    }
+    $from = $direction == 'give' ? $parent_id : $sub_id;
+    $to = $direction == 'give' ? $sub_id : $parent_id;
+    if ((int)$rows[$from]['credits'] < $amount) {
+        mysqli_rollback($mysqli);
+        return array('ok' => false, 'msg' => $direction == 'give' ? 'Você não tem créditos suficientes. Saldo: '.(int)$rows[$from]['credits'].'.' : 'A sub-revenda tem só '.(int)$rows[$from]['credits'].' crédito(s) para retirar.');
+    }
+    $now = time();
+    $bal_from = (int)$rows[$from]['credits'] - $amount;
+    $bal_to = (int)$rows[$to]['credits'] + $amount;
+    mysqli_query($mysqli, "UPDATE tbl_resellers SET credits = $bal_from, updated_at = $now WHERE id = $from");
+    mysqli_query($mysqli, "UPDATE tbl_resellers SET credits = $bal_to, updated_at = $now WHERE id = $to");
+    $note_out = $direction == 'give' ? 'Enviado para '.$rows[$to]['name'] : 'Retirado por '.$rows[$to]['name'];
+    $note_in = $direction == 'give' ? 'Recebido de '.$rows[$from]['name'] : 'Devolvido a '.$rows[$to]['name'];
+    $note_out = mb_substr(strip_tags($note_out), 0, 255);
+    $note_in = mb_substr(strip_tags($note_in), 0, 255);
+    $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_reseller_credits (reseller_id, amount, balance_after, type, note, admin_id, created_at) VALUES (?,?,?,?,?,0,?)");
+    $neg = -$amount; $t_out = 'transfer_out'; $t_in = 'transfer_in';
+    mysqli_stmt_bind_param($stmt, 'iiissi', $from, $neg, $bal_from, $t_out, $note_out, $now);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_bind_param($stmt, 'iiissi', $to, $amount, $bal_to, $t_in, $note_in, $now);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    mysqli_commit($mysqli);
+    return array('ok' => true, 'msg' => ($direction == 'give' ? $amount.' crédito(s) enviado(s) para ' : $amount.' crédito(s) retirado(s) de ').$rows[$sub_id]['name'].'.');
 }

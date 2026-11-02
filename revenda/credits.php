@@ -2,6 +2,7 @@
 require_once(__DIR__."/_init.php");
 $reseller = rv_require_login($mysqli);
 $rid = (int)$reseller['id'];
+$is_sub = reseller_is_sub($reseller);
 
 $currency = reseller_currency($reseller);
 $price = credit_price($mysqli, $currency);
@@ -15,6 +16,8 @@ $contact = trim(panel_config_get($mysqli, 'payment_contact', ''));
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (!rv_csrf_ok()) {
         rv_flash('error', 'Sessão expirada. Tente novamente.');
+    } else if (isset($_POST['buy_submit']) && $is_sub) {
+        rv_flash('error', 'Sua conta compra créditos direto com a revenda que criou você.');
     } else if (isset($_POST['buy_submit'])) {
         $qty = (int)$_POST['credits'];
         $pending = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_credit_orders WHERE reseller_id = $rid AND status = 'pending'"));
@@ -88,6 +91,11 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
                     <?php } ?>
                 </div>
             <?php } ?>
+        </div>
+<?php } else if ($is_sub) { $up = reseller_find($mysqli, (int)$reseller['parent_id']); ?>
+        <div class="rv-card p-4">
+            <h2 class="rv-title fs-5 mb-1">Como conseguir créditos</h2>
+            <p class="rv-muted mb-0">Você compra os créditos direto com a revenda que criou o seu acesso<?php echo $up ? ' (<b>'.rv_e($up['name']).'</b>)' : ''; ?>. Peça a ela e ela envia os créditos pelo painel dela. Eles aparecem aqui no seu saldo na hora.</p>
         </div>
 <?php } else { ?>
 

@@ -53,6 +53,8 @@ function rv_current($mysqli){
 function rv_require_login($mysqli){
     $r = rv_current($mysqli);
     if (!$r) rv_redirect('index.php');
+    // sub-revenda criada com senha provisória: só usa o painel depois de trocar a senha
+    if (!empty($r['must_change']) && basename($_SERVER['SCRIPT_NAME']) != 'change_password.php') rv_redirect('change_password.php');
     return $r;
 }
 
@@ -152,13 +154,14 @@ function rv_header($mysqli, $reseller, $title, $active){
         array('training', 'training.php', 'ri-play-circle-line', 'Treinamento'),
         array('devices', 'devices.php', 'ri-device-line', 'Dispositivos'),
         array('credits', 'credits.php', 'ri-coin-line', 'Créditos'),
+        array('subs', 'subs.php', 'ri-team-line', 'Sub-revendas'),
         array('dns', 'dns.php', 'ri-server-line', 'DNS'),
         array('theme', 'theme.php', 'ri-palette-line', 'Minha Marca'),
         array('posters', 'posters.php', 'ri-image-line', 'Pôsteres'),
         array('support', 'support.php', 'ri-customer-service-2-line', 'Suporte'),
     );
     // servidor parceiro: sem treinamento da revenda
-    if (rv_is_server()) $rv_menu = array_values(array_filter($rv_menu, function ($m) { return $m[0] != 'training'; }));
+    if (rv_is_server()) $rv_menu = array_values(array_filter($rv_menu, function ($m) { return $m[0] != 'training' && $m[0] != 'subs'; }));
     ?>
     <!-- menu lateral (no celular abre pelo botão ☰ e fecha ao escolher um item ou tocar fora) -->
     <aside class="rv-side" id="rvSide">
