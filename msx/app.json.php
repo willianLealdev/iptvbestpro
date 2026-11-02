@@ -1,6 +1,7 @@
 <?php
 /**
  * Rotas do serviço MSX (/msx/app.json?r=...). Cada rota devolve o JSON de uma tela.
+ * O visual segue o tema do app deste aparelho (marca da revenda, logo, nome, cores, fundo e banner).
  */
 require_once(__DIR__."/msx_lib.php");
 
@@ -19,41 +20,120 @@ $device = msx_device($mysqli, $key);
 $status = devices_app_status($device);
 $active = $status === 'active';
 
-function msx_need_active($active){
-    if (!$active) msx_out(msx_msg_page('Aparelho não ativo', 'Ative o aparelho com o código do seu revendedor para usar esta área.'));
+function msx_th(){
+    global $mysqli, $key;
+    static $t = null;
+    if ($t === null) $t = msx_theme($mysqli, $key);
+    return $t;
 }
 function msx_clean_text($t){ return str_replace(array('|', '[', ']', '@'), ' ', (string)$t); }
-function msx_need_list($mysqli, $key){
-    $pl = msx_current_pl($mysqli, $key);
-    if (!$pl) msx_out(msx_msg_page('Nenhuma lista', 'Seu revendedor ainda não colocou uma lista neste aparelho.'));
-    return $pl;
-}
-// vencimento legível
 function msx_expiry($device){
     return ($device && (int)$device['expires_at'] > 0) ? date('d/m/Y', (int)$device['expires_at']) : '';
+}
+function msx_msg($title, $text){
+    $th = msx_th();
+    return array('type' => 'list', 'headline' => $title, 'background' => msx_bg_url($th),
+        'template' => array('type' => 'default', 'layout' => '0,0,12,2', 'color' => msx_rgba($th['surface'], 0.9)),
+        'items' => array(array('title' => $title, 'titleFooter' => $text)));
+}
+function msx_need_active($active){
+    if (!$active) msx_out(msx_msg('Aparelho não ativo', 'Ative o aparelho com o código do seu revendedor para usar esta área.'));
+}
+function msx_need_list($mysqli, $key){
+    $pl = msx_current_pl($mysqli, $key);
+    if (!$pl) msx_out(msx_msg('Nenhuma lista', 'Seu revendedor ainda não colocou uma lista neste aparelho.'));
+    return $pl;
+}
+
+// Lista vertical (listas, conta, resultados): linhas na cor do tema
+function msx_rows($headline, $items, $icon = 'chevron-right'){
+    $th = msx_th();
+    $out = array();
+    foreach ($items as $i) {
+        $it = array('label' => $i['label'], 'icon' => !empty($i['icon']) ? $i['icon'] : $icon);
+        if (!empty($i['action'])) $it['action'] = $i['action'];
+        $out[] = $it;
+    }
+    return array('type' => 'list', 'headline' => $headline, 'background' => msx_bg_url($th),
+        'template' => array('type' => 'control', 'layout' => '0,0,12,1', 'color' => msx_rgba($th['surface'], 0.92)), 'items' => $out);
+}
+
+// Categorias: grade de botões grandes, 3 por linha
+function msx_category_grid($headline, $items, $icon){
+    $th = msx_th();
+    $out = array();
+    foreach ($items as $i) {
+        $out[] = array('label' => $i['label'], 'icon' => !empty($i['icon']) ? $i['icon'] : $icon, 'action' => $i['action']);
+    }
+    return array('type' => 'pages', 'headline' => $headline, 'background' => msx_bg_url($th),
+        'template' => array('type' => 'button', 'layout' => '0,0,4,1', 'color' => msx_rgba($th['surface'], 0.92)), 'items' => $out);
+}
+
+// Canais, filmes e séries: grade de cartões com imagem (canal sem logo ganha um quadrinho com as iniciais)
+function msx_card_grid($headline, $items, $layout){
+    $th = msx_th();
+    $out = array();
+    foreach ($items as $i) {
+        $img = !empty($i['image']) ? $i['image'] : msx_img_url('tile', array('t' => $i['title'], 's' => ltrim($th['surface'], '#'), 'a' => ltrim($th['primary'], '#')));
+        $out[] = array('title' => $i['title'], 'image' => $img, 'action' => $i['action']);
+    }
+    return array('type' => 'pages', 'headline' => $headline, 'background' => msx_bg_url($th),
+        'template' => array('type' => 'default', 'layout' => $layout, 'imageFiller' => 'smart', 'color' => msx_rgba($th['surface'], 0.92)), 'items' => $out);
+}
+
+// Tela inicial: banner (se tiver) + 3 cartões grandes + atalhos, com as cores do tema
+function msx_home_page($key, $th){
+    $card = function ($sec, $icon, $text) use ($th) {
+        return msx_img_url('card', array('c1' => ltrim($th['sec'][$sec][0], '#'), 'c2' => ltrim($th['sec'][$sec][1], '#'), 'i' => $icon, 't' => $text));
+    };
+    $small = function ($icon, $text) use ($th) {
+        return msx_img_url('card', array('c1' => ltrim(msx_shade($th['surface'], 0.10), '#'), 'c2' => ltrim(msx_shade($th['surface'], -0.25), '#'), 'i' => $icon, 't' => $text, 'w' => 640, 'h' => 300));
+    };
+    $banner = $th['banner'] !== '';
+    $y1 = $banner ? 2 : 0;
+    $h1 = $banner ? 2 : 3;
+    $y2 = $y1 + $h1;
+    $h2 = 6 - $y2;
+    $items = array();
+    if ($banner) $items[] = array('type' => 'default', 'layout' => '0,0,12,2', 'image' => $th['banner'], 'imageFiller' => 'cover', 'action' => '[]');
+    $items[] = array('type' => 'default', 'layout' => '0,'.$y1.',4,'.$h1, 'image' => $card('live', 'live', 'TV ao vivo'), 'imageFiller' => 'cover', 'action' => 'content:'.msx_u('live_cats', $key));
+    $items[] = array('type' => 'default', 'layout' => '4,'.$y1.',4,'.$h1, 'image' => $card('movies', 'movies', 'Filmes'), 'imageFiller' => 'cover', 'action' => 'content:'.msx_u('vod_cats', $key));
+    $items[] = array('type' => 'default', 'layout' => '8,'.$y1.',4,'.$h1, 'image' => $card('series', 'series', 'Séries'), 'imageFiller' => 'cover', 'action' => 'content:'.msx_u('ser_cats', $key));
+    $items[] = array('type' => 'default', 'layout' => '0,'.$y2.',4,'.$h2, 'image' => $small('search', 'Buscar'), 'imageFiller' => 'cover', 'action' => 'content:'.msx_u('search_menu', $key));
+    $items[] = array('type' => 'default', 'layout' => '4,'.$y2.',4,'.$h2, 'image' => $small('lists', 'Minhas listas'), 'imageFiller' => 'cover', 'action' => 'content:'.msx_u('pls', $key));
+    $items[] = array('type' => 'default', 'layout' => '8,'.$y2.',4,'.$h2, 'image' => $small('account', 'Conta'), 'imageFiller' => 'cover', 'action' => 'content:'.msx_u('account', $key));
+    return array('type' => 'pages', 'headline' => $th['show_name'] ? $th['name'] : '', 'background' => msx_bg_url($th), 'pages' => array(array('items' => $items)));
 }
 
 switch ($route) {
 
 case 'menu':
+    $th = msx_th();
     $items = array();
     if ($active) {
+        $items[] = array('id' => 'home', 'icon' => 'home', 'label' => 'Início', 'focus' => true, 'data' => msx_u('home', $key));
         $items[] = array('id' => 'live', 'icon' => 'live-tv', 'label' => 'TV ao vivo', 'data' => msx_u('live_cats', $key));
         $items[] = array('id' => 'movies', 'icon' => 'movie', 'label' => 'Filmes', 'data' => msx_u('vod_cats', $key));
         $items[] = array('id' => 'series', 'icon' => 'video-library', 'label' => 'Séries', 'data' => msx_u('ser_cats', $key));
         $items[] = array('id' => 'search', 'icon' => 'search', 'label' => 'Buscar', 'data' => msx_u('search_menu', $key));
         $items[] = array('id' => 'pls', 'icon' => 'playlist-play', 'label' => 'Minhas listas', 'data' => msx_u('pls', $key));
     } else {
-        $items[] = array('id' => 'activate', 'icon' => 'vpn-key', 'label' => 'Ativar', 'data' => msx_u('activate', $key));
+        $items[] = array('id' => 'activate', 'icon' => 'vpn-key', 'label' => 'Ativar', 'focus' => true, 'data' => msx_u('activate', $key));
     }
     $items[] = array('id' => 'account', 'icon' => 'account-circle', 'label' => 'Conta', 'data' => msx_u('account', $key));
-    msx_out(array('name' => 'IPTV Best Pro', 'version' => MSX_VERSION, 'logo' => msx_logo(), 'logoSize' => 'small',
-        'cache' => false, 'reuse' => false, 'style' => 'default', 'menu' => $items));
+    $root = array('name' => $th['name'], 'version' => MSX_VERSION, 'logo' => $th['logo'], 'logoSize' => 'small',
+        'headline' => $th['name'], 'background' => msx_bg_url($th), 'cache' => false, 'reuse' => false, 'style' => 'default', 'menu' => $items);
+    if ($th['show_name']) $root['extension'] = $th['name'];
+    msx_out($root);
+
+case 'home':
+    msx_need_active($active);
+    msx_out(msx_home_page($key, msx_th()));
 
 case 'activate':
     $msg = $status === 'pending' ? 'Aparelho ligado. Aguarde a ativação pelo seu revendedor.'
         : ($status === 'expired' ? 'Sua ativação venceu. Digite o código do seu revendedor de novo para renovar.' : 'Digite o código que o seu revendedor passou.');
-    msx_out(msx_list_page($msg, array(array('label' => 'Digitar o código', 'icon' => 'vpn-key',
+    msx_out(msx_rows($msg, array(array('label' => 'Digitar o código', 'icon' => 'vpn-key',
         'action' => msx_input_action(msx_u('link', $key, array(), '&input={INPUT}'), 'default', 'Código de ativação', 'Ex.: ABCDEF')))));
 
 case 'link':
@@ -68,13 +148,13 @@ case 'live_cats':
     msx_need_active($active);
     $pl = msx_need_list($mysqli, $key);
     $cats = msx_xtream($pl, 'get_live_categories');
-    if (!is_array($cats) || !$cats) msx_out(msx_msg_page('Sem categorias', 'Não foi possível carregar as categorias agora. Tente de novo em instantes.'));
+    if (!is_array($cats) || !$cats) msx_out(msx_msg('Sem categorias', 'Não foi possível carregar as categorias agora. Tente de novo em instantes.'));
     $items = array(array('label' => 'Todos os canais', 'icon' => 'live-tv', 'action' => 'content:'.msx_u('live', $key, array('c' => 'all', 'p' => 0))));
     foreach ($cats as $c) {
         if (!isset($c['category_id'])) continue;
         $items[] = array('label' => (string)$c['category_name'], 'action' => 'content:'.msx_u('live', $key, array('c' => (string)$c['category_id'], 'p' => 0)));
     }
-    msx_out(msx_list_page('TV ao vivo', $items));
+    msx_out(msx_category_grid('TV ao vivo', $items, 'live-tv'));
 
 case 'live':
     msx_need_active($active);
@@ -82,19 +162,18 @@ case 'live':
     $cat = isset($_GET['c']) ? (string)$_GET['c'] : 'all';
     $p = max(0, isset($_GET['p']) ? (int)$_GET['p'] : 0);
     $list = msx_xtream($pl, 'get_live_streams', $cat === 'all' ? array() : array('category_id' => $cat), 600);
-    if (!is_array($list)) msx_out(msx_msg_page('Sem canais', 'Não foi possível carregar os canais agora. Tente de novo em instantes.'));
+    if (!is_array($list)) msx_out(msx_msg('Sem canais', 'Não foi possível carregar os canais agora. Tente de novo em instantes.'));
     $total = count($list);
-    $slice = array_slice($list, $p * MSX_PAGE, MSX_PAGE);
     $items = array();
-    if ($p > 0) $items[] = array('label' => '« Página anterior', 'icon' => 'arrow-back', 'action' => 'content:'.msx_u('live', $key, array('c' => $cat, 'p' => $p - 1)));
-    foreach ($slice as $s) {
+    if ($p > 0) $items[] = array('title' => '« Página anterior', 'action' => 'content:'.msx_u('live', $key, array('c' => $cat, 'p' => $p - 1)));
+    foreach (array_slice($list, $p * MSX_PAGE, MSX_PAGE) as $s) {
         if (!isset($s['stream_id'])) continue;
-        $items[] = array('label' => (string)$s['name'], 'icon' => 'live-tv', 'image' => !empty($s['stream_icon']) ? (string)$s['stream_icon'] : null,
+        $items[] = array('title' => (string)$s['name'], 'image' => !empty($s['stream_icon']) ? (string)$s['stream_icon'] : '',
             'action' => 'video:'.msx_stream_url($pl, 'live', $s['stream_id'], 'm3u8'));
     }
-    if (($p + 1) * MSX_PAGE < $total) $items[] = array('label' => 'Próxima página »', 'icon' => 'arrow-forward', 'action' => 'content:'.msx_u('live', $key, array('c' => $cat, 'p' => $p + 1)));
-    if (!$items) msx_out(msx_msg_page('Sem canais', 'Esta categoria está vazia.'));
-    msx_out(msx_list_page('TV ao vivo ('.$total.')', $items));
+    if (($p + 1) * MSX_PAGE < $total) $items[] = array('title' => 'Próxima página »', 'action' => 'content:'.msx_u('live', $key, array('c' => $cat, 'p' => $p + 1)));
+    if (!$items) msx_out(msx_msg('Sem canais', 'Esta categoria está vazia.'));
+    msx_out(msx_card_grid('TV ao vivo ('.$total.')', $items, '0,0,3,2'));
 
 case 'vod_cats':
 case 'ser_cats':
@@ -102,13 +181,13 @@ case 'ser_cats':
     $pl = msx_need_list($mysqli, $key);
     $is_vod = $route === 'vod_cats';
     $cats = msx_xtream($pl, $is_vod ? 'get_vod_categories' : 'get_series_categories');
-    if (!is_array($cats) || !$cats) msx_out(msx_msg_page('Sem categorias', 'Não foi possível carregar as categorias agora. Tente de novo em instantes.'));
+    if (!is_array($cats) || !$cats) msx_out(msx_msg('Sem categorias', 'Não foi possível carregar as categorias agora. Tente de novo em instantes.'));
     $items = array();
     foreach ($cats as $c) {
         if (!isset($c['category_id'])) continue;
         $items[] = array('label' => (string)$c['category_name'], 'action' => 'content:'.msx_u($is_vod ? 'vod' : 'ser', $key, array('c' => (string)$c['category_id'], 'p' => 0)));
     }
-    msx_out(msx_list_page($is_vod ? 'Filmes' : 'Séries', $items));
+    msx_out(msx_category_grid($is_vod ? 'Filmes' : 'Séries', $items, $is_vod ? 'movie' : 'video-library'));
 
 case 'vod':
     msx_need_active($active);
@@ -116,19 +195,19 @@ case 'vod':
     $cat = isset($_GET['c']) ? (string)$_GET['c'] : '';
     $p = max(0, isset($_GET['p']) ? (int)$_GET['p'] : 0);
     $list = msx_xtream($pl, 'get_vod_streams', array('category_id' => $cat), 600);
-    if (!is_array($list)) msx_out(msx_msg_page('Sem filmes', 'Não foi possível carregar os filmes agora. Tente de novo em instantes.'));
+    if (!is_array($list)) msx_out(msx_msg('Sem filmes', 'Não foi possível carregar os filmes agora. Tente de novo em instantes.'));
     $total = count($list);
     $items = array();
     if ($p > 0) $items[] = array('title' => '« Página anterior', 'action' => 'content:'.msx_u('vod', $key, array('c' => $cat, 'p' => $p - 1)));
     foreach (array_slice($list, $p * MSX_PAGE, MSX_PAGE) as $m) {
         if (!isset($m['stream_id'])) continue;
         $ext = !empty($m['container_extension']) && preg_match('/^[A-Za-z0-9]{2,5}$/', $m['container_extension']) ? $m['container_extension'] : 'mp4';
-        $items[] = array('title' => (string)$m['name'], 'image' => !empty($m['stream_icon']) ? (string)$m['stream_icon'] : null,
+        $items[] = array('title' => (string)$m['name'], 'image' => !empty($m['stream_icon']) ? (string)$m['stream_icon'] : '',
             'action' => 'video:'.msx_stream_url($pl, 'movie', $m['stream_id'], $ext));
     }
     if (($p + 1) * MSX_PAGE < $total) $items[] = array('title' => 'Próxima página »', 'action' => 'content:'.msx_u('vod', $key, array('c' => $cat, 'p' => $p + 1)));
-    if (!$items) msx_out(msx_msg_page('Sem filmes', 'Esta categoria está vazia.'));
-    msx_out(msx_poster_page('Filmes ('.$total.')', $items));
+    if (!$items) msx_out(msx_msg('Sem filmes', 'Esta categoria está vazia.'));
+    msx_out(msx_card_grid('Filmes ('.$total.')', $items, '0,0,2,3'));
 
 case 'ser':
     msx_need_active($active);
@@ -136,18 +215,18 @@ case 'ser':
     $cat = isset($_GET['c']) ? (string)$_GET['c'] : '';
     $p = max(0, isset($_GET['p']) ? (int)$_GET['p'] : 0);
     $list = msx_xtream($pl, 'get_series', array('category_id' => $cat), 600);
-    if (!is_array($list)) msx_out(msx_msg_page('Sem séries', 'Não foi possível carregar as séries agora. Tente de novo em instantes.'));
+    if (!is_array($list)) msx_out(msx_msg('Sem séries', 'Não foi possível carregar as séries agora. Tente de novo em instantes.'));
     $total = count($list);
     $items = array();
     if ($p > 0) $items[] = array('title' => '« Página anterior', 'action' => 'content:'.msx_u('ser', $key, array('c' => $cat, 'p' => $p - 1)));
     foreach (array_slice($list, $p * MSX_PAGE, MSX_PAGE) as $s) {
         if (!isset($s['series_id'])) continue;
-        $items[] = array('title' => (string)$s['name'], 'image' => !empty($s['cover']) ? (string)$s['cover'] : null,
+        $items[] = array('title' => (string)$s['name'], 'image' => !empty($s['cover']) ? (string)$s['cover'] : '',
             'action' => 'content:'.msx_u('serie', $key, array('s' => (string)$s['series_id'])));
     }
     if (($p + 1) * MSX_PAGE < $total) $items[] = array('title' => 'Próxima página »', 'action' => 'content:'.msx_u('ser', $key, array('c' => $cat, 'p' => $p + 1)));
-    if (!$items) msx_out(msx_msg_page('Sem séries', 'Esta categoria está vazia.'));
-    msx_out(msx_poster_page('Séries ('.$total.')', $items));
+    if (!$items) msx_out(msx_msg('Sem séries', 'Esta categoria está vazia.'));
+    msx_out(msx_card_grid('Séries ('.$total.')', $items, '0,0,2,3'));
 
 case 'serie':
     msx_need_active($active);
@@ -168,9 +247,9 @@ case 'serie':
                 'action' => 'video:'.msx_stream_url($pl, 'series', $e['id'], $ext));
         }
     }
-    if (!$items) msx_out(msx_msg_page('Sem episódios', 'Não encontramos episódios para esta série.'));
+    if (!$items) msx_out(msx_msg('Sem episódios', 'Não encontramos episódios para esta série.'));
     $name = is_array($info) && isset($info['info']['name']) ? (string)$info['info']['name'] : 'Série';
-    msx_out(msx_list_page($name, $items));
+    msx_out(msx_rows($name, $items));
 
 case 'search_menu':
     msx_need_active($active);
@@ -178,14 +257,16 @@ case 'search_menu':
         return array('label' => $label, 'icon' => $icon,
             'action' => msx_input_action(msx_u('search', $key, array('t' => $type), '&input={INPUT}'), 'search:2', 'Buscar '.mb_strtolower($label, 'UTF-8'), 'Digite pelo menos 2 letras'));
     };
-    msx_out(msx_list_page('Buscar', array($mk('live', 'Canais', 'live-tv'), $mk('movie', 'Filmes', 'movie'), $mk('series', 'Séries', 'video-library'))));
+    msx_out(msx_rows('Buscar', array($mk('live', 'Canais', 'live-tv'), $mk('movie', 'Filmes', 'movie'), $mk('series', 'Séries', 'video-library'))));
 
 case 'search':
     msx_need_active($active);
     $pl = msx_need_list($mysqli, $key);
+    $th = msx_th();
+    $tpl = array('type' => 'control', 'layout' => '0,0,12,1', 'color' => msx_rgba($th['surface'], 0.92));
     $type = isset($_GET['t']) && in_array($_GET['t'], array('live', 'movie', 'series'), true) ? $_GET['t'] : 'movie';
     $text = trim(mb_substr(strip_tags(isset($_GET['input']) ? (string)$_GET['input'] : ''), 0, 60));
-    if (mb_strlen($text) < 2) msx_out(array('template' => array('type' => 'control', 'layout' => '0,0,12,1', 'color' => 'msx-glass'), 'items' => array()));
+    if (mb_strlen($text) < 2) msx_out(array('template' => $tpl, 'items' => array()));
     $act = $type === 'live' ? 'get_live_streams' : ($type === 'movie' ? 'get_vod_streams' : 'get_series');
     $all = msx_xtream($pl, $act, array(), 1800);
     $needle = msx_norm($text);
@@ -207,20 +288,20 @@ case 'search':
             if (count($items) >= 60) break;
         }
     }
-    msx_out(array('template' => array('type' => 'control', 'layout' => '0,0,12,1', 'color' => 'msx-glass'), 'items' => $items));
+    msx_out(array('template' => $tpl, 'items' => $items));
 
 case 'pls':
     msx_need_active($active);
     $pls = msx_playlists($mysqli, $key);
     $cur = msx_current_pl($mysqli, $key);
-    if (!$pls) msx_out(msx_msg_page('Nenhuma lista', 'Seu revendedor ainda não colocou uma lista neste aparelho.'));
+    if (!$pls) msx_out(msx_msg('Nenhuma lista', 'Seu revendedor ainda não colocou uma lista neste aparelho.'));
     $items = array();
     foreach ($pls as $p) {
         $on = $cur && (int)$cur['id'] === (int)$p['id'];
         $items[] = array('label' => msx_pl_name($p).($on ? '  (em uso)' : ''), 'icon' => $on ? 'check-circle' : 'radio-button-unchecked',
             'action' => 'execute:'.msx_u('setpl', $key, array('l' => (int)$p['id'])));
     }
-    msx_out(msx_list_page('Minhas listas', $items));
+    msx_out(msx_rows('Minhas listas', $items));
 
 case 'setpl':
     msx_need_active($active);
@@ -236,6 +317,7 @@ case 'setpl':
 case 'account':
     require_once(__DIR__."/../includes/support_helper.php");
     support_migrate($mysqli);
+    $th = msx_th();
     $sp = support_contact_for_device($mysqli, $device);
     $labels = array('active' => 'Ativo', 'expired' => 'Vencido', 'pending' => 'Aguardando ativação pelo revendedor', 'unlinked' => 'Não ativado');
     $items = array(array('title' => 'Situação', 'titleFooter' => isset($labels[$status]) ? $labels[$status] : $status));
@@ -243,8 +325,8 @@ case 'account':
     if ($device && $device['owner'] != '') $items[] = array('title' => 'Revenda', 'titleFooter' => devices_owner_name($mysqli, $device));
     if (!empty($sp['whatsapp'])) $items[] = array('title' => 'Suporte (WhatsApp)', 'titleFooter' => (string)$sp['whatsapp']);
     $items[] = array('title' => 'ID deste aparelho', 'titleFooter' => substr($key, 0, 24));
-    $page = array('type' => 'list', 'headline' => 'Conta',
-        'template' => array('type' => 'default', 'layout' => '0,0,12,1', 'color' => 'msx-glass'), 'items' => $items);
+    $page = array('type' => 'list', 'headline' => 'Conta', 'background' => msx_bg_url($th),
+        'template' => array('type' => 'default', 'layout' => '0,0,12,1', 'color' => msx_rgba($th['surface'], 0.92)), 'items' => $items);
     if ($device && $device['owner'] != '') {
         $page['items'][] = array('type' => 'control', 'label' => 'Resetar licença (usar outro código)', 'icon' => 'restore', 'action' => 'execute:'.msx_u('reset', $key));
     }
@@ -266,5 +348,5 @@ case 'reset':
     msx_exec('[success:Licença resetada. Digite o novo código.|reload]');
 
 default:
-    msx_out(msx_msg_page('Tela não encontrada', 'Volte e tente de novo.'));
+    msx_out(msx_msg('Tela não encontrada', 'Volte e tente de novo.'));
 }

@@ -211,3 +211,113 @@ function msx_poster_page($headline, $items){
 function msx_input_action($url_with_input, $type, $headline, $hint){
     return 'content:request:interaction:'.$url_with_input.'|'.$type.'|pt|'.str_replace(array('|', '@'), ' ', $headline).'|||'.str_replace(array('|', '@'), ' ', $hint).'@'.MSX_INPUT_PLUGIN;
 }
+
+
+/* ---------- visual: usa o tema do app (marca da revenda, logo, nome, cores, fundo, banner) ---------- */
+
+function msx_hex($v, $def){
+    $v = trim((string)$v);
+    return preg_match('/^#[0-9A-Fa-f]{6}$/', $v) ? strtoupper($v) : $def;
+}
+function msx_rgb($hex){ return array(hexdec(substr($hex, 1, 2)), hexdec(substr($hex, 3, 2)), hexdec(substr($hex, 5, 2))); }
+function msx_from_rgb($r, $g, $b){
+    return sprintf('#%02X%02X%02X', max(0, min(255, (int)round($r))), max(0, min(255, (int)round($g))), max(0, min(255, (int)round($b))));
+}
+function msx_mix($a, $b, $t = 0.5){
+    $x = msx_rgb($a); $y = msx_rgb($b);
+    return msx_from_rgb($x[0] + ($y[0] - $x[0]) * $t, $x[1] + ($y[1] - $x[1]) * $t, $x[2] + ($y[2] - $x[2]) * $t);
+}
+function msx_shade($hex, $f){ return $f < 0 ? msx_mix($hex, '#000000', -$f) : msx_mix($hex, '#FFFFFF', $f); }
+function msx_rgba($hex, $a){ $c = msx_rgb($hex); return 'rgba('.$c[0].','.$c[1].','.$c[2].','.$a.')'; }
+
+/**
+ * Paleta do app para este aparelho: marca da revenda (se tiver e o admin permitir) ou a marca do admin.
+ * Cada modelo de tema (OneUI, Glossy, BestPro...) entrega as cores dele.
+ */
+function msx_theme($mysqli, $key){
+    require_once(__DIR__.'/../includes/theme_helper.php');
+    $base_url = msx_base();
+    $brand = theme_for_device($mysqli, msx_device_id($key), MSX_APP_ID, $base_url);
+    $cfg = $brand ? $brand['theme_config'] : theme_api_payload($mysqli, $base_url);
+    $tid = isset($cfg['theme_id']) ? (string)$cfg['theme_id'] : THEME_BESTPRO_ID;
+    $m = array_merge(isset($cfg['model_defaults']) && is_array($cfg['model_defaults']) ? $cfg['model_defaults'] : array(),
+                     isset($cfg['model_settings']) && is_array($cfg['model_settings']) ? $cfg['model_settings'] : array());
+    $g = function ($k, $d) use ($m) { return msx_hex(isset($m[$k]) ? $m[$k] : '', $d); };
+
+    switch ($tid) {
+    case '1': // OneUI
+        $top = $g('bg_top', '#070923'); $bottom = $g('bg_bottom', '#020309');
+        $sec = array('live' => array($g('live_top', '#36D29B'), $g('live_bottom', '#3C56DE')),
+                     'movies' => array($g('movies_top', '#DB2E54'), $g('movies_bottom', '#F69D3F')),
+                     'series' => array($g('series_top', '#9C3CB3'), $g('series_bottom', '#5396DC')));
+        $primary = $g('buttons', '#4DB6AC'); $accent = $sec['movies'][0]; $surface = msx_mix($bottom, '#FFFFFF', 0.10);
+        break;
+    case '2': // Glossy
+        $bottom = $g('bg', '#151B27'); $top = $g('panel_top', '#233245');
+        $a = $g('accent_start', '#FD4C3A'); $b = $g('accent_end', '#FF7439');
+        $sec = array('live' => array($a, $b), 'movies' => array($b, msx_shade($b, -0.3)), 'series' => array(msx_shade($a, -0.25), $a));
+        $primary = $a; $accent = $b; $surface = $g('panel_bottom', '#141A26');
+        break;
+    case '3': // Black Panther
+        $bottom = $g('bg', '#111111'); $top = msx_shade($bottom, 0.08); $acc = $g('accent', '#E22F4D');
+        $sec = array('live' => array($acc, msx_shade($acc, -0.35)), 'movies' => array(msx_shade($acc, 0.15), msx_shade($acc, -0.2)), 'series' => array(msx_shade($acc, -0.1), msx_shade($acc, -0.45)));
+        $primary = $acc; $accent = $acc; $surface = $g('card', '#404040');
+        break;
+    case '4': // MovieUI
+        $tile = $g('tile_color', '#3A0A10'); $bottom = msx_shade($tile, -0.7); $top = msx_shade($tile, -0.35);
+        $sec = array('live' => array('#E50914', '#7A0710'), 'movies' => array('#F59E0B', '#92400E'), 'series' => array('#8B5CF6', '#4C1D95'));
+        $primary = '#E50914'; $accent = '#F59E0B'; $surface = $tile;
+        break;
+    case '5': case '6': case '7':
+        $top = $g('bg_top', '#070923'); $bottom = $g('bg_bottom', '#020309');
+        $c = array($g('live_color', '#E62E2F'), $g('movies_color', '#00E676'), $g('series_color', '#FF9100'));
+        $sec = array('live' => array($c[0], msx_shade($c[0], -0.4)), 'movies' => array($c[1], msx_shade($c[1], -0.4)), 'series' => array($c[2], msx_shade($c[2], -0.4)));
+        $primary = $c[0]; $accent = $c[1]; $surface = msx_mix($bottom, '#FFFFFF', 0.10);
+        break;
+    default: // 8 BestPro
+        $bottom = $g('theme_background', '#0B1220'); $top = msx_shade($bottom, 0.10);
+        $primary = $g('theme_primary', '#3B6CF6'); $accent = $g('theme_accent', '#22C55E'); $surface = $g('theme_surface', '#131C2E');
+        $mid = msx_mix($primary, $accent, 0.5);
+        $sec = array('live' => array($primary, msx_shade($primary, -0.4)), 'movies' => array($accent, msx_shade($accent, -0.45)),
+                     'series' => array($mid, msx_shade($mid, -0.45)));
+    }
+    $name = isset($cfg['brand_name']) && $cfg['brand_name'] != '' ? (string)$cfg['brand_name'] : (defined('APP_NAME') ? APP_NAME : 'IPTV Best Pro');
+    return array(
+        'name' => $name,
+        'show_name' => !isset($cfg['show_brand_name']) || $cfg['show_brand_name'] != '0',
+        'logo' => !empty($cfg['logo']) ? (string)$cfg['logo'] : msx_logo(),
+        'bgimg' => !empty($cfg['background_image']) ? (string)$cfg['background_image'] : '',
+        'banner' => !empty($cfg['banner']) ? (string)$cfg['banner'] : '',
+        'top' => $top, 'bottom' => $bottom, 'surface' => $surface, 'primary' => $primary, 'accent' => $accent,
+        'text' => msx_hex(isset($m['theme_text']) ? $m['theme_text'] : '', '#FFFFFF'), 'sec' => $sec,
+    );
+}
+
+// Imagens geradas (SVG): fundo, cartões da tela inicial e quadrinho de canal sem logo
+function msx_img_url($kind, $params){
+    return msx_base().'/msx/img.svg?'.http_build_query(array_merge(array('k' => $kind), $params));
+}
+function msx_bg_url($th){
+    return $th['bgimg'] !== '' ? $th['bgimg'] : msx_img_url('bg', array('a' => ltrim($th['top'], '#'), 'b' => ltrim($th['bottom'], '#'), 'p' => ltrim($th['primary'], '#')));
+}
+
+function msx_svg_out($svg){
+    header('Content-Type: image/svg+xml; charset=utf-8');
+    header('Cache-Control: public, max-age=86400');
+    echo $svg;
+    exit;
+}
+function msx_svg_icon($kind){
+    $paths = array(
+        'live'    => 'M21 6h-7.59l3.29-3.29L16 2l-4 4-4-4-.71.71L10.59 6H3c-1.1 0-2 .89-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.11-.9-2-2-2zm0 14H3V8h18v12zM9 10v8l7-4z',
+        'movies'  => 'M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z',
+        'series'  => 'M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z',
+        'search'  => 'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+        'lists'   => 'M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z',
+        'account' => 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z',
+    );
+    return isset($paths[$kind]) ? $paths[$kind] : $paths['live'];
+}
+function msx_svg_text($t, $max = 60){
+    return htmlspecialchars(mb_substr(strip_tags((string)$t), 0, $max, 'UTF-8'), ENT_XML1 | ENT_QUOTES, 'UTF-8');
+}
