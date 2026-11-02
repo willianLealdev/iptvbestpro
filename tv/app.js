@@ -1045,7 +1045,7 @@
     if (IS_WIN) {
       var wv = L.video, wm = $('pvmsg');
       if (wv._wd) clearTimeout(wv._wd);
-      wv._wd = setTimeout(function () { if (!wv._played && wm && L.video === wv) { wm.textContent = 'Sem imagem após 7 s' + diagText(wv); wm.classList.remove('hide'); } }, 7000);
+      wv._wd = setTimeout(function () { if (!wv._played && wm && L.video === wv) { wm.textContent = 'Sem imagem após 15 s' + diagText(wv); wm.classList.remove('hide'); } }, 15000);
     }
     var catId = L.curCat || (L.cats && L.cats[L.catIdx] ? L.cats[L.catIdx].category_id : '');
     LS.setJ('bp_last_live', { cat: catId, sid: c.stream_id });
@@ -1057,7 +1057,7 @@
   function diagText(v) {
     if (!IS_WIN || !v) return '';
     var host = String(v._url || '').replace(/^https?:\/\//, '').split('/')[0];
-    return ' [v31 ' + (NATIVE_HLS ? 'hls-nativo=sim ' : 'hls-nativo=nao ') + 'pronto=' + v.readyState + ' rede=' + v.networkState + ' ' + (v._hls ? 'hls.js ' + (v._dbg || '') : 'nativo ' + (v.error ? 'erro ' + v.error.code + ' ' + (v.error.message || '') : '')) + ' · ' + host + ']';
+    return ' [v33 ' + (NATIVE_HLS ? 'hls-nativo=sim ' : 'hls-nativo=nao ') + 'pronto=' + v.readyState + ' rede=' + v.networkState + ' ' + (v._hls ? 'hls.js ' + (v._dbg || '') : 'nativo ' + (v.error ? 'erro ' + v.error.code + ' ' + (v.error.message || '') : '')) + ' · ' + host + ']';
   }
   function onLiveError() {
     var m = $('pvmsg'); if (!m) return;
