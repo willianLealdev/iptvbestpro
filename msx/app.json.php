@@ -61,7 +61,7 @@ case 'link':
     if ($code === '') msx_out(array('action' => 'error:Digite o código.'));
     $link = devices_link($mysqli, array('device_id' => msx_device_id($key), 'application_id' => MSX_APP_ID, 'code' => $code,
         'platform' => 'msx', 'device_model' => 'Media Station X', 'app_name' => 'IPTV Best Pro (MSX)', 'app_version' => 'MSX '.MSX_VERSION));
-    if ($link['ok']) msx_out(array('action' => '[success:'.msx_clean_text($link['msg']).'|reload:menu]'));
+    if ($link['ok']) msx_out(array('action' => '[success:'.msx_clean_text($link['msg']).'|reload]'));
     msx_out(array('action' => 'error:'.msx_clean_text($link['msg'])));
 
 case 'live_cats':
@@ -263,7 +263,7 @@ case 'reset':
         mysqli_stmt_close($st);
         if ($ids) devices_purge($mysqli, $ids);
     }
-    msx_exec('[success:Licença resetada. Digite o novo código.|reload:menu]');
+    msx_exec('[success:Licença resetada. Digite o novo código.|reload]');
 
 default:
     msx_out(msx_msg_page('Tela não encontrada', 'Volte e tente de novo.'));
