@@ -1910,4 +1910,8 @@ return array(
   'Entrar no painel' => array('pt' => 'Entrar no painel', 'en' => 'Open the panel', 'es' => 'Entrar al panel'),
   'Se você não esperava este e-mail, pode ignorá-lo.' => array('pt' => 'Se você não esperava este e-mail, pode ignorá-lo.', 'en' => 'If you were not expecting this e-mail, you can ignore it.', 'es' => 'Si no esperabas este correo, puedes ignorarlo.'),
   'Sua conta compra créditos direto com a revenda que criou você.' => array('pt' => 'Sua conta compra créditos direto com a revenda que criou você.', 'en' => 'Your account buys credits directly from the reseller who created you.', 'es' => 'Tu cuenta compra créditos directamente del revendedor que te creó.'),
+  'Resumo' => array('pt' => 'Resumo', 'en' => 'Summary', 'es' => 'Resumen'),
+  'Recebido (transferências)' => array('pt' => 'Recebido (transferências)', 'en' => 'Received (transfers)', 'es' => 'Recibido (transferencias)'),
+  'Usado em ativações' => array('pt' => 'Usado em ativações', 'en' => 'Used in activations', 'es' => 'Usado en activaciones'),
+  'Devolvido à revenda' => array('pt' => 'Devolvido à revenda', 'en' => 'Returned to reseller', 'es' => 'Devuelto al revendedor'),
 );

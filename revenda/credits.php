@@ -45,7 +45,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     rv_redirect('credits.php');
 }
 
-$orders = mysqli_query($mysqli, "SELECT * FROM tbl_credit_orders WHERE reseller_id = $rid ORDER BY id DESC LIMIT 20");
+$orders = $is_sub ? false : mysqli_query($mysqli, "SELECT * FROM tbl_credit_orders WHERE reseller_id = $rid ORDER BY id DESC LIMIT 20");
+// resumo da sub-revenda: quanto recebeu, quanto usou e quanto devolveu
+$sum = array('received' => 0, 'used' => 0, 'returned' => 0);
+if ($is_sub) {
+    $q = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT
+        COALESCE(SUM(CASE WHEN type = 'transfer_in' THEN amount ELSE 0 END),0) AS received,
+        COALESCE(-SUM(CASE WHEN type = 'activation' THEN amount ELSE 0 END),0) AS used,
+        COALESCE(-SUM(CASE WHEN type = 'transfer_out' THEN amount ELSE 0 END),0) AS returned
+        FROM tbl_reseller_credits WHERE reseller_id = $rid"));
+    if ($q) $sum = array('received' => (int)$q['received'], 'used' => (int)$q['used'], 'returned' => (int)$q['returned']);
+}
 $history = mysqli_query($mysqli, "SELECT * FROM tbl_reseller_credits WHERE reseller_id = $rid ORDER BY id DESC LIMIT 30");
 
 rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
@@ -92,10 +102,14 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
                 </div>
             <?php } ?>
         </div>
-<?php } else if ($is_sub) { $up = reseller_find($mysqli, (int)$reseller['parent_id']); ?>
+<?php } else if ($is_sub) { ?>
         <div class="rv-card p-4">
-            <h2 class="rv-title fs-5 mb-1">Como conseguir créditos</h2>
-            <p class="rv-muted mb-0">Você compra os créditos direto com a revenda que criou o seu acesso<?php echo $up ? ' (<b>'.rv_e($up['name']).'</b>)' : ''; ?>. Peça a ela e ela envia os créditos pelo painel dela. Eles aparecem aqui no seu saldo na hora.</p>
+            <h2 class="rv-title fs-5 mb-3">Resumo</h2>
+            <div class="d-grid gap-2">
+                <div class="d-flex justify-content-between"><span class="rv-muted">Recebido (transferências)</span><b><?php echo (int)$sum['received']; ?></b></div>
+                <div class="d-flex justify-content-between"><span class="rv-muted">Usado em ativações</span><b><?php echo (int)$sum['used']; ?></b></div>
+                <div class="d-flex justify-content-between"><span class="rv-muted">Devolvido à revenda</span><b><?php echo (int)$sum['returned']; ?></b></div>
+            </div>
         </div>
 <?php } else { ?>
 
@@ -162,6 +176,7 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
     </div>
 
     <div class="col-lg-7">
+        <?php if (!$is_sub) { ?>
         <div class="rv-card p-4 mb-4">
             <h2 class="rv-title fs-5 mb-3">Meus pedidos</h2>
             <?php if (mysqli_num_rows($orders) > 0) { ?>
@@ -220,6 +235,7 @@ rv_header($mysqli, $reseller, 'Créditos', 'credits'); ?>
                 <div class="rv-empty"><i class="ri-shopping-bag-line"></i>Nenhum pedido ainda.</div>
             <?php } ?>
         </div>
+        <?php } ?>
 
         <div class="rv-card p-4">
             <h2 class="rv-title fs-5 mb-3">Extrato de créditos</h2>

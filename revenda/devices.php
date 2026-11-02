@@ -201,7 +201,7 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
                 </div>
                 <p class="rv-muted small mt-2 mb-0">Se o aparelho ainda estiver ativo, o novo período é somado ao vencimento atual.</p>
                 <?php if ((int)$reseller['credits'] < CREDITS_PER_YEAR) { ?>
-                    <div class="alert alert-warning mt-3 mb-0">Você não tem créditos suficientes. <a href="credits.php">Comprar créditos</a></div>
+                    <div class="alert alert-warning mt-3 mb-0">Você não tem créditos suficientes.<?php if (!reseller_is_sub($reseller)) { ?> <a href="credits.php">Comprar créditos</a><?php } ?></div>
                 <?php } ?>
             </div>
             <div class="modal-footer">

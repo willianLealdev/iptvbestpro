@@ -178,7 +178,7 @@ function rv_header($mysqli, $reseller, $title, $active){
             <?php } ?>
         </nav>
         <div class="rv-side__foot">
-            <a href="credits.php" class="rv-side__credits"><i class="ri-coin-fill"></i><span><b><?php echo (int)$reseller['credits']; ?></b> créditos</span><i class="ri-add-circle-line ms-auto"></i></a>
+            <a href="credits.php" class="rv-side__credits"><i class="ri-coin-fill"></i><span><b><?php echo (int)$reseller['credits']; ?></b> créditos</span><?php if (!reseller_is_sub($reseller)) { ?><i class="ri-add-circle-line ms-auto"></i><?php } ?></a>
             <?php if ($rv_tg !== '') { ?>
                 <a href="<?php echo rv_e($rv_tg); ?>" target="_blank" rel="noopener" class="rv-side__tg"><i class="ri-telegram-fill"></i><span>Canal no Telegram</span></a>
             <?php } ?>
