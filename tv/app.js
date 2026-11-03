@@ -173,7 +173,11 @@
   var stage = $('stage');
 
   function fit() {
-    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    var w = window.innerWidth || 1920, h = window.innerHeight || 1080;
+    var s = Math.min(w / 1920, h / 1080);
+    // o fundo cobre a janela inteira (TV, computador, celular, tela larga); a tela 16:9 fica centralizada por cima
+    stage.style.width = Math.ceil(w / s) + 'px';
+    stage.style.height = Math.ceil(h / s) + 'px';
     stage.style.webkitTransform = 'scale(' + s + ')';
     stage.style.transform = 'scale(' + s + ')';
   }
