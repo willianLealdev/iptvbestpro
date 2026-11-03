@@ -254,6 +254,28 @@ function trial_used_by_customer($mysqli, $customer_id){
 }
 
 // O aparelho já teve teste grátis ou qualquer ativação antes? (o teste é só para aparelho novo)
+/**
+ * Teste de 7 dias liberado pelo PAINEL (revenda ou admin): só vale a regra exata do aparelho (mesmo ID).
+ * As regras por internet/modelo (trial_used_by_device) existem para o teste do site, onde ninguém responde pelo cliente;
+ * numa revenda, vários clientes dividem o mesmo IP e o mesmo modelo de TV, e isso bloqueava teste de quem nunca usou.
+ */
+function trial_used_by_exact_device($mysqli, $device){
+    if (!$device) return false;
+    if ((int)$device['activated_at'] > 0 || (int)$device['expires_at'] > 0) return true;
+    $stmt = mysqli_prepare($mysqli, "SELECT COUNT(*) AS num FROM tbl_trial_devices WHERE device_id = ?");
+    mysqli_stmt_bind_param($stmt, 's', $device['device_id']);
+    mysqli_stmt_execute($stmt);
+    $t = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    if ((int)$t['num'] > 0) return true;
+    $stmt = mysqli_prepare($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions s JOIN tbl_devices d ON d.id = s.device_pk WHERE s.is_trial = 1 AND d.device_id = ?");
+    mysqli_stmt_bind_param($stmt, 's', $device['device_id']);
+    mysqli_stmt_execute($stmt);
+    $r = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    return (int)$r['num'] > 0;
+}
+
 function trial_used_by_device($mysqli, $device){
     if (!$device) return false;
     if ((int)$device['activated_at'] > 0 || (int)$device['expires_at'] > 0) return true;

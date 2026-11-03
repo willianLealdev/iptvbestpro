@@ -545,7 +545,7 @@ function devices_activate($mysqli, $device_pk, $package_key, $charge_reseller_id
         require_once(__DIR__.'/customer_helper.php');
         customers_migrate($mysqli);
         if (devices_activation_status($device) == 'active') return array('ok' => false, 'msg' => 'O teste grátis é só para aparelho sem ativação. Este aparelho já está ativo.');
-        if (trial_used_by_device($mysqli, $device)) return array('ok' => false, 'msg' => 'Este aparelho já usou o teste grátis ou já foi ativado antes. Ative com um pacote de 1 ano.');
+        if (trial_used_by_exact_device($mysqli, $device)) return array('ok' => false, 'msg' => 'Este aparelho já usou o teste grátis ou já foi ativado antes. Ative com um pacote de 1 ano.');
     }
     $credits = 0;
     $activated_by = $actor_label;
