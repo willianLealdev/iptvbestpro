@@ -68,7 +68,7 @@
       p_audio: 'Áudio e legenda', p_diag: 'Diagnóstico', p_back: 'Voltar', p_h_bar: 'barra do vídeo', p_h_pick: 'escolhe', p_h_ok: 'confirma', p_h_exit: 'sai',
       p_no_tracks: 'Este vídeo não tem outras faixas de áudio ou legenda.', p_audio_h: 'Áudio', p_sub_h: 'Legenda', p_sub_off: 'Sem legenda', p_diag_h: 'Diagnóstico do vídeo',
       d_res: 'Resolução', d_time: 'Tempo', d_buf: 'Buffer à frente', d_state: 'Estado', d_drop: 'Quadros perdidos', d_player: 'Player', d_host: 'Servidor', d_dev: 'Aparelho', d_err: 'Erro',
-      l_list: 'Ao vivo', l_fav: 'Favoritar', l_favd: 'Favorito', l_epg: 'Programação', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recarregar', l_live: 'AO VIVO', l_h_open: 'abre', l_h_zap: 'troca de canal', l_h_close: 'fecha', l_none: 'Ainda não há canal anterior.',
+      l_list: 'Ao vivo', l_fav: 'Favoritar', l_favd: 'Favorito', l_epg: 'Programação', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recarregar', l_live: 'AO VIVO', l_h_open: 'abre', l_h_zap: 'mostra / esconde', l_h_close: 'fecha', l_none: 'Ainda não há canal anterior.',
       ch_off: 'Este canal está fora do ar no momento.', play_err: 'Não foi possível reproduzir agora.',
       connected: 'Conectado', language: 'Idioma', device: 'ID do aparelho', support: 'Suporte', refresh: 'Atualizar lista', about: 'Sobre',
       refresh_ok: 'Lista atualizada.', sup_talk: 'Fale com a sua revenda para ter suporte.', sup_none: 'Contato de suporte não cadastrado.',
@@ -105,7 +105,7 @@
       p_audio: 'Audio & subtitles', p_diag: 'Diagnostics', p_back: 'Back', p_h_bar: 'video bar', p_h_pick: 'choose', p_h_ok: 'confirm', p_h_exit: 'exit',
       p_no_tracks: 'This video has no other audio or subtitle tracks.', p_audio_h: 'Audio', p_sub_h: 'Subtitles', p_sub_off: 'No subtitles', p_diag_h: 'Video diagnostics',
       d_res: 'Resolution', d_time: 'Time', d_buf: 'Buffer ahead', d_state: 'State', d_drop: 'Dropped frames', d_player: 'Player', d_host: 'Server', d_dev: 'Device', d_err: 'Error',
-      l_list: 'Live', l_fav: 'Favorite', l_favd: 'Favorited', l_epg: 'Guide', l_prev: 'Previous channel', l_zoom: 'Zoom', l_reload: 'Reload', l_live: 'LIVE', l_h_open: 'open', l_h_zap: 'change channel', l_h_close: 'close', l_none: 'No previous channel yet.',
+      l_list: 'Live', l_fav: 'Favorite', l_favd: 'Favorited', l_epg: 'Guide', l_prev: 'Previous channel', l_zoom: 'Zoom', l_reload: 'Reload', l_live: 'LIVE', l_h_open: 'open', l_h_zap: 'show / hide', l_h_close: 'close', l_none: 'No previous channel yet.',
       ch_off: 'This channel is offline right now.', play_err: 'Could not play right now.',
       connected: 'Connected', language: 'Language', device: 'Device ID', support: 'Support', refresh: 'Refresh list', about: 'About',
       refresh_ok: 'List refreshed.', sup_talk: 'Contact your reseller for support.', sup_none: 'No support contact registered.',
@@ -142,7 +142,7 @@
       p_audio: 'Audio y subtítulos', p_diag: 'Diagnóstico', p_back: 'Volver', p_h_bar: 'barra del video', p_h_pick: 'elige', p_h_ok: 'confirma', p_h_exit: 'sale',
       p_no_tracks: 'Este video no tiene otras pistas de audio o subtítulos.', p_audio_h: 'Audio', p_sub_h: 'Subtítulos', p_sub_off: 'Sin subtítulos', p_diag_h: 'Diagnóstico del video',
       d_res: 'Resolución', d_time: 'Tiempo', d_buf: 'Buffer adelante', d_state: 'Estado', d_drop: 'Cuadros perdidos', d_player: 'Reproductor', d_host: 'Servidor', d_dev: 'Dispositivo', d_err: 'Error',
-      l_list: 'En vivo', l_fav: 'Favorito', l_favd: 'Favorito ★', l_epg: 'Programación', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recargar', l_live: 'EN VIVO', l_h_open: 'abre', l_h_zap: 'cambia de canal', l_h_close: 'cierra', l_none: 'Aún no hay canal anterior.',
+      l_list: 'En vivo', l_fav: 'Favorito', l_favd: 'Favorito ★', l_epg: 'Programación', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recargar', l_live: 'EN VIVO', l_h_open: 'abre', l_h_zap: 'muestra / oculta', l_h_close: 'cierra', l_none: 'Aún no hay canal anterior.',
       ch_off: 'Este canal está fuera del aire ahora.', play_err: 'No fue posible reproducir ahora.',
       connected: 'Conectado', language: 'Idioma', device: 'ID del dispositivo', support: 'Soporte', refresh: 'Actualizar lista', about: 'Acerca de',
       refresh_ok: 'Lista actualizada.', sup_talk: 'Habla con tu revendedor para tener soporte.', sup_none: 'Contacto de soporte no registrado.',
@@ -292,9 +292,18 @@
     if (best) focus(best);
   }
   function keyName(e) {
-    var c = e.keyCode;
+    var c = e.keyCode || e.which;
     if (c === 37) return 'left'; if (c === 38) return 'up'; if (c === 39) return 'right'; if (c === 40) return 'down';
-    if (c === 13) return 'ok';
+    if (c === 13 || c === 29443 || c === 65376) return 'ok';
+    // controles e TVs que não mandam o código numérico: usa o nome da tecla
+    var kn = e.key || e.code || '';
+    if (!c || c === 229 || c === 0 || c === 255) {
+      if (kn === 'ArrowLeft') return 'left'; if (kn === 'ArrowUp') return 'up'; if (kn === 'ArrowRight') return 'right'; if (kn === 'ArrowDown') return 'down';
+      if (kn === 'Enter' || kn === 'Select' || kn === 'NumpadEnter') return 'ok';
+      if (kn === 'GoBack' || kn === 'BrowserBack' || kn === 'XF86Back' || kn === 'Escape' || kn === 'Backspace' || kn === 'Back') return 'back';
+      if (kn === 'MediaPlayPause' || kn === 'MediaPlay' || kn === 'MediaPause') return 'playpause';
+      if (kn === 'ChannelUp' || kn === 'PageUp') return 'chup'; if (kn === 'ChannelDown' || kn === 'PageDown') return 'chdown';
+    }
     if (c === 461 || c === 10009 || c === 27 || (c === 8 && !(document.activeElement && document.activeElement.tagName === 'INPUT'))) return 'back';
     if (c === 33 || c === 427) return 'chup'; if (c === 34 || c === 428) return 'chdown';
     if (c === 415 || c === 19 || c === 10252 || c === 179) return 'playpause';
@@ -327,7 +336,15 @@
       return;
     }
     if (S.keys && S.keys(k) === true) return;
-    if (k === 'up' || k === 'down' || k === 'left' || k === 'right') move(k);
+    if (k === 'up' || k === 'down' || k === 'left' || k === 'right') {
+      var before = focused;
+      move(k);
+      // setas em qualquer controle: ◀ volta e ▶ avança quando a seta não leva a outro item (listas e categorias)
+      if (focused === before) {
+        if (k === 'left' && S.back && S.back !== confirmExit) S.back();
+        else if (k === 'right' && focused && focused.classList && (focused.classList.contains('row') || focused.classList.contains('poster'))) activate(focused);
+      }
+    }
     else if (k === 'ok') { if (focused) activate(focused); }
     else if (k === 'back') { if (S.back) S.back(); }
   }, true);
@@ -1018,9 +1035,12 @@
     if (L.skipResume) { L.skipResume = false; return; }
     if (L.playIdx >= 0) return;
     var last = LS.getJ('bp_last_live', null);
-    if (!last) return;
-    if (last.cat === '_fav') { openChans(favList('live'), last.sid, '_fav'); return; }
-    for (var i = 0; i < L.cats.length; i++) if (String(L.cats[i].category_id) === String(last.cat)) { L.catIdx = i; openCat(i, last.sid); return; }
+    if (last) {
+      if (last.cat === '_fav' && favList('live').length) { openChans(favList('live'), last.sid, '_fav'); return; }
+      for (var i = 0; i < L.cats.length; i++) if (String(L.cats[i].category_id) === String(last.cat)) { L.catIdx = i; openCat(i, last.sid); return; }
+    }
+    // primeira vez (ou o último canal não existe mais): abre a primeira categoria e já toca o primeiro canal no quadrado
+    if (L.cats && L.cats.length) openCat(0);
   }
   function openCat(i, startSid) {
     L.catIdx = i; L.catName = L.cats[i].category_name;
@@ -1209,11 +1229,13 @@
       return true;
     }
     if (L.full) {
-      if (k === 'up') { zap(-1); return true; }
-      if (k === 'down') { zap(1); return true; }
+      if (k === 'up') { showLbar(); return true; }
+      if (k === 'down') { hideLbar(); return true; }
       if (!lshow) {
-        // barra escondida: OK ou ◀ ▶ abrem a barra; Voltar sai da tela cheia
-        if (k === 'ok' || k === 'left' || k === 'right') { showLbar(); return true; }
+        // barra escondida: ◀ canal anterior, ▶ próximo canal, OK abre a barra, Voltar sai da tela cheia
+        if (k === 'left') { zap(-1); return true; }
+        if (k === 'right') { zap(1); return true; }
+        if (k === 'ok') { showLbar(); return true; }
         if (k === 'back') { setFull(false); return true; }
         return true;
       }
@@ -1562,7 +1584,7 @@
         mode = 'btn'; showBar(); return true;
       }
       if (k === 'up') { mode = 'seek'; showBar(); return true; }
-      if (k === 'down') { mode = 'btn'; showBar(); return true; }
+      if (k === 'down') { if (mode === 'seek') { mode = 'btn'; showBar(); } else { var bb = $('pbar'); if (bb) bb.classList.add('hide'); } return true; }
       if (mode === 'seek') {
         if (k === 'right') { seekBy(10); return true; }
         if (k === 'left') { seekBy(-10); return true; }
