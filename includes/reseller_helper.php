@@ -443,7 +443,8 @@ function credit_order_status_badge($status){
 
 // 1 ano = 1 crédito, 2 anos = 2 créditos... até MAX_ACTIVATION_YEARS. Sem vitalício.
 function devices_packages(){
-    $packages = array();
+    // Teste grátis de 7 dias (sem crédito): só uma vez por aparelho, em aparelho que nunca foi ativado. Sempre o primeiro da lista.
+    $packages = array('trial' => array('label' => 'Teste grátis 7 dias', 'years' => 0, 'days' => 7, 'credits' => 0, 'class' => 'pk-trial'));
     for ($y = 1; $y <= MAX_ACTIVATION_YEARS; $y++) {
         $packages[$y.'y'] = array(
             'label'   => $y == 1 ? '1 Ano' : $y.' Anos',
@@ -453,8 +454,6 @@ function devices_packages(){
             'class'   => 'pk-year',
         );
     }
-    // Teste grátis de 7 dias (sem crédito): só uma vez por aparelho, em aparelho que nunca foi ativado
-    $packages['trial'] = array('label' => 'Teste grátis 7 dias', 'years' => 0, 'days' => 7, 'credits' => 0, 'class' => 'pk-trial');
     return $packages;
 }
 
