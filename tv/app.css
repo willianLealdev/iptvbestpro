@@ -142,6 +142,32 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050814; c
 .player { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: #000; z-index: 70; }
 .player video { width: 100%; height: 100%; }
 .player .bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 80px 60px; background: linear-gradient(transparent, rgba(0, 0, 0, .85)); }
+/* controles do filme/série: topo (voltar + título) e embaixo (barra, tempos, botões, dicas) */
+.pbar { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.pbar:before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 260px; background: linear-gradient(rgba(0, 0, 0, .8), transparent); }
+.pbar:after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 560px; background: linear-gradient(transparent, rgba(0, 0, 0, .88)); }
+.ptop { position: absolute; left: 90px; right: 90px; top: 56px; z-index: 2; display: -webkit-flex; display: flex; align-items: center; }
+.pbk { width: 96px; height: 96px; border-radius: 50%; background: rgba(40, 40, 46, .92); border: 2px solid rgba(255, 255, 255, .25); display: -webkit-flex; display: flex; align-items: center; justify-content: center; margin-right: 32px; cursor: pointer; }
+.pkind { font-size: 26px; letter-spacing: 3px; color: #aeb6c9; font-weight: 700; }
+.pbar .ttl { font-size: 54px; font-weight: 800; margin-top: 4px; }
+.pbot { position: absolute; left: 70px; right: 70px; bottom: 36px; z-index: 2; }
+.pbot .track { position: relative; height: 12px; border-radius: 6px; background: rgba(255, 255, 255, .28); margin-top: 0; cursor: pointer; }
+.pbot .track i { display: block; height: 100%; width: 0; background: #f5b82e; border-radius: 6px; }
+.pbot .track b { position: absolute; top: 50%; left: 0; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .6); }
+.pbot .track.on { height: 18px; box-shadow: 0 0 0 4px rgba(245, 184, 46, .55); }
+.tms { display: -webkit-flex; display: flex; justify-content: space-between; font-size: 28px; color: #c8d0e4; margin-top: 12px; }
+.pctl { display: -webkit-flex; display: flex; justify-content: center; margin-top: 12px; }
+.pbt { width: 220px; text-align: center; font-size: 26px; font-weight: 600; cursor: pointer; }
+.pbc { width: 104px; height: 104px; border-radius: 50%; margin: 0 auto 10px; background: rgba(48, 50, 58, .92); display: -webkit-flex; display: flex; align-items: center; justify-content: center; }
+.pbt.on .pbc { background: #fff; color: #111; width: 128px; height: 128px; margin-top: -12px; margin-bottom: 4px; }
+.pbt.on .pbc svg { fill: #111; width: 56px; height: 56px; }
+.pbt.on { color: #fff; }
+.phint { text-align: center; font-size: 24px; color: #aeb6c9; margin-top: 18px; }
+.phint kbd { display: inline-block; background: rgba(60, 62, 70, .95); border-radius: 8px; padding: 2px 14px; margin: 0 4px; font-family: inherit; font-weight: 700; color: #fff; }
+.diag { font-size: 28px; margin: 18px 0 26px; min-width: 760px; }
+.diag div { display: -webkit-flex; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, .12); }
+.diag span { color: #9aa6c2; margin-right: 40px; }
+
 .player .ttl { font-size: 38px; font-weight: 700; }
 .player .track { height: 10px; background: rgba(255, 255, 255, .25); border-radius: 5px; margin-top: 24px; }
 .player .track i { display: block; height: 100%; width: 0; background: #f5b82e; border-radius: 5px; }

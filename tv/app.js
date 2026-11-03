@@ -64,7 +64,11 @@
       live: 'TV AO VIVO', movies: 'FILMES', series: 'SÉRIES', playlist: 'PLAYLIST', settings: 'CONFIGURAÇÕES',
       categories: 'Categorias', loading: 'Carregando…', empty: 'Nada por aqui.', now: 'Agora', next: 'A seguir', no_epg: 'Sem guia de programação',
       play: 'Assistir', resume: 'Continuar de', from_start: 'Do início', continue: 'Continuar assistindo', season: 'Temporada',
-      reconnect: 'Reconectando…', ch_off: 'Este canal está fora do ar no momento.', play_err: 'Não foi possível reproduzir agora.',
+      reconnect: 'Reconectando…', p_movie: 'FILME', p_series: 'SÉRIE', p_pause: 'Pausar', p_play: 'Assistir', p_aspect: 'Tela', p_asp_contain: 'Original', p_asp_cover: 'Preencher', p_asp_fill: 'Esticar',
+      p_audio: 'Áudio e legenda', p_diag: 'Diagnóstico', p_back: 'Voltar', p_h_bar: 'barra do vídeo', p_h_pick: 'escolhe', p_h_ok: 'confirma', p_h_exit: 'sai',
+      p_no_tracks: 'Este vídeo não tem outras faixas de áudio ou legenda.', p_audio_h: 'Áudio', p_sub_h: 'Legenda', p_sub_off: 'Sem legenda', p_diag_h: 'Diagnóstico do vídeo',
+      d_res: 'Resolução', d_time: 'Tempo', d_buf: 'Buffer à frente', d_state: 'Estado', d_drop: 'Quadros perdidos', d_player: 'Player', d_host: 'Servidor', d_dev: 'Aparelho', d_err: 'Erro',
+      ch_off: 'Este canal está fora do ar no momento.', play_err: 'Não foi possível reproduzir agora.',
       connected: 'Conectado', language: 'Idioma', device: 'ID do aparelho', support: 'Suporte', refresh: 'Atualizar lista', about: 'Sobre',
       refresh_ok: 'Lista atualizada.', sup_talk: 'Fale com a sua revenda para ter suporte.', sup_none: 'Contato de suporte não cadastrado.',
       sup_scan: 'Aponte a câmera do celular para abrir o WhatsApp', close: 'Fechar',
@@ -96,7 +100,11 @@
       live: 'LIVE TV', movies: 'MOVIES', series: 'SERIES', playlist: 'PLAYLIST', settings: 'SETTINGS',
       categories: 'Categories', loading: 'Loading…', empty: 'Nothing here.', now: 'Now', next: 'Next', no_epg: 'No program guide',
       play: 'Play', resume: 'Resume from', from_start: 'From start', continue: 'Continue watching', season: 'Season',
-      reconnect: 'Reconnecting…', ch_off: 'This channel is offline right now.', play_err: 'Could not play right now.',
+      reconnect: 'Reconnecting…', p_movie: 'MOVIE', p_series: 'SERIES', p_pause: 'Pause', p_play: 'Play', p_aspect: 'Screen', p_asp_contain: 'Original', p_asp_cover: 'Fill', p_asp_fill: 'Stretch',
+      p_audio: 'Audio & subtitles', p_diag: 'Diagnostics', p_back: 'Back', p_h_bar: 'video bar', p_h_pick: 'choose', p_h_ok: 'confirm', p_h_exit: 'exit',
+      p_no_tracks: 'This video has no other audio or subtitle tracks.', p_audio_h: 'Audio', p_sub_h: 'Subtitles', p_sub_off: 'No subtitles', p_diag_h: 'Video diagnostics',
+      d_res: 'Resolution', d_time: 'Time', d_buf: 'Buffer ahead', d_state: 'State', d_drop: 'Dropped frames', d_player: 'Player', d_host: 'Server', d_dev: 'Device', d_err: 'Error',
+      ch_off: 'This channel is offline right now.', play_err: 'Could not play right now.',
       connected: 'Connected', language: 'Language', device: 'Device ID', support: 'Support', refresh: 'Refresh list', about: 'About',
       refresh_ok: 'List refreshed.', sup_talk: 'Contact your reseller for support.', sup_none: 'No support contact registered.',
       sup_scan: 'Point your phone camera at the code to open WhatsApp', close: 'Close',
@@ -128,7 +136,11 @@
       live: 'TV EN VIVO', movies: 'PELÍCULAS', series: 'SERIES', playlist: 'PLAYLIST', settings: 'CONFIGURACIÓN',
       categories: 'Categorías', loading: 'Cargando…', empty: 'Nada por aquí.', now: 'Ahora', next: 'A continuación', no_epg: 'Sin guía de programación',
       play: 'Ver', resume: 'Continuar desde', from_start: 'Desde el inicio', continue: 'Seguir viendo', season: 'Temporada',
-      reconnect: 'Reconectando…', ch_off: 'Este canal está fuera del aire ahora.', play_err: 'No fue posible reproducir ahora.',
+      reconnect: 'Reconectando…', p_movie: 'PELÍCULA', p_series: 'SERIE', p_pause: 'Pausar', p_play: 'Ver', p_aspect: 'Pantalla', p_asp_contain: 'Original', p_asp_cover: 'Llenar', p_asp_fill: 'Estirar',
+      p_audio: 'Audio y subtítulos', p_diag: 'Diagnóstico', p_back: 'Volver', p_h_bar: 'barra del video', p_h_pick: 'elige', p_h_ok: 'confirma', p_h_exit: 'sale',
+      p_no_tracks: 'Este video no tiene otras pistas de audio o subtítulos.', p_audio_h: 'Audio', p_sub_h: 'Subtítulos', p_sub_off: 'Sin subtítulos', p_diag_h: 'Diagnóstico del video',
+      d_res: 'Resolución', d_time: 'Tiempo', d_buf: 'Buffer adelante', d_state: 'Estado', d_drop: 'Cuadros perdidos', d_player: 'Reproductor', d_host: 'Servidor', d_dev: 'Dispositivo', d_err: 'Error',
+      ch_off: 'Este canal está fuera del aire ahora.', play_err: 'No fue posible reproducir ahora.',
       connected: 'Conectado', language: 'Idioma', device: 'ID del dispositivo', support: 'Soporte', refresh: 'Actualizar lista', about: 'Acerca de',
       refresh_ok: 'Lista actualizada.', sup_talk: 'Habla con tu revendedor para tener soporte.', sup_none: 'Contacto de soporte no registrado.',
       sup_scan: 'Apunta la cámara del celular al código para abrir WhatsApp', close: 'Cerrar',
@@ -162,6 +174,12 @@
     search: '<path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>',
     star: '<path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>',
     play: '<path d="M8 5v14l11-7z"/>',
+    pbk: '<path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>',
+    rew: '<path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>',
+    ff: '<path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>',
+    pause: '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>',
+    aspect: '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>',
+    cc: '<path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-8 7H9.5v-.5h-2v3h2V13H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V13H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/>',
     gauge: '<path d="M12 4a9 9 0 0 0-7.8 13.5l1.7-1A7 7 0 1 1 19 12h2a9 9 0 0 0-9-8zm4.2 3.4l-5 5.6a1.5 1.5 0 1 0 2.1 2.1l5.6-5-2.7-2.7zM3 19h18v2H3z"/>'
   };
 
@@ -1362,14 +1380,85 @@
     else setLastPlay({ kind: 'series', id: id, title: title, ext: ext || 'mp4', series: series || null });
     var back = S.back;
     var p = document.createElement('div'); p.className = 'player'; p.id = 'player';
-    p.innerHTML = '<video id="pvid" autoplay></video><div class="msg hide" id="pmsg"></div><div class="bar" id="pbar"><div class="ttl">' + esc(title) + '</div><div class="track"><i id="ptr"></i></div><div class="tm" id="ptm"></div></div>';
+    // barra de controles: voltar/avançar 10 s, pausar, formato da tela, áudio e legenda, diagnóstico
+    var ASP = ['contain', 'cover', 'fill'], aspI = Math.max(0, ASP.indexOf(LS.get('bp_aspect', 'contain')));
+    var BTNS = ['rew', 'pp', 'ff', 'asp', 'aud', 'diag'], sel = 1, mode = 'btn';
+    function aspLabel() { return t('p_aspect') + ': ' + t('p_asp_' + ASP[aspI]); }
+    function pbt(b, ic, lb) { return '<div class="pbt" data-b="' + b + '"><div class="pbc">' + svg(ic, 44) + '</div><span>' + esc(lb) + '</span></div>'; }
+    p.innerHTML = '<video id="pvid" autoplay playsinline></video><div class="msg hide" id="pmsg"></div>' +
+      '<div class="pbar" id="pbar"><div class="ptop"><div class="pbk" id="pbk">' + svg(IC.pbk, 44) + '</div><div><div class="pkind">' + esc(type === 'movie' ? t('p_movie') : t('p_series')) + '</div><div class="ttl">' + esc(title) + '</div></div></div>' +
+      '<div class="pbot"><div class="track" id="ptk"><i id="ptr"></i><b id="pth"></b></div><div class="tms"><span id="ptc">0:00</span><span id="ptd">--:--</span></div>' +
+      '<div class="pctl">' + pbt('rew', IC.rew, '10 s') + pbt('pp', IC.pause, t('p_pause')) + pbt('ff', IC.ff, '10 s') + pbt('asp', IC.aspect, aspLabel()) + pbt('aud', IC.cc, t('p_audio')) + pbt('diag', IC.info, t('p_diag')) + '</div>' +
+      '<div class="phint"><kbd>&#9650;</kbd> ' + esc(t('p_h_bar')) + ' &middot; <kbd>&#9664;</kbd><kbd>&#9654;</kbd> ' + esc(t('p_h_pick')) + ' &middot; <kbd>OK</kbd> ' + esc(t('p_h_ok')) + ' &middot; <kbd>' + esc(t('p_back')) + '</kbd> ' + esc(t('p_h_exit')) + '</div></div></div>';
     stage.appendChild(p);
     PL.video = $('pvid'); PL.type = type; PL.id = id;
+    PL.video.style.objectFit = ASP[aspI];
     var key = 'bp_pos_' + (type === 'movie' ? 'm_' : 'e_') + id, seeked = false, errs = 0, barT = null;
-    function showBar() { $('pbar').classList.remove('hide'); clearTimeout(barT); barT = setTimeout(function () { var b = $('pbar'); if (b) b.classList.add('hide'); }, 4000); }
+    function paintSel() {
+      var els = p.querySelectorAll('.pbt');
+      for (var i = 0; i < els.length; i++) { if (i === sel && mode === 'btn') els[i].classList.add('on'); else els[i].classList.remove('on'); }
+      var tk = $('ptk'); if (tk) { if (mode === 'seek') tk.classList.add('on'); else tk.classList.remove('on'); }
+    }
+    function paintPlay() {
+      var b = p.querySelector('[data-b=pp]'); if (!b || !PL.video) return;
+      var paused = PL.video.paused;
+      b.querySelector('.pbc').innerHTML = svg(paused ? IC.play : IC.pause, 44);
+      b.querySelector('span').textContent = paused ? t('p_play') : t('p_pause');
+    }
+    function showBar() { var b = $('pbar'); if (!b) return; b.classList.remove('hide'); paintSel(); clearTimeout(barT); barT = setTimeout(function () { var b2 = $('pbar'); if (b2 && !(PL.video && PL.video.paused)) b2.classList.add('hide'); }, 5000); }
+    function seekBy(d) { var v = PL.video; if (!v) return; try { v.currentTime = Math.max(0, Math.min(v.duration || 1e9, v.currentTime + d)); } catch (e) {} showBar(); }
+    function togglePlay() { var v = PL.video; if (!v) return; if (v.paused) { var pr = v.play(); if (pr && pr.catch) pr.catch(function () {}); } else v.pause(); showBar(); }
+    function cycleAspect() {
+      aspI = (aspI + 1) % ASP.length; LS.set('bp_aspect', ASP[aspI]);
+      if (PL.video) PL.video.style.objectFit = ASP[aspI];
+      var l = p.querySelector('[data-b=asp] span'); if (l) l.textContent = aspLabel();
+      showBar();
+    }
+    // áudio e legenda (hls.js, faixas nativas do navegador ou da TV); sem faixas extras, só avisa
+    function tracksModal() {
+      var v = PL.video, h = v && v._hls, au = [], su = [], i, x;
+      if (h && h.audioTracks && h.audioTracks.length > 1) for (i = 0; i < h.audioTracks.length; i++) { x = h.audioTracks[i]; au.push({ l: x.name || x.lang || (t('p_audio_h') + ' ' + (i + 1)), on: h.audioTrack === i, set: (function (n) { return function () { h.audioTrack = n; }; })(i) }); }
+      else if (v && v.audioTracks && v.audioTracks.length > 1) for (i = 0; i < v.audioTracks.length; i++) { x = v.audioTracks[i]; au.push({ l: x.label || x.language || (t('p_audio_h') + ' ' + (i + 1)), on: !!x.enabled, set: (function (n) { return function () { for (var j = 0; j < v.audioTracks.length; j++) v.audioTracks[j].enabled = (j === n); }; })(i) }); }
+      if (h && h.subtitleTracks && h.subtitleTracks.length) { su.push({ l: t('p_sub_off'), on: h.subtitleTrack < 0, set: function () { h.subtitleTrack = -1; } }); for (i = 0; i < h.subtitleTracks.length; i++) { x = h.subtitleTracks[i]; su.push({ l: x.name || x.lang || (t('p_sub_h') + ' ' + (i + 1)), on: h.subtitleTrack === i, set: (function (n) { return function () { h.subtitleTrack = n; }; })(i) }); } }
+      else if (v && v.textTracks && v.textTracks.length) { var tt = []; for (i = 0; i < v.textTracks.length; i++) if (v.textTracks[i].kind === 'subtitles' || v.textTracks[i].kind === 'captions') tt.push(v.textTracks[i]); if (tt.length) { su.push({ l: t('p_sub_off'), on: tt.every(function (z) { return z.mode !== 'showing'; }), set: function () { tt.forEach(function (z) { z.mode = 'disabled'; }); } }); tt.forEach(function (z, n) { su.push({ l: z.label || z.language || (t('p_sub_h') + ' ' + (n + 1)), on: z.mode === 'showing', set: function () { tt.forEach(function (w) { w.mode = (w === z ? 'showing' : 'disabled'); }); } }); }); } }
+      if (!au.length && !su.length) { toast(t('p_no_tracks')); return; }
+      var all = au.concat(su), html = '', n = 0;
+      if (au.length) { html += '<h2>' + esc(t('p_audio_h')) + '</h2>'; au.forEach(function (o) { html += '<div class="btn f' + (o.on ? ' gold' : '') + '" data-a="T" data-i="' + (n++) + '">' + esc(o.l) + '</div>'; }); }
+      if (su.length) { html += '<h2>' + esc(t('p_sub_h')) + '</h2>'; su.forEach(function (o) { html += '<div class="btn f' + (o.on ? ' gold' : '') + '" data-a="T" data-i="' + (n++) + '">' + esc(o.l) + '</div>'; }); }
+      modal(html, { T: function (el, k) { var o = all[+k]; if (o) o.set(); closeModal(); } });
+    }
+    function diagModal() {
+      var v = PL.video; if (!v) return;
+      var buf = 0; try { for (var i = 0; i < v.buffered.length; i++) if (v.buffered.start(i) <= v.currentTime && v.buffered.end(i) >= v.currentTime) buf = v.buffered.end(i) - v.currentTime; } catch (e) {}
+      var q = null; try { q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : null; } catch (e) {}
+      var host = String(url).replace(/^[a-z]+:\/\//i, '').split('/')[0];
+      var rows = [[t('d_res'), (v.videoWidth || 0) + ' x ' + (v.videoHeight || 0)], [t('d_time'), fmtTime(v.currentTime) + ' / ' + (v.duration ? fmtTime(v.duration) : '--:--')],
+        [t('d_buf'), Math.round(buf) + ' s'], [t('d_state'), 'ready ' + v.readyState + ' / net ' + v.networkState], [t('d_drop'), q ? q.droppedVideoFrames + ' / ' + q.totalVideoFrames : '-'],
+        [t('d_player'), v._hls ? 'hls.js' : 'native'], [t('d_host'), host + ' (' + (ext || 'mp4') + ')'], [t('d_dev'), PLATFORM_NAME + ' v' + VER]];
+      if (v.error) rows.push([t('d_err'), v.error.code + (v.error.message ? ' ' + v.error.message : '')]);
+      var h = '<h2>' + esc(t('p_diag_h')) + '</h2><div class="diag">';
+      for (var r = 0; r < rows.length; r++) h += '<div><span>' + esc(rows[r][0]) + '</span><b>' + esc(rows[r][1]) + '</b></div>';
+      modal(h + '</div><div class="btn f" data-a="_close">' + esc(t('close')) + '</div>');
+    }
+    function runBtn(b) {
+      if (b === 'rew') seekBy(-10); else if (b === 'ff') seekBy(10); else if (b === 'pp') togglePlay();
+      else if (b === 'asp') cycleAspect(); else if (b === 'aud') tracksModal(); else if (b === 'diag') diagModal();
+    }
+    // mouse / toque nos botões, na barra de progresso e no botão voltar
+    p.addEventListener('click', function (e) {
+      var el = e.target, b = null; while (el && el !== p) { if (el.getAttribute && el.getAttribute('data-b')) { b = el.getAttribute('data-b'); break; } if (el.id === 'pbk' || el.id === 'ptk') break; el = el.parentNode; }
+      e.stopPropagation();
+      if (b) { sel = BTNS.indexOf(b); mode = 'btn'; runBtn(b); return; }
+      if (el && el.id === 'pbk') { if (S.back) S.back(); return; }
+      if (el && el.id === 'ptk') { var v = PL.video, r = el.getBoundingClientRect(); if (v && v.duration && r.width) { try { v.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * v.duration; } catch (er) {} } showBar(); return; }
+      showBar();
+    }, true);
+    p.addEventListener('mousemove', function () { showBar(); });
     function save() { var v = PL.video; if (!v || !v.duration) return; if (v.currentTime > v.duration - 15) LS.del(key); else if (v.currentTime > 5) LS.set(key, String(Math.floor(v.currentTime))); }
     PL.video.addEventListener('loadedmetadata', function () { if (startAt > 0 && !seeked) { seeked = true; try { PL.video.currentTime = startAt; } catch (e) {} } });
-    PL.video.addEventListener('timeupdate', function () { var v = PL.video; if (!v || !v.duration) return; $('ptr').style.width = (v.currentTime / v.duration * 100) + '%'; $('ptm').textContent = fmtTime(v.currentTime) + ' / ' + fmtTime(v.duration); });
+    PL.video.addEventListener('timeupdate', function () { var v = PL.video; if (!v || !v.duration || !$('ptr')) return; var pc = (v.currentTime / v.duration * 100) + '%'; $('ptr').style.width = pc; $('pth').style.left = pc; $('ptc').textContent = fmtTime(v.currentTime); $('ptd').textContent = fmtTime(v.duration); });
+    PL.video.addEventListener('pause', paintPlay); PL.video.addEventListener('play', paintPlay);
+    PL.video.addEventListener('pause', function () { showBar(); });
     PL.video.addEventListener('playing', function () { S.failing = false; $('pmsg').classList.add('hide'); });
     function verr() {
       // página https: o vídeo do filme/episódio termina num endereço http que o navegador bloqueia → o painel entrega o vídeo por https (tv_vod.php)
@@ -1388,10 +1477,26 @@
     function close() { save(); clearInterval(PL.saveT); unsetSrc(PL.video); try { PL.video.pause(); PL.video.removeAttribute('src'); PL.video.load(); } catch (e) {} var el = $('player'); if (el) el.parentNode.removeChild(el); PL.video = null; S.keys = prevKeys; S.back = back; }
     S.keys = function (k) {
       var v = PL.video; if (!v) return true;
+      var bar = $('pbar'), shown = bar && !bar.classList.contains('hide');
       if (k === 'back') { close(); return true; }
-      if (k === 'ok' || k === 'playpause') { if (v.paused) v.play(); else v.pause(); showBar(); return true; }
-      if (k === 'right') { try { v.currentTime = Math.min(v.duration || 1e9, v.currentTime + 10); } catch (e) {} showBar(); return true; }
-      if (k === 'left') { try { v.currentTime = Math.max(0, v.currentTime - 10); } catch (e) {} showBar(); return true; }
+      if (k === 'playpause') { togglePlay(); return true; }
+      if (!shown) {
+        // barra escondida: OK pausa, ◀ ▶ pulam 10 s, o resto só mostra a barra
+        if (k === 'ok') { togglePlay(); return true; }
+        if (k === 'right') { seekBy(10); return true; }
+        if (k === 'left') { seekBy(-10); return true; }
+        mode = 'btn'; showBar(); return true;
+      }
+      if (k === 'up') { mode = 'seek'; showBar(); return true; }
+      if (k === 'down') { mode = 'btn'; showBar(); return true; }
+      if (mode === 'seek') {
+        if (k === 'right') { seekBy(10); return true; }
+        if (k === 'left') { seekBy(-10); return true; }
+        if (k === 'ok') { mode = 'btn'; showBar(); return true; }
+      }
+      if (k === 'right') { sel = Math.min(BTNS.length - 1, sel + 1); showBar(); return true; }
+      if (k === 'left') { sel = Math.max(0, sel - 1); showBar(); return true; }
+      if (k === 'ok') { runBtn(BTNS[sel]); return true; }
       showBar(); return true;
     };
   }
