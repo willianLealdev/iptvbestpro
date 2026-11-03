@@ -32,7 +32,7 @@ function msx_expiry($device){
 }
 function msx_msg($title, $text){
     $th = msx_th();
-    return array('type' => 'list', 'headline' => $title, 'background' => msx_bg_url($th),
+    return array('type' => 'list', 'headline' => $title, 'background' => msx_bg_url($th), 'transparent' => 1,
         'template' => array('type' => 'default', 'layout' => '0,0,12,2', 'color' => msx_rgba($th['surface'], 0.9)),
         'items' => array(array('title' => $title, 'titleFooter' => $text)));
 }
@@ -54,7 +54,7 @@ function msx_rows($headline, $items, $icon = 'chevron-right'){
         if (!empty($i['action'])) $it['action'] = $i['action'];
         $out[] = $it;
     }
-    return array('type' => 'list', 'headline' => $headline, 'background' => msx_bg_url($th),
+    return array('type' => 'list', 'headline' => $headline, 'background' => msx_bg_url($th), 'transparent' => 1,
         'template' => array('type' => 'control', 'layout' => '0,0,12,1', 'color' => msx_rgba($th['surface'], 0.92)), 'items' => $out);
 }
 
@@ -65,8 +65,8 @@ function msx_category_grid($headline, $items, $icon){
     foreach ($items as $i) {
         $out[] = array('label' => $i['label'], 'icon' => !empty($i['icon']) ? $i['icon'] : $icon, 'action' => $i['action']);
     }
-    return array('type' => 'pages', 'headline' => $headline, 'background' => msx_bg_url($th),
-        'template' => array('type' => 'button', 'layout' => '0,0,4,1', 'color' => msx_rgba($th['surface'], 0.92)), 'items' => $out);
+    return array('type' => 'pages', 'headline' => $headline, 'background' => msx_bg_url($th), 'transparent' => 1,
+        'template' => array('type' => 'control', 'layout' => '0,0,6,1', 'color' => msx_rgba($th['surface'], 0.92)), 'items' => $out);
 }
 
 // Canais, filmes e séries: grade de cartões com imagem (canal sem logo ganha um quadrinho com as iniciais)
@@ -77,7 +77,7 @@ function msx_card_grid($headline, $items, $layout){
         $img = !empty($i['image']) ? $i['image'] : msx_img_url('tile', array('t' => $i['title'], 's' => ltrim($th['surface'], '#'), 'a' => ltrim($th['primary'], '#')));
         $out[] = array('title' => $i['title'], 'image' => $img, 'action' => $i['action']);
     }
-    return array('type' => 'pages', 'headline' => $headline, 'background' => msx_bg_url($th),
+    return array('type' => 'pages', 'headline' => $headline, 'background' => msx_bg_url($th), 'transparent' => 1,
         'template' => array('type' => 'default', 'layout' => $layout, 'imageFiller' => 'smart', 'color' => msx_rgba($th['surface'], 0.92)), 'items' => $out);
 }
 
@@ -102,7 +102,7 @@ function msx_home_page($key, $th){
     $items[] = array('type' => 'default', 'layout' => '0,'.$y2.',4,'.$h2, 'image' => $small('search', 'Buscar'), 'imageFiller' => 'cover', 'action' => 'content:'.msx_u('search_menu', $key));
     $items[] = array('type' => 'default', 'layout' => '4,'.$y2.',4,'.$h2, 'image' => $small('lists', 'Minhas listas'), 'imageFiller' => 'cover', 'action' => 'content:'.msx_u('pls', $key));
     $items[] = array('type' => 'default', 'layout' => '8,'.$y2.',4,'.$h2, 'image' => $small('account', 'Conta'), 'imageFiller' => 'cover', 'action' => 'content:'.msx_u('account', $key));
-    return array('type' => 'pages', 'headline' => $th['show_name'] ? $th['name'] : '', 'background' => msx_bg_url($th), 'pages' => array(array('items' => $items)));
+    return array('type' => 'pages', 'headline' => $th['show_name'] ? $th['name'] : '', 'background' => msx_bg_url($th), 'transparent' => 1, 'pages' => array(array('items' => $items)));
 }
 
 switch ($route) {
@@ -122,7 +122,7 @@ case 'menu':
     }
     $items[] = array('id' => 'account', 'icon' => 'account-circle', 'label' => 'Conta', 'data' => msx_u('account', $key));
     $root = array('name' => $th['name'], 'version' => MSX_VERSION, 'logo' => $th['logo'], 'logoSize' => 'small',
-        'headline' => $th['name'], 'background' => msx_bg_url($th), 'cache' => false, 'reuse' => false, 'style' => 'default', 'menu' => $items);
+        'headline' => $th['name'], 'background' => msx_bg_url($th), 'transparent' => 1, 'cache' => false, 'reuse' => false, 'style' => 'default', 'menu' => $items);
     if ($th['show_name']) $root['extension'] = $th['name'];
     msx_out($root);
 
@@ -325,7 +325,7 @@ case 'account':
     if ($device && $device['owner'] != '') $items[] = array('title' => 'Revenda', 'titleFooter' => devices_owner_name($mysqli, $device));
     if (!empty($sp['whatsapp'])) $items[] = array('title' => 'Suporte (WhatsApp)', 'titleFooter' => (string)$sp['whatsapp']);
     $items[] = array('title' => 'ID deste aparelho', 'titleFooter' => substr($key, 0, 24));
-    $page = array('type' => 'list', 'headline' => 'Conta', 'background' => msx_bg_url($th),
+    $page = array('type' => 'list', 'headline' => 'Conta', 'background' => msx_bg_url($th), 'transparent' => 1,
         'template' => array('type' => 'default', 'layout' => '0,0,12,1', 'color' => msx_rgba($th['surface'], 0.92)), 'items' => $items);
     if ($device && $device['owner'] != '') {
         $page['items'][] = array('type' => 'control', 'label' => 'Resetar licença (usar outro código)', 'icon' => 'restore', 'action' => 'execute:'.msx_u('reset', $key));
