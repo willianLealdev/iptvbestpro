@@ -65,7 +65,7 @@
       categories: 'Categorias', loading: 'Carregando…', empty: 'Nada por aqui.', now: 'Agora', next: 'A seguir', no_epg: 'Sem guia de programação',
       play: 'Assistir', resume: 'Continuar de', from_start: 'Do início', continue: 'Continuar assistindo', season: 'Temporada',
       reconnect: 'Reconectando…', p_movie: 'FILME', p_series: 'SÉRIE', p_pause: 'Pausar', p_play: 'Assistir', p_aspect: 'Tela', p_asp_contain: 'Original', p_asp_cover: 'Preencher', p_asp_fill: 'Esticar',
-      p_audio: 'Áudio e legenda', p_diag: 'Diagnóstico', p_back: 'Voltar', p_h_bar: 'barra do vídeo', p_h_pick: 'escolhe', p_h_ok: 'confirma', p_h_exit: 'sai',
+      p_audio: 'Áudio e legenda', p_diag: 'Diagnóstico', p_back: 'Voltar', p_h_bar: 'mostra / esconde', p_h_pick: 'escolhe', p_h_ok: 'confirma', p_h_exit: 'sai',
       p_no_tracks: 'Este vídeo não tem outras faixas de áudio ou legenda.', p_audio_h: 'Áudio', p_sub_h: 'Legenda', p_sub_off: 'Sem legenda', p_diag_h: 'Diagnóstico do vídeo',
       d_res: 'Resolução', d_time: 'Tempo', d_buf: 'Buffer à frente', d_state: 'Estado', d_drop: 'Quadros perdidos', d_player: 'Player', d_host: 'Servidor', d_dev: 'Aparelho', d_err: 'Erro',
       l_list: 'Ao vivo', l_fav: 'Favoritar', l_favd: 'Favorito', l_epg: 'Programação', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recarregar', l_live: 'AO VIVO', l_h_open: 'abre', l_h_zap: 'mostra / esconde', l_h_close: 'fecha', l_none: 'Ainda não há canal anterior.',
@@ -102,7 +102,7 @@
       categories: 'Categories', loading: 'Loading…', empty: 'Nothing here.', now: 'Now', next: 'Next', no_epg: 'No program guide',
       play: 'Play', resume: 'Resume from', from_start: 'From start', continue: 'Continue watching', season: 'Season',
       reconnect: 'Reconnecting…', p_movie: 'MOVIE', p_series: 'SERIES', p_pause: 'Pause', p_play: 'Play', p_aspect: 'Screen', p_asp_contain: 'Original', p_asp_cover: 'Fill', p_asp_fill: 'Stretch',
-      p_audio: 'Audio & subtitles', p_diag: 'Diagnostics', p_back: 'Back', p_h_bar: 'video bar', p_h_pick: 'choose', p_h_ok: 'confirm', p_h_exit: 'exit',
+      p_audio: 'Audio & subtitles', p_diag: 'Diagnostics', p_back: 'Back', p_h_bar: 'show / hide', p_h_pick: 'choose', p_h_ok: 'confirm', p_h_exit: 'exit',
       p_no_tracks: 'This video has no other audio or subtitle tracks.', p_audio_h: 'Audio', p_sub_h: 'Subtitles', p_sub_off: 'No subtitles', p_diag_h: 'Video diagnostics',
       d_res: 'Resolution', d_time: 'Time', d_buf: 'Buffer ahead', d_state: 'State', d_drop: 'Dropped frames', d_player: 'Player', d_host: 'Server', d_dev: 'Device', d_err: 'Error',
       l_list: 'Live', l_fav: 'Favorite', l_favd: 'Favorited', l_epg: 'Guide', l_prev: 'Previous channel', l_zoom: 'Zoom', l_reload: 'Reload', l_live: 'LIVE', l_h_open: 'open', l_h_zap: 'show / hide', l_h_close: 'close', l_none: 'No previous channel yet.',
@@ -139,7 +139,7 @@
       categories: 'Categorías', loading: 'Cargando…', empty: 'Nada por aquí.', now: 'Ahora', next: 'A continuación', no_epg: 'Sin guía de programación',
       play: 'Ver', resume: 'Continuar desde', from_start: 'Desde el inicio', continue: 'Seguir viendo', season: 'Temporada',
       reconnect: 'Reconectando…', p_movie: 'PELÍCULA', p_series: 'SERIE', p_pause: 'Pausar', p_play: 'Ver', p_aspect: 'Pantalla', p_asp_contain: 'Original', p_asp_cover: 'Llenar', p_asp_fill: 'Estirar',
-      p_audio: 'Audio y subtítulos', p_diag: 'Diagnóstico', p_back: 'Volver', p_h_bar: 'barra del video', p_h_pick: 'elige', p_h_ok: 'confirma', p_h_exit: 'sale',
+      p_audio: 'Audio y subtítulos', p_diag: 'Diagnóstico', p_back: 'Volver', p_h_bar: 'muestra / oculta', p_h_pick: 'elige', p_h_ok: 'confirma', p_h_exit: 'sale',
       p_no_tracks: 'Este video no tiene otras pistas de audio o subtítulos.', p_audio_h: 'Audio', p_sub_h: 'Subtítulos', p_sub_off: 'Sin subtítulos', p_diag_h: 'Diagnóstico del video',
       d_res: 'Resolución', d_time: 'Tiempo', d_buf: 'Buffer adelante', d_state: 'Estado', d_drop: 'Cuadros perdidos', d_player: 'Reproductor', d_host: 'Servidor', d_dev: 'Dispositivo', d_err: 'Error',
       l_list: 'En vivo', l_fav: 'Favorito', l_favd: 'Favorito ★', l_epg: 'Programación', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recargar', l_live: 'EN VIVO', l_h_open: 'abre', l_h_zap: 'muestra / oculta', l_h_close: 'cierra', l_none: 'Aún no hay canal anterior.',
@@ -1486,7 +1486,7 @@
       '<div class="pbar" id="pbar"><div class="ptop"><div class="pbk" id="pbk">' + svg(IC.pbk, 44) + '</div><div><div class="pkind">' + esc(type === 'movie' ? t('p_movie') : t('p_series')) + '</div><div class="ttl">' + esc(title) + '</div></div></div>' +
       '<div class="pbot"><div class="track" id="ptk"><i id="ptr"></i><b id="pth"></b></div><div class="tms"><span id="ptc">0:00</span><span id="ptd">--:--</span></div>' +
       '<div class="pctl">' + pbt('rew', IC.rew, '10 s') + pbt('pp', IC.pause, t('p_pause')) + pbt('ff', IC.ff, '10 s') + pbt('asp', IC.aspect, aspLabel()) + pbt('aud', IC.cc, t('p_audio')) + pbt('diag', IC.info, t('p_diag')) + '</div>' +
-      '<div class="phint"><kbd>&#9650;</kbd> ' + esc(t('p_h_bar')) + ' &middot; <kbd>&#9664;</kbd><kbd>&#9654;</kbd> ' + esc(t('p_h_pick')) + ' &middot; <kbd>OK</kbd> ' + esc(t('p_h_ok')) + ' &middot; <kbd>' + esc(t('p_back')) + '</kbd> ' + esc(t('p_h_exit')) + '</div></div></div>';
+      '<div class="phint"><kbd>&#9650;</kbd><kbd>&#9660;</kbd> ' + esc(t('p_h_bar')) + ' &middot; <kbd>&#9664;</kbd><kbd>&#9654;</kbd> ' + esc(t('p_h_pick')) + ' &middot; <kbd>OK</kbd> ' + esc(t('p_h_ok')) + ' &middot; <kbd>&#9664;</kbd><kbd>&#9664;</kbd> / <kbd>' + esc(t('p_back')) + '</kbd> ' + esc(t('p_h_exit')) + '</div></div></div>';
     stage.appendChild(p);
     PL.video = $('pvid'); PL.type = type; PL.id = id;
     PL.video.style.objectFit = ASP[aspI];
@@ -1575,24 +1575,19 @@
     S.keys = function (k) {
       var v = PL.video; if (!v) return true;
       var bar = $('pbar'), shown = bar && !bar.classList.contains('hide');
+      mode = 'btn';
       if (k === 'back') { close(); return true; }
       if (k === 'playpause') { togglePlay(); return true; }
+      if (k === 'up') { showBar(); return true; }
+      if (k === 'down') { if (bar) bar.classList.add('hide'); return true; }
       if (!shown) {
-        // barra escondida: OK pausa, ◀ ▶ pulam 10 s, o resto só mostra a barra
+        // barra escondida: ◀ ou ▶ só mostram os botões (◀ já marca o primeiro, então ◀ de novo sai); OK pausa/continua
         if (k === 'ok') { togglePlay(); return true; }
-        if (k === 'right') { seekBy(10); return true; }
-        if (k === 'left') { seekBy(-10); return true; }
-        mode = 'btn'; showBar(); return true;
-      }
-      if (k === 'up') { mode = 'seek'; showBar(); return true; }
-      if (k === 'down') { if (mode === 'seek') { mode = 'btn'; showBar(); } else { var bb = $('pbar'); if (bb) bb.classList.add('hide'); } return true; }
-      if (mode === 'seek') {
-        if (k === 'right') { seekBy(10); return true; }
-        if (k === 'left') { seekBy(-10); return true; }
-        if (k === 'ok') { mode = 'btn'; showBar(); return true; }
+        if (k === 'left') { sel = 0; showBar(); return true; }
+        showBar(); return true;
       }
       if (k === 'right') { sel = Math.min(BTNS.length - 1, sel + 1); showBar(); return true; }
-      if (k === 'left') { sel = Math.max(0, sel - 1); showBar(); return true; }
+      if (k === 'left') { if (sel <= 0) { close(); return true; } sel = sel - 1; showBar(); return true; }
       if (k === 'ok') { runBtn(BTNS[sel]); return true; }
       showBar(); return true;
     };
