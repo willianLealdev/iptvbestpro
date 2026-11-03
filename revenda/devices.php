@@ -201,12 +201,12 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
                 </div>
                 <p class="rv-muted small mt-2 mb-0">Se o aparelho ainda estiver ativo, o novo período é somado ao vencimento atual.</p>
                 <?php if ((int)$reseller['credits'] < CREDITS_PER_YEAR) { ?>
-                    <div class="alert alert-warning mt-3 mb-0">Você não tem créditos suficientes.<?php if (!reseller_is_sub($reseller)) { ?> <a href="credits.php">Comprar créditos</a><?php } ?></div>
+                    <div class="alert alert-warning mt-3 mb-0">Você não tem créditos para os pacotes pagos.<?php if (!reseller_is_sub($reseller)) { ?> <a href="credits.php">Comprar créditos</a><?php } ?> O <b>teste grátis de 7 dias</b> continua disponível (não gasta crédito).</div>
                 <?php } ?>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" name="activate_submit" class="btn rv-btn-green" <?php if ((int)$reseller['credits'] < CREDITS_PER_YEAR) { echo 'disabled'; } ?>>Confirmar ativação</button>
+                <button type="submit" name="activate_submit" class="btn rv-btn-green">Confirmar ativação</button>
             </div>
         </form>
     </div>
