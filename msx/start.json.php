@@ -8,7 +8,7 @@ require_once(__DIR__."/msx_lib.php");
 msx_out(array(
     'name' => 'IPTV Best Pro',
     'version' => MSX_VERSION,
-    'parameter' => 'menu:'.msx_base().'/msx/app.json?r=menu&id={ID}',
+    'parameter' => 'menu:'.msx_base().'/msx/app.json?r=open',
     'welcome' => 'none',
     'launcher' => array('icon' => 'blank', 'image' => msx_logo(), 'color' => 'msx-black-soft'),
 ));

@@ -7,6 +7,16 @@ require_once(__DIR__."/msx_lib.php");
 
 resellers_migrate($mysqli);
 $route = isset($_GET['r']) ? (string)$_GET['r'] : 'menu';
+// Entrada padrão: o MSX abre o app de TV completo do IPTV Best Pro (o mesmo das TVs LG/Samsung) em tela cheia.
+// Página http (tv.iptvbestpro.com): o vídeo http dos servidores toca. Página https: só serve servidores com https.
+if ($route === 'open') {
+    $https = !empty($_SERVER['HTTP_X_FORWARDED_PROTO']) ? strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https' : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $app = ($https ? 'https://iptvbestpro.com' : 'http://tv.iptvbestpro.com').'/tv/?p=msx';
+    msx_out(array('name' => 'IPTV Best Pro', 'version' => MSX_VERSION, 'headline' => 'IPTV Best Pro', 'logo' => msx_logo(), 'logoSize' => 'small',
+        'action' => 'link:'.$app, 'menu' => array(array('id' => 'open', 'icon' => 'tv', 'label' => 'Abrir IPTV Best Pro', 'focus' => true,
+            'data' => array('type' => 'list', 'headline' => 'IPTV Best Pro', 'template' => array('type' => 'control', 'layout' => '0,0,12,1', 'color' => 'msx-glass'),
+                'items' => array(array('label' => 'Abrir o aplicativo', 'icon' => 'tv', 'action' => 'link:'.$app)))))));
+}
 $key = msx_key();
 
 // O MSX troca {ID} por um código da instalação dele. Sem isso (MSX antigo), não dá para saber qual é o aparelho.
