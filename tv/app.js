@@ -350,6 +350,7 @@
   }, true);
   // Windows: botão Voltar na tela (mouse), botão "voltar" do mouse e rodinha para subir/descer nas listas
   function goBack() { if (S.modal) closeModal(); else if (S.back) S.back(); }
+  if (PLATFORM !== 'windows') document.documentElement.className += ' tvhw';
   if (IS_WIN) {
     document.documentElement.className += ' win';
     var wb = document.createElement('div');
@@ -999,7 +1000,7 @@
   function live() {
     L.mode = 'cats'; L.full = false; L.err = 0; L.curCat = '';
     show(header(t('live')) + '<div class="left"><div class="scroll" id="lst"></div></div>' +
-      '<div class="right"><div class="pvbox" id="pv"><video id="vid" autoplay></video><div class="pvmsg hide" id="pvmsg"></div></div>' +
+      '<div class="right"><div class="pvbox" id="pv"><video id="vid" autoplay playsinline></video><div class="pvmsg hide" id="pvmsg"></div></div>' +
       '<div class="epg" id="epg"></div><div class="hint">' + esc(t('fav_live_hint')) + '</div></div>', {
       keys: liveKeys, back: liveBack,
       acts: {
@@ -1545,7 +1546,7 @@
       var el = e.target, b = null; while (el && el !== p) { if (el.getAttribute && el.getAttribute('data-b')) { b = el.getAttribute('data-b'); break; } if (el.id === 'pbk' || el.id === 'ptk') break; el = el.parentNode; }
       e.stopPropagation();
       if (b) { sel = BTNS.indexOf(b); mode = 'btn'; runBtn(b); return; }
-      if (el && el.id === 'pbk') { if (S.back) S.back(); return; }
+      if (el && el.id === 'pbk') { close(); return; }
       if (el && el.id === 'ptk') { var v = PL.video, r = el.getBoundingClientRect(); if (v && v.duration && r.width) { try { v.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * v.duration; } catch (er) {} } showBar(); return; }
       showBar();
     }, true);
