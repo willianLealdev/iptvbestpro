@@ -68,6 +68,7 @@
       p_audio: 'Áudio e legenda', p_diag: 'Diagnóstico', p_back: 'Voltar', p_h_bar: 'barra do vídeo', p_h_pick: 'escolhe', p_h_ok: 'confirma', p_h_exit: 'sai',
       p_no_tracks: 'Este vídeo não tem outras faixas de áudio ou legenda.', p_audio_h: 'Áudio', p_sub_h: 'Legenda', p_sub_off: 'Sem legenda', p_diag_h: 'Diagnóstico do vídeo',
       d_res: 'Resolução', d_time: 'Tempo', d_buf: 'Buffer à frente', d_state: 'Estado', d_drop: 'Quadros perdidos', d_player: 'Player', d_host: 'Servidor', d_dev: 'Aparelho', d_err: 'Erro',
+      l_list: 'Ao vivo', l_fav: 'Favoritar', l_favd: 'Favorito', l_epg: 'Programação', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recarregar', l_live: 'AO VIVO', l_h_open: 'abre', l_h_zap: 'troca de canal', l_h_close: 'fecha', l_none: 'Ainda não há canal anterior.',
       ch_off: 'Este canal está fora do ar no momento.', play_err: 'Não foi possível reproduzir agora.',
       connected: 'Conectado', language: 'Idioma', device: 'ID do aparelho', support: 'Suporte', refresh: 'Atualizar lista', about: 'Sobre',
       refresh_ok: 'Lista atualizada.', sup_talk: 'Fale com a sua revenda para ter suporte.', sup_none: 'Contato de suporte não cadastrado.',
@@ -104,6 +105,7 @@
       p_audio: 'Audio & subtitles', p_diag: 'Diagnostics', p_back: 'Back', p_h_bar: 'video bar', p_h_pick: 'choose', p_h_ok: 'confirm', p_h_exit: 'exit',
       p_no_tracks: 'This video has no other audio or subtitle tracks.', p_audio_h: 'Audio', p_sub_h: 'Subtitles', p_sub_off: 'No subtitles', p_diag_h: 'Video diagnostics',
       d_res: 'Resolution', d_time: 'Time', d_buf: 'Buffer ahead', d_state: 'State', d_drop: 'Dropped frames', d_player: 'Player', d_host: 'Server', d_dev: 'Device', d_err: 'Error',
+      l_list: 'Live', l_fav: 'Favorite', l_favd: 'Favorited', l_epg: 'Guide', l_prev: 'Previous channel', l_zoom: 'Zoom', l_reload: 'Reload', l_live: 'LIVE', l_h_open: 'open', l_h_zap: 'change channel', l_h_close: 'close', l_none: 'No previous channel yet.',
       ch_off: 'This channel is offline right now.', play_err: 'Could not play right now.',
       connected: 'Connected', language: 'Language', device: 'Device ID', support: 'Support', refresh: 'Refresh list', about: 'About',
       refresh_ok: 'List refreshed.', sup_talk: 'Contact your reseller for support.', sup_none: 'No support contact registered.',
@@ -140,6 +142,7 @@
       p_audio: 'Audio y subtítulos', p_diag: 'Diagnóstico', p_back: 'Volver', p_h_bar: 'barra del video', p_h_pick: 'elige', p_h_ok: 'confirma', p_h_exit: 'sale',
       p_no_tracks: 'Este video no tiene otras pistas de audio o subtítulos.', p_audio_h: 'Audio', p_sub_h: 'Subtítulos', p_sub_off: 'Sin subtítulos', p_diag_h: 'Diagnóstico del video',
       d_res: 'Resolución', d_time: 'Tiempo', d_buf: 'Buffer adelante', d_state: 'Estado', d_drop: 'Cuadros perdidos', d_player: 'Reproductor', d_host: 'Servidor', d_dev: 'Dispositivo', d_err: 'Error',
+      l_list: 'En vivo', l_fav: 'Favorito', l_favd: 'Favorito ★', l_epg: 'Programación', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recargar', l_live: 'EN VIVO', l_h_open: 'abre', l_h_zap: 'cambia de canal', l_h_close: 'cierra', l_none: 'Aún no hay canal anterior.',
       ch_off: 'Este canal está fuera del aire ahora.', play_err: 'No fue posible reproducir ahora.',
       connected: 'Conectado', language: 'Idioma', device: 'ID del dispositivo', support: 'Soporte', refresh: 'Actualizar lista', about: 'Acerca de',
       refresh_ok: 'Lista actualizada.', sup_talk: 'Habla con tu revendedor para tener soporte.', sup_none: 'Contacto de soporte no registrado.',
@@ -175,6 +178,8 @@
     star: '<path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>',
     play: '<path d="M8 5v14l11-7z"/>',
     pbk: '<path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>',
+    cal: '<path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-1V1h-2zm3 18H5V8h14v11z"/>',
+    undo: '<path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>',
     rew: '<path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>',
     ff: '<path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>',
     pause: '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>',
@@ -1062,6 +1067,8 @@
   }
   function startLive() {
     var c = L.playList[L.playIdx]; if (!c || !L.video) return;
+    if (L.curCh && String(L.curCh.stream_id) !== String(c.stream_id)) L.prevCh = L.curCh; // para o botão "Canal anterior"
+    L.curCh = c;
     L.video._triedHls = false;
     setSrc(L.video, liveUrl(c), onLiveError);
     if (IS_WIN) {
@@ -1073,7 +1080,7 @@
     LS.setJ('bp_last_live', { cat: catId, sid: c.stream_id });
     setLastPlay({ kind: 'live', cat: catId, sid: c.stream_id, name: c.name, icon: c.stream_icon || '', list: catId === '_search' ? L.playList.slice(0, 80) : null });
     markPlaying(); loadEpg(c);
-    if (L.full) zapBanner((L.playIdx + 1) + '  ·  ' + c.name);
+    if (L.full) { zapBanner((L.playIdx + 1) + '  ·  ' + c.name); lbSync(); }
   }
   // Windows: mostra o motivo da falha na tela (ajuda a achar o problema)
   function diagText(v) {
@@ -1112,7 +1119,66 @@
     L.full = on;
     var pv = $('pv'); if (!pv) return;
     pv.classList.toggle('full', on);
-    if (on && L.playList[L.playIdx]) zapBanner((L.playIdx + 1) + '  ·  ' + L.playList[L.playIdx].name);
+    if (on) { buildLbar(); if (L.playList[L.playIdx]) zapBanner((L.playIdx + 1) + '  ·  ' + L.playList[L.playIdx].name); }
+    else removeLbar();
+  }
+  /* barra de controles da TV ao vivo em tela cheia: lista, favoritar, programação, canal anterior, zoom, recarregar */
+  var LB = ['list', 'fav', 'epg', 'prev', 'zoom', 'reload'], lsel = 0, lshow = false, lbT = null, LASP = ['contain', 'cover', 'fill'], lAsp = Math.max(0, LASP.indexOf(LS.get('bp_laspect', 'contain')));
+  function lAspTxt() { return lAsp === 0 ? '100%' : t('p_asp_' + LASP[lAsp]); }
+  function lbtn(b, ic, lb, sub) { return '<div class="pbt" data-lb="' + b + '"><div class="pbc">' + svg(ic, 44) + '</div><span>' + esc(lb) + '</span><small>' + (sub ? esc(sub) : '&nbsp;') + '</small></div>'; }
+  function lbarBtns() {
+    var c = L.playList[L.playIdx], fav = !!c && isFav('live', c);
+    return lbtn('list', IC.list, t('l_list')) + lbtn('fav', IC.star, fav ? t('l_favd') : t('l_fav')) + lbtn('epg', IC.cal, t('l_epg')) +
+      lbtn('prev', IC.undo, t('l_prev'), L.prevCh ? L.prevCh.name : '') + lbtn('zoom', IC.aspect, t('l_zoom'), lAspTxt()) + lbtn('reload', IC.sync, t('l_reload'));
+  }
+  function lbPaint() {
+    var els = document.querySelectorAll('#lbar .pbt');
+    for (var i = 0; i < els.length; i++) { if (i === lsel) els[i].classList.add('on'); else els[i].classList.remove('on'); }
+  }
+  function lbSync() { var b = $('lbar'); if (!b) return; var c = b.querySelector('.pctl'); if (c) c.innerHTML = lbarBtns(); lbPaint(); }
+  function buildLbar() {
+    removeLbar();
+    var pv = $('pv'); if (!pv) return;
+    var b = document.createElement('div'); b.id = 'lbar'; b.className = 'lbar hide';
+    b.innerHTML = '<div class="pctl">' + lbarBtns() + '</div><div class="phint"><b class="lv">&#9679; ' + esc(t('l_live')) + '</b> <kbd>&#9664;</kbd><kbd>&#9654;</kbd> ' + esc(t('p_h_pick')) + ' &middot; <kbd>OK</kbd> ' + esc(t('l_h_open')) +
+      ' &middot; <kbd>&#9650;</kbd><kbd>&#9660;</kbd> ' + esc(t('l_h_zap')) + ' &middot; <kbd>' + esc(t('p_back')) + '</kbd> ' + esc(t('l_h_close')) + '</div>';
+    pv.appendChild(b);
+    lsel = 0; lshow = false;
+    if (L.video) L.video.style.objectFit = LASP[lAsp];
+    b.addEventListener('click', function (e) {
+      var el = e.target; while (el && el !== b && !(el.getAttribute && el.getAttribute('data-lb'))) el = el.parentNode;
+      e.stopPropagation();
+      if (el && el !== b) { lsel = LB.indexOf(el.getAttribute('data-lb')); lbRun(LB[lsel]); } else showLbar();
+    }, true);
+    pv.addEventListener('mousemove', function () { if (L.full) showLbar(); });
+  }
+  function removeLbar() { clearTimeout(lbT); lshow = false; var b = $('lbar'); if (b && b.parentNode) b.parentNode.removeChild(b); if (L.video) L.video.style.objectFit = ''; }
+  function showLbar() { var b = $('lbar'); if (!b) return; b.classList.remove('hide'); lshow = true; lbPaint(); clearTimeout(lbT); lbT = setTimeout(hideLbar, 6000); }
+  function hideLbar() { var b = $('lbar'); if (b) b.classList.add('hide'); lshow = false; }
+  function epgModal() {
+    var c = L.playList[L.playIdx]; if (!c) return;
+    modal('<h2>' + esc(c.name) + '</h2><div class="diag"><div><span>' + esc(t('loading')) + '</span></div></div><div class="btn f" data-a="_close">' + esc(t('close')) + '</div>');
+    xt('get_short_epg', { stream_id: c.stream_id, limit: 8 }, function (err, j) {
+      var box = document.querySelector('.modal .diag'); if (!box) return;
+      var l = j && j.epg_listings ? j.epg_listings : [];
+      if (!l.length) { box.innerHTML = '<div><span>' + esc(t('no_epg')) + '</span></div>'; return; }
+      var h = '';
+      for (var i = 0; i < l.length; i++) h += '<div><span>' + hhmm(+l[i].start_timestamp) + ' &ndash; ' + hhmm(+l[i].stop_timestamp) + '</span><b>' + esc(unb64(l[i].title)) + '</b></div>';
+      box.innerHTML = h;
+    });
+  }
+  function lbRun(b) {
+    var c = L.playList[L.playIdx];
+    if (b === 'list') { setFull(false); return; }
+    if (b === 'fav') { if (c) favToggle('live', c); lbSync(); showLbar(); return; }
+    if (b === 'epg') { hideLbar(); epgModal(); return; }
+    if (b === 'prev') {
+      if (!L.prevCh) { toast(t('l_none')); return; }
+      for (var i = 0; i < L.playList.length; i++) if (String(L.playList[i].stream_id) === String(L.prevCh.stream_id)) { L.playIdx = i; L.err = 0; startLive(); showLbar(); return; }
+      toast(t('l_none')); return;
+    }
+    if (b === 'zoom') { lAsp = (lAsp + 1) % LASP.length; LS.set('bp_laspect', LASP[lAsp]); if (L.video) L.video.style.objectFit = LASP[lAsp]; lbSync(); showLbar(); return; }
+    if (b === 'reload') { L.err = 0; startLive(); showLbar(); return; }
   }
   var zapT = null, digits = '', digitT = null;
   function zapBanner(txt) {
@@ -1145,14 +1211,22 @@
     if (L.full) {
       if (k === 'up') { zap(-1); return true; }
       if (k === 'down') { zap(1); return true; }
-      if (k === 'ok') { zapBanner((L.playIdx + 1) + '  ·  ' + L.playList[L.playIdx].name); return true; }
-      if (k === 'back') { setFull(false); return true; }
+      if (!lshow) {
+        // barra escondida: OK ou ◀ ▶ abrem a barra; Voltar sai da tela cheia
+        if (k === 'ok' || k === 'left' || k === 'right') { showLbar(); return true; }
+        if (k === 'back') { setFull(false); return true; }
+        return true;
+      }
+      if (k === 'left') { lsel = Math.max(0, lsel - 1); showLbar(); return true; }
+      if (k === 'right') { lsel = Math.min(LB.length - 1, lsel + 1); showLbar(); return true; }
+      if (k === 'ok') { lbRun(LB[lsel]); return true; }
+      if (k === 'back') { hideLbar(); return true; }
       return true;
     }
     return false;
   }
   function liveBack() { if (L.mode === 'chans') { L.curCat = ''; L.mode = 'cats'; if (L.cats) renderCats(); else { stopPreview(); home(); } } else { stopPreview(); home(); } }
-  function stopPreview() { if (L.video) { unsetSrc(L.video); try { L.video.pause(); L.video.removeAttribute('src'); L.video.load(); } catch (e) {} L.video = null; } L.playIdx = -1; L.full = false; }
+  function stopPreview() { if (L.video) { unsetSrc(L.video); try { L.video.pause(); L.video.removeAttribute('src'); L.video.load(); } catch (e) {} L.video = null; } L.playIdx = -1; L.full = false; removeLbar(); }
 
   /* ---------------- favoritos e continuar assistindo ---------------- */
   // Favoritos ficam no aparelho, por lista (trocar de lista apaga). kind: live | movie | series

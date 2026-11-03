@@ -164,6 +164,12 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050814; c
 .pbt.on { color: #fff; }
 .phint { text-align: center; font-size: 24px; color: #aeb6c9; margin-top: 18px; }
 .phint kbd { display: inline-block; background: rgba(60, 62, 70, .95); border-radius: 8px; padding: 2px 14px; margin: 0 4px; font-family: inherit; font-weight: 700; color: #fff; }
+/* barra da TV ao vivo em tela cheia */
+.lbar { position: absolute; left: 0; right: 0; bottom: 0; padding: 150px 70px 40px; background: linear-gradient(transparent, rgba(0, 0, 0, .9)); z-index: 5; }
+.lbar .pbt { width: 250px; }
+.lbar .pbt small { display: block; font-size: 20px; font-weight: 500; color: #9aa6c2; margin-top: 2px; height: 26px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 8px; }
+.lbar .phint { margin-top: 10px; }
+.lbar .lv { color: #ff5a5a; font-size: 32px; margin-right: 38px; letter-spacing: 1px; }
 .diag { font-size: 28px; margin: 18px 0 26px; min-width: 760px; }
 .diag div { display: -webkit-flex; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, .12); }
 .diag span { color: #9aa6c2; margin-right: 40px; }
