@@ -12,7 +12,7 @@
   try {
     var q = location.search, ua = navigator.userAgent;
     if (location.protocol === 'https:' && location.hostname === 'iptvbestpro.com' && !/[?&]https=1/.test(q) &&
-        (/[?&]p=(titan|whale)/i.test(q) || /TitanOS\/|WhaleTV|Whale ?OS|Zeasn/i.test(ua))) {
+        (/[?&]p=(titan|whale|msx)/i.test(q) || /TitanOS\/|WhaleTV|Whale ?OS|Zeasn/i.test(ua))) {
       location.replace('http://tv.iptvbestpro.com' + location.pathname + q);
     }
   } catch (e) {}
