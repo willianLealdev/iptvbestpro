@@ -584,7 +584,7 @@ function dns_title_for_base($mysqli, $base){
 }
 
 define('DNS_OFFLINE_DELETE_DAYS', 15);
-define('DNS_MAX_PER_RESELLER', 30);
+define('DNS_MAX_PER_RESELLER', 10);
 
 // Dias restantes até a exclusão automática de um DNS de revendedor offline (null = não está offline)
 function dns_days_until_delete($row){
