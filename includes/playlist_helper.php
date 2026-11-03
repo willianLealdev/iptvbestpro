@@ -24,6 +24,7 @@ function playlists_migrate($mysqli){
         'dns_pin'       => "VARCHAR(191) NOT NULL DEFAULT ''",  // DNS escolhido no painel ("Usar este"): sempre volta para ele quando estiver no ar
         'dns_search_at' => "INT(11) NOT NULL DEFAULT 0",       // última busca em todos os DNS de uma lista caída (no máximo a cada 10 min)
         'dns_fail_at'   => "INT(11) NOT NULL DEFAULT 0",       // quando o DNS em uso parou de responder (espera 1 min antes de procurar outro)
+        'dns_order'     => "VARCHAR(500) NOT NULL DEFAULT ''",  // ordem de prioridade dos servidores definida no painel: ids dos DNS separados por vírgula (1º, 2º, 3º...)
     );
     foreach ($columns as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_users` LIKE '$name'");
@@ -196,7 +197,29 @@ function playlist_probe_result($body, $code){
  * $prefer_norm: servidor a testar primeiro (o da URL colada ou o último que funcionou).
  * Retorna array('ok' => bool, 'msg' => string, 'dns' => item|null, 'probe' => array|null)
  */
-function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $timeout = PLAYLIST_PROBE_TIMEOUT, $scope = 0, $hard_pref = false, $newest = false){
+// ids dos DNS na ordem de prioridade escolhida no painel ("2,5,1" = 1º o DNS 2, 2º o DNS 5, 3º o DNS 1)
+function dns_order_ids($csv){
+    $out = array();
+    foreach (explode(',', (string)$csv) as $x) { $x = (int)trim($x); if ($x > 0 && !in_array($x, $out, true)) $out[] = $x; }
+    return $out;
+}
+
+// Posição (0 = primeiro) de um DNS na ordem; 999 se ele não está na ordem
+function dns_order_rank($csv, $dns_id){
+    $i = array_search((int)$dns_id, dns_order_ids($csv), true);
+    return $i === false ? 999 : $i;
+}
+
+// Posição do DNS em uso (pelo endereço) na ordem da playlist
+function dns_order_rank_of_base($mysqli, $row, $base){
+    $norm = dns_normalize($base);
+    foreach (dns_list_active($mysqli, playlist_dns_scope($mysqli, $row['device_id'])) as $d) {
+        if ($d['norm'] == $norm) return dns_order_rank($row['dns_order'], $d['id']);
+    }
+    return 999;
+}
+
+function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $timeout = PLAYLIST_PROBE_TIMEOUT, $scope = 0, $hard_pref = false, $newest = false, $order = ''){
     dns_health_migrate($mysqli);
     dns_catch_all_refresh($mysqli); // só testa os servidores que não foram verificados nas últimas 6 horas
     $list = dns_list_active($mysqli, $scope);
@@ -212,15 +235,15 @@ function playlist_find_dns($mysqli, $username, $password, $prefer_norm = '', $ti
             foreach (dns_list_active($mysqli, 0) as $d) if (!isset($seen[(int)$d['id']])) $extra[] = $d;
         }
     }
-    $find = playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm, $timeout, $hard_pref, $newest);
+    $find = playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm, $timeout, $hard_pref, $newest, $order);
     if ($find['ok'] || !$extra) return $find;
-    $more = playlist_find_dns_in($mysqli, $extra, $username, $password, $prefer_norm, $timeout, $hard_pref, $newest);
+    $more = playlist_find_dns_in($mysqli, $extra, $username, $password, $prefer_norm, $timeout, $hard_pref, $newest, $order);
     if (!$more['ok']) return $list ? $find : $more;
     mysqli_query($mysqli, "INSERT IGNORE INTO tbl_dns_share (dns_id, reseller_id, created_at) VALUES (".(int)$more['dns']['id'].", $scope, ".time().")");
     return $more;
 }
 
-function playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm, $timeout, $hard_pref, $newest){
+function playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm, $timeout, $hard_pref, $newest, $order = ''){
     if (!$list) return array('ok' => false, 'msg' => 'Nenhum servidor DNS ativo. Cadastre em Servidores DNS.', 'dns' => null, 'probe' => null);
 
     $results = playlist_probe_parallel($list, $username, $password, $timeout);
@@ -230,6 +253,12 @@ function playlist_find_dns_in($mysqli, $list, $username, $password, $prefer_norm
     $any_active = false;
     foreach ($list as $i => $d) if ($results[$i]['result'] == 'ok' && !empty($results[$i]['active'])) $any_active = true;
     if ($any_active) foreach ($list as $i => $d) if ($results[$i]['result'] == 'ok' && empty($results[$i]['active'])) $results[$i]['result'] = 'inactive';
+    // Ordem definida no painel (1º, 2º, 3º...): usa o primeiro da ordem que aceitar o login, antes de qualquer outra regra
+    foreach (dns_order_ids($order) as $oid) foreach ($list as $i => $d) {
+        if ((int)$d['id'] == $oid && $results[$i]['result'] == 'ok') {
+            return array('ok' => true, 'msg' => 'Servidor encontrado: '.$d['title'].'.', 'dns' => $d, 'probe' => $results[$i], 'migrated' => false);
+        }
+    }
     // Ordem de escolha quando mais de um DNS aceita o mesmo usuário:
     //  1º o DNS preferido (o escolhido / o último que funcionou);
     //  2º qualquer DNS que aceite; por último os que aceitam qualquer usuário.
@@ -347,6 +376,8 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
         // para outro servidor (o antigo pode continuar aceitando o login depois da migração)
         $mig = $now - (int)(isset($row['dns_full_at']) ? $row['dns_full_at'] : 0) >= 600;
         if ($mig && count(playlist_siblings($mysqli, $row)) > 0) $mig = false; // aparelho com várias listas: sem busca de migração (evita login errado nos outros servidores)
+        // ordem de servidores definida no painel: se não está no 1º da ordem, confere a cada 5 min se um servidor mais bem colocado voltou
+        if (!$mig && !empty($row['dns_order']) && $now - (int)(isset($row['dns_full_at']) ? $row['dns_full_at'] : 0) >= 300 && dns_order_rank_of_base($mysqli, $row, $curBase) > 0) $mig = true;
         if ($cur[0]['result'] == 'ok' && !empty($cur[0]['active']) && !$mig) {
             playlist_set_dns_state($mysqli, $row['id'], $curBase, true, isset($cur[0]['server']) ? $cur[0]['server'] : null);
             $status = 'online';
@@ -354,7 +385,7 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
         }
         if ($cur[0]['result'] == 'ok' && !empty($cur[0]['active'])) {
             mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = $now WHERE id = ".(int)$row['id']);
-            $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], dns_normalize($curBase), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '', true);
+            $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], dns_normalize($curBase), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '', true, isset($row['dns_order']) ? (string)$row['dns_order'] : '');
             playlist_unpin_if_migrated($mysqli, $row['id'], $find);
             $base = $find['ok'] ? $find['dns']['base'] : $curBase;
             playlist_set_dns_state($mysqli, $row['id'], $base, true, $find['ok'] && isset($find['probe']['server']) ? $find['probe']['server'] : (isset($cur[0]['server']) ? $cur[0]['server'] : null));
@@ -382,7 +413,7 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
     // (os servidores IPTV bloqueiam o IP que erra login demais)
     if (!$fresh && !empty($row['dns_search_at']) && $now - (int)$row['dns_search_at'] < 120) return $row['dns_base'];
     if (!$fresh) mysqli_query($mysqli, "UPDATE tbl_users SET dns_search_at = $now WHERE id = ".(int)$row['id']);
-    $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], $pin != '' ? $pin : dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '', true);
+    $find = playlist_find_dns($mysqli, $row['user_name'], $row['user_password'], $pin != '' ? $pin : dns_normalize($row['dns_base']), 4, playlist_dns_scope($mysqli, $row['device_id']), $pin != '', true, isset($row['dns_order']) ? (string)$row['dns_order'] : '');
     $base = $find['ok'] ? $find['dns']['base'] : $row['dns_base'];
     playlist_unpin_if_migrated($mysqli, $row['id'], $find);
     playlist_set_dns_state($mysqli, $row['id'], $base, $find['ok'], $find['ok'] && isset($find['probe']['server']) ? $find['probe']['server'] : null);
@@ -870,7 +901,7 @@ function playlist_monitor_run($mysqli){
 
     // Playlists por usuário/senha + revendedor dono do aparelho (define quais DNS valem para ela)
     $rows = array();
-    $res = mysqli_query($mysqli, "SELECT u.id, u.user_name, u.user_password, u.dns_base, u.dns_server, u.dns_full_at, u.dns_pin, u.device_id, u.dns_status, u.dns_search_at,
+    $res = mysqli_query($mysqli, "SELECT u.id, u.user_name, u.user_password, u.dns_base, u.dns_server, u.dns_full_at, u.dns_pin, u.dns_order, u.device_id, u.dns_status, u.dns_search_at,
                                          COALESCE((SELECT d.reseller_id FROM tbl_devices d WHERE d.device_id = u.device_id AND d.owner = 'reseller' ORDER BY d.id DESC LIMIT 1), 0) AS scope
                                   FROM tbl_users u WHERE u.status = '1' AND u.source = 'account'");
     while ($res && $r = mysqli_fetch_assoc($res)) $rows[$r['id']] = $r;
@@ -926,6 +957,15 @@ function playlist_monitor_run($mysqli){
             $okIds[$id] = true;
             // a cada 30 min, algumas por ciclo: confere se a lista foi migrada para outro servidor (com o antigo ainda aceitando o login)
             // (aparelho com várias listas não faz essa busca: ela gera login errado nos outros servidores)
+            // ordem definida no painel e o servidor em uso não é o 1º: confere a cada 5 min se um mais bem colocado voltou
+            if ($rows[$id]['dns_order'] !== '' && isset($allowed[$tn]) && time() - (int)$rows[$id]['dns_full_at'] > 300 && $periodic < 40
+                && dns_order_rank($rows[$id]['dns_order'], $allowed[$tn]['id']) > 0) {
+                $periodic++;
+                mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = ".time()." WHERE id = ".(int)$id);
+                $failed[$id] = $rows[$id];
+                $failed[$id]['want_newest'] = 1;
+                continue;
+            }
             if (!$multiHere && time() - (int)$rows[$id]['dns_full_at'] > 1800 && $periodic < 40) {
                 $periodic++;
                 mysqli_query($mysqli, "UPDATE tbl_users SET dns_full_at = ".time()." WHERE id = ".(int)$id);
@@ -973,7 +1013,7 @@ function playlist_monitor_run($mysqli){
         if (empty($r['want_newest']) && $r['dns_status'] == 'offline' && time() - (int)$r['dns_search_at'] < 600) { playlist_set_dns_state($mysqli, $id, $r['dns_base'], false); $stats['offline']++; continue; }
         mysqli_query($mysqli, "UPDATE tbl_users SET dns_search_at = ".time()." WHERE id = ".(int)$id);
         $pin = !empty($r['dns_pin']) ? $r['dns_pin'] : '';
-        $find = playlist_find_dns($mysqli, $r['user_name'], $r['user_password'], $pin != '' ? $pin : dns_normalize($r['dns_base']), 5, (int)$r['scope'], $pin != '', !empty($r['want_newest']));
+        $find = playlist_find_dns($mysqli, $r['user_name'], $r['user_password'], $pin != '' ? $pin : dns_normalize($r['dns_base']), 5, (int)$r['scope'], $pin != '', !empty($r['want_newest']), (string)$r['dns_order']);
         playlist_unpin_if_migrated($mysqli, $id, $find);
         if ($find['ok']) {
             $switched = dns_normalize($find['dns']['base']) != dns_normalize($r['dns_base']);
@@ -1142,6 +1182,32 @@ function playlist_handle_pin($mysqli, $device_id, $post){
     mysqli_query($mysqli, "UPDATE tbl_users SET dns_pin = '', dns_full_at = ".time()." WHERE id = $pid");
     playlist_set_dns_state($mysqli, $pid, $chosen['base'], true, isset($probe[0]['server']) ? $probe[0]['server'] : '');
     return array('ok' => true, 'msg' => 'A playlist agora usa o servidor "'.$chosen['title'].'". Se ele cair ou a lista mudar de servidor, o sistema troca sozinho.');
+}
+
+// POST playlist_order: pos[<id do DNS>] = posição (1, 2, 3...); campo vazio = fora da ordem. playlist_order_clear = volta ao automático
+function playlist_handle_order($mysqli, $device_id, $post){
+    $row = playlist_get($mysqli, isset($post['playlist_id']) ? $post['playlist_id'] : 0, $device_id);
+    if (!$row) return array('ok' => false, 'msg' => 'Playlist não encontrada.');
+    $pid = (int)$row['id'];
+    $valid = array();
+    foreach (dns_list_active($mysqli, playlist_dns_scope($mysqli, $device_id)) as $d) $valid[(int)$d['id']] = true;
+    $items = array();
+    $pos = isset($post['pos']) && is_array($post['pos']) ? $post['pos'] : array();
+    if (!isset($post['playlist_order_clear'])) {
+        $k = 0;
+        foreach ($pos as $id => $n) {
+            $id = (int)$id; $n = (int)$n; $k++;
+            if ($n > 0 && isset($valid[$id])) $items[] = array($n, $k, $id);
+        }
+    }
+    usort($items, function ($a, $b) { return $a[0] != $b[0] ? $a[0] - $b[0] : $a[1] - $b[1]; });
+    $ids = array();
+    foreach ($items as $it) $ids[] = $it[2];
+    $csv = implode(',', $ids);
+    // zera as datas de verificação: o sistema aplica a nova ordem na próxima consulta
+    mysqli_query($mysqli, "UPDATE tbl_users SET dns_order = '".mysqli_real_escape_string($mysqli, $csv)."', dns_full_at = 0, dns_search_at = 0, dns_checked_at = 0 WHERE id = $pid");
+    if ($csv === '') return array('ok' => true, 'msg' => 'Sem ordem definida: o sistema escolhe o servidor sozinho.');
+    return array('ok' => true, 'msg' => 'Ordem salva: o sistema usa os servidores nessa ordem e volta ao primeiro quando ele estiver no ar.');
 }
 
 /* ---------- Fonte de cada DNS: para onde ele aponta (aprende com os logins reais das playlists) ---------- */

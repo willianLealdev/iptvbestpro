@@ -35,6 +35,9 @@ function playlist_form_styles(){ ?>
     .pl-item__dns { color: #6b7280; font-size: 13px; margin-top: 2px; }
     .pl-item__dns b { color: #374151; }
     .pl-pin { color: #2563eb; font-weight: 600; }
+    .pl-srv__ord { width: 56px; flex: 0 0 56px; border: 1px solid #dfe3ea; border-radius: 6px; padding: 3px 6px; text-align: center; font-weight: 700; color: #1f2a44; background: #fff; }
+    .pl-srv__hint { font-size: 12px; color: #6b7280; margin: 8px 0 6px; }
+    .pl-srv__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .pl-srv-link { margin-left: 8px; font-size: 12px; font-weight: 600; text-decoration: none; }
     .pl-srv { margin-top: 10px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; background: #fafbfc; }
     .pl-srv__title { font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 6px; }
@@ -179,14 +182,24 @@ function playlist_list_render($playlists, $hidden_html, $allow_pin = true){
                             <div class="pl-item__dns"><i class="ri-server-line"></i> DNS: <b><?php echo htmlspecialchars(dns_title_for_base($mysqli, $p['dns_base'])); ?></b>
                                 <?php if ($allow_pin) { $q = $qs; $q['pl_check'] = (int)$p['id']; ?>
                                     <a class="pl-srv-link" href="<?php echo htmlspecialchars($self.'?'.http_build_query($q)); ?>"><i class="ri-route-line"></i> Servidores</a>
+                                    <?php if (!empty($p['dns_order'])) { ?><span class="pl-pin">Ordem definida</span><?php } ?>
                                 <?php } ?></div>
-                            <?php if ($check_id == (int)$p['id']) { $chk = playlist_check_servers($mysqli, $p); ?>
+                            <?php if ($check_id == (int)$p['id']) { $chk = playlist_check_servers($mysqli, $p);
+                                $ord_ids = dns_order_ids(isset($p['dns_order']) ? $p['dns_order'] : '');
+                                $ord_pos = array(); foreach ($ord_ids as $oi => $oid) $ord_pos[$oid] = $oi + 1;
+                                // servidores com ordem definida primeiro (na ordem), depois os outros
+                                $k = 0; foreach ($chk as $ci => $c) { $chk[$ci]['_k'] = $k++; }
+                                usort($chk, function ($a, $b) use ($ord_pos) {
+                                    $pa = isset($ord_pos[$a['id']]) ? $ord_pos[$a['id']] : 999; $pb = isset($ord_pos[$b['id']]) ? $ord_pos[$b['id']] : 999;
+                                    return $pa != $pb ? $pa - $pb : $a['_k'] - $b['_k'];
+                                }); ?>
                                 <div class="pl-srv">
                                     <div class="pl-srv__title">Em quais servidores este login funciona</div>
                                     <?php foreach ($chk as $c) {
                                         $is_cur = $c['norm'] == dns_normalize($p['dns_base']);
                                         $txt = $c['result'] == 'ok' ? (isset($c['active']) && !$c['active'] ? 'Aceita, mas vencido/desativado' : 'Aceita') : ($c['result'] == 'auth_fail' ? 'Recusou' : 'Não respondeu'); ?>
                                         <div class="pl-srv__row <?php echo $c['result'] == 'ok' ? 'is-ok' : ''; ?>">
+                                            <input type="number" min="1" max="99" class="pl-srv__ord" form="plord_<?php echo (int)$p['id']; ?>" name="pos[<?php echo (int)$c['id']; ?>]" value="<?php echo isset($ord_pos[$c['id']]) ? (int)$ord_pos[$c['id']] : ''; ?>" placeholder="-" title="Ordem">
                                             <span class="pl-srv__name"><?php echo htmlspecialchars(html_entity_decode($c['title'], ENT_QUOTES, 'UTF-8')); ?><?php if ($is_cur) { ?> <small>(em uso)</small><?php } ?></span>
                                             <span class="pl-srv__res"><?php echo $txt; ?><?php if ($c['catch_all']) { ?> · aceita qualquer usuário<?php } ?></span>
                                             <?php if ($c['result'] == 'ok' && !$is_cur) { ?>
@@ -198,6 +211,14 @@ function playlist_list_render($playlists, $hidden_html, $allow_pin = true){
                                             <?php } ?>
                                         </div>
                                     <?php } ?>
+                                    <form method="post" id="plord_<?php echo (int)$p['id']; ?>" class="m-0"><?php echo $hidden_html; ?>
+                                        <input type="hidden" name="playlist_id" value="<?php echo (int)$p['id']; ?>">
+                                        <div class="pl-srv__hint">Ordem dos servidores: digite 1, 2, 3... O sistema usa o 1 e, se ele cair, passa para o 2, e assim por diante. Volta ao 1 quando ele estiver no ar. Deixe em branco o que não quiser na ordem.</div>
+                                        <div class="pl-srv__actions">
+                                            <button type="submit" name="playlist_order" class="btn btn-sm btn-primary">Salvar ordem</button>
+                                            <?php if ($ord_ids) { ?><button type="submit" name="playlist_order_clear" class="btn btn-sm btn-outline-secondary">Voltar ao automático</button><?php } ?>
+                                        </div>
+                                    </form>
                                 </div>
                             <?php } ?>
                         <?php } ?>

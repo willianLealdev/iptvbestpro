@@ -26,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else if (isset($_POST['playlist_pin'])) {
         $r = playlist_handle_pin($mysqli, $device['device_id'], $_POST);
         rv_flash($r['ok'] ? 'success' : 'error', $r['msg']);
+    } else if (isset($_POST['playlist_order']) || isset($_POST['playlist_order_clear'])) {
+        $r = playlist_handle_order($mysqli, $device['device_id'], $_POST);
+        rv_flash($r['ok'] ? 'success' : 'error', $r['msg']);
     }
     rv_redirect('playlist.php?device='.$pk);
 }
