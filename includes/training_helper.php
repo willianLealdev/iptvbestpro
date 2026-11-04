@@ -19,6 +19,7 @@ function training_videos($set = 'reseller'){
         array('06-ativando-aparelho.mp4', 'Ativando o aparelho do cliente', 'Do código no app até o aparelho ativo.'),
         array('07-publicando-lista.mp4', 'Adicionando e publicando a lista', 'Como mandar a lista para o aparelho do cliente.'),
         array('08-suporte.mp4', 'Suporte e Telegram', 'Como falar com a gente e acompanhar as novidades.'),
+        array('09-ativando-apple.mp4', 'Ativando iPhone, iPad e Apple TV', 'Ativação pelo ID do Dispositivo (8 números), na página Ativação Apple.'),
     );
 }
 
