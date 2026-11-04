@@ -160,6 +160,7 @@ function subscription_create($mysqli, $customer, $plan_id){
     $ok = mysqli_stmt_execute($stmt);
     $id = mysqli_insert_id($mysqli);
     mysqli_stmt_close($stmt);
+    if ($ok) { require_once(__DIR__.'/payment_log.php'); pay_log($mysqli, 'sub', $id, 'order_created', '', 'ok', 'Pedido '.$plan['name'].' de '.number_format($amount, 2, ',', '.').' '.$currency.' criado pelo cliente.'); }
     return $ok ? array('ok' => true, 'msg' => 'Pedido #'.$id.' criado. Siga as instruções de pagamento.', 'id' => $id) : array('ok' => false, 'msg' => 'Não foi possível criar o pedido.');
 }
 
@@ -194,6 +195,7 @@ function subscription_mark_paid($mysqli, $sub_id, $admin_id = 0, $reference = ''
     mysqli_stmt_execute($stmt);
     $ok = mysqli_stmt_affected_rows($stmt) > 0;
     mysqli_stmt_close($stmt);
+    if ($ok && $admin_id > 0) { require_once(__DIR__.'/payment_log.php'); pay_log($mysqli, 'sub', $sub_id, 'manual_paid', 'manual', 'ok', 'Confirmado à mão por um administrador (admin #'.$admin_id.')'.($reference != '' ? ' · referência: '.$reference : '').'.'); }
     return $ok ? $code : false;
 }
 
@@ -201,7 +203,9 @@ function subscription_cancel($mysqli, $sub_id, $customer_id = 0){
     $sub_id = (int)$sub_id;
     $extra = $customer_id > 0 ? " AND customer_id = ".(int)$customer_id : '';
     mysqli_query($mysqli, "UPDATE tbl_subscriptions SET status = 'cancelled' WHERE id = $sub_id AND status = 'pending'".$extra);
-    return mysqli_affected_rows($mysqli) > 0;
+    $done = mysqli_affected_rows($mysqli) > 0;
+    if ($done) { require_once(__DIR__.'/payment_log.php'); pay_log($mysqli, 'sub', $sub_id, 'cancelled', '', 'info', $customer_id > 0 ? 'O cliente cancelou o pedido.' : 'Pedido cancelado pelo administrador.'); }
+    return $done;
 }
 
 // Situação de uma assinatura para exibir: pending | code (pago, código livre) | active | expired | cancelled

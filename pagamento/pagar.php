@@ -21,6 +21,10 @@ if (!$p || $owner_id !== (int)$p['owner_id']) {
 $back = '../cliente/dashboard.php';
 if ($p['owner_type'] == 'reseller') { require_once(__DIR__.'/../includes/server_helper.php'); $back = '../'.server_portal_dir($mysqli, (int)$p['owner_id']).'/credits.php'; }
 
+// Passos do cliente (histórico do pedido)
+if ($p['provider'] == 'mercadopago') pay_log($mysqli, $p['order_type'], $p['order_id'], 'pix_page_viewed', 'pix', 'info', 'A tela do QR Code Pix foi aberta.', (string)$p['id'], true);
+if ($p['provider'] == 'stripe' && isset($_GET['s']) && $_GET['s'] == 'ok') pay_log($mysqli, $p['order_type'], $p['order_id'], 'card_return_ok', 'card', 'info', 'O Stripe devolveu o cliente com sucesso; confirmando o pagamento.', (string)$p['id'], true);
+if ($p['provider'] == 'stripe' && isset($_GET['s']) && $_GET['s'] == 'cancel') pay_log($mysqli, $p['order_type'], $p['order_id'], 'card_return_cancel', 'card', 'info', 'O cliente voltou da tela do cartão sem pagar.', (string)$p['id'], true);
 // Retorno do Stripe: confirma na hora consultando a sessão (o webhook também confirma)
 if ($p['provider'] == 'stripe' && isset($_GET['s']) && $_GET['s'] == 'ok' && $p['provider_id'] != '') pay_stripe_sync($mysqli, $p['provider_id']);
 $status = pay_status_for_owner($mysqli, $pid, $p['owner_type'], $p['owner_id']);

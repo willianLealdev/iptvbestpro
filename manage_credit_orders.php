@@ -10,6 +10,7 @@
     }
 
     resellers_migrate($mysqli);
+    require_once("includes/payment_log.php");
     require_once("includes/server_helper.php");
     server_migrate($mysqli); // pedidos de pacote dos servidores parceiros ficam na mesma lista
     $admin_id = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
@@ -70,6 +71,18 @@
     $result = mysqli_query($mysqli, "SELECT o.*, r.name AS reseller_name, r.email AS reseller_email, r.phone AS reseller_phone, r.kind AS reseller_kind
                                      FROM tbl_credit_orders o LEFT JOIN tbl_resellers r ON r.id = o.reseller_id
                                      $where_sql ORDER BY (o.status = 'pending') DESC, o.id DESC LIMIT $start, $limit");
+    // O que cada revenda fez em cada pedido (clicou em Pix/cartão, Pix gerado, erro, etc.)
+    $rows = array(); $row_ids = array();
+    while($result && $one = mysqli_fetch_assoc($result)){ $rows[] = $one; $row_ids[] = (int)$one['id']; }
+    $ev_map = pay_log_load($mysqli, 'credit', $row_ids);
+    $pm_map = pay_log_payments($mysqli, 'credit', $row_ids);
+    $hist_js = array();
+    foreach($rows as $k => $one){
+        $oid = (int)$one['id'];
+        $steps = pay_log_steps(isset($ev_map[$oid]) ? $ev_map[$oid] : array(), isset($pm_map[$oid]) ? $pm_map[$oid] : array(), (int)$one['created_at'], $one['status']);
+        $rows[$k]['_sum'] = pay_log_summary($steps, $one['status']);
+        $hist_js[$oid] = pay_log_for_js($steps);
+    }
 
     $pending_count = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_credit_orders WHERE status = 'pending'"));
     // Recebidos separados por moeda (R$ e US$): no mês e no total
@@ -102,6 +115,19 @@
         </nav>
 
         <style>
+
+            .pl-sum { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 600; line-height: 1.3; white-space: normal; }
+            .pl-sum-ok { color: #15803d; background: #f0fdf4; }
+            .pl-sum-wait { color: #b45309; background: #fff7e6; }
+            .pl-sum-bad { color: #cf1322; background: #fff1f0; }
+            .pl-sum-none { color: #6b7280; background: #f3f4f6; }
+            .ph-list { list-style: none; margin: 0; padding: 0; }
+            .ph-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eef0f4; }
+            .ph-item:last-child { border-bottom: 0; }
+            .ph-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; margin-top: 5px; background: #9ca3af; }
+            .ph-dot.ok { background: #16a34a; } .ph-dot.error { background: #dc2626; } .ph-dot.info { background: #3b82f6; }
+            .ph-time { color: #6b7280; font-size: 12px; }
+            .ph-meth { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 4px; background: #eef2ff; color: #4338ca; margin-left: 6px; }
             .co-card { border: 0; border-radius: 14px; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); }
             .co-table thead th { background: #fafbfc; font-weight: 600; text-align: center; white-space: nowrap; padding: 14px 10px; }
             .co-table tbody td { text-align: center; vertical-align: middle; white-space: nowrap; padding: 12px 10px; }
@@ -140,9 +166,9 @@
                         </div>
                         <div class="table-responsive">
                             <table class="table co-table mb-0">
-                                <thead><tr><th>#</th><th>Data</th><th>Revendedor</th><th>Créditos</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+                                <thead><tr><th>#</th><th>Data</th><th>Revendedor</th><th>Créditos</th><th>Total</th><th>Status</th><th>Último passo</th><th>Ações</th></tr></thead>
                                 <tbody>
-                                <?php if(mysqli_num_rows($result) > 0){ while($o = mysqli_fetch_assoc($result)){ ?>
+                                <?php if(count($rows) > 0){ foreach($rows as $o){ ?>
                                     <tr>
                                         <td><?php echo (int)$o['id']; ?></td>
                                         <td><?php echo date('d/m/Y H:i', $o['created_at']); ?></td>
@@ -156,7 +182,9 @@
                                             <?php echo credit_order_status_badge($o['status']); ?>
                                             <?php if($o['status'] == 'paid' && $o['paid_at']){ ?><br><small class="text-muted"><?php echo date('d/m/Y H:i', $o['paid_at']); ?><?php echo $o['reference'] != '' ? ' · '.htmlspecialchars($o['reference']) : ''; ?></small><?php } ?>
                                         </td>
+                                        <td style="white-space:normal;min-width:190px;max-width:280px"><span class="pl-sum pl-sum-<?php echo $o['_sum'][1]; ?>"><?php echo htmlspecialchars($o['_sum'][0]); ?></span></td>
                                         <td>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn_hist" data-id="<?php echo (int)$o['id']; ?>" data-info="<?php echo htmlspecialchars('#'.$o['id'].' · '.$o['credits'].' créditos · '.money_currency($o['total'], $o['currency']).' · '.$o['reseller_name']); ?>" title="Ver o que aconteceu neste pedido"><i class="ri-history-line"></i> Histórico</button>
                                             <?php if($o['status'] == 'pending'){ ?>
                                                 <button type="button" class="btn btn-sm btn-success btn_pay" data-id="<?php echo (int)$o['id']; ?>" data-info="<?php echo htmlspecialchars('#'.$o['id'].' · '.$o['credits'].' créditos · '.money_currency($o['total'], $o['currency']).' · '.$o['reseller_name']); ?>"><i class="ri-check-line"></i> Confirmar pagamento</button>
                                                 <form method="post" class="d-inline" onsubmit="return confirm('Cancelar este pedido?');">
@@ -167,7 +195,7 @@
                                         </td>
                                     </tr>
                                 <?php } } else { ?>
-                                    <tr><td colspan="7" class="text-muted py-5">Nenhum pedido.</td></tr>
+                                    <tr><td colspan="8" class="text-muted py-5">Nenhum pedido.</td></tr>
                                 <?php } ?>
                                 </tbody>
                             </table>
@@ -226,6 +254,45 @@
         </div>
     </div>
 </main>
+
+<div class="modal fade" id="histModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">O que aconteceu neste pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p id="hist_info" class="fw-semibold mb-2"></p>
+                <ul class="ph-list" id="hist_list"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+var PAY_HIST = <?php echo json_encode($hist_js, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+document.addEventListener('click', function (e) {
+    var b = e.target.closest('.btn_hist');
+    if (!b) return;
+    var list = document.getElementById('hist_list');
+    list.innerHTML = '';
+    document.getElementById('hist_info').textContent = b.getAttribute('data-info');
+    var steps = PAY_HIST[b.getAttribute('data-id')] || [];
+    if (!steps.length) { var li0 = document.createElement('li'); li0.className = 'text-muted'; li0.textContent = 'Nenhum registro deste pedido.'; list.appendChild(li0); }
+    steps.forEach(function (s) {
+        var li = document.createElement('li'); li.className = 'ph-item';
+        var dot = document.createElement('span'); dot.className = 'ph-dot ' + s.level;
+        var body = document.createElement('div'); body.style.flex = '1';
+        var t = document.createElement('div'); t.className = 'ph-time'; t.textContent = s.t + (s.ip ? ' · IP ' + s.ip : '');
+        var l = document.createElement('div'); l.style.fontWeight = '600'; l.textContent = s.label;
+        if (s.method) { var m = document.createElement('span'); m.className = 'ph-meth'; m.textContent = s.method == 'pix' ? 'PIX' : (s.method == 'card' ? 'CARTÃO' : 'MANUAL'); l.appendChild(m); }
+        body.appendChild(t); body.appendChild(l);
+        if (s.detail) { var d = document.createElement('div'); d.className = 'text-muted small'; d.style.wordBreak = 'break-word'; d.textContent = s.detail; body.appendChild(d); }
+        li.appendChild(dot); li.appendChild(body); list.appendChild(li);
+    });
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('histModal')).show();
+});
+</script>
 
 <!-- Modal: confirmar pagamento -->
 <div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">

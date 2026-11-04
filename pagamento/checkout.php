@@ -39,8 +39,10 @@ if (($as == 'reseller' && $type != 'credit') || ($as == 'customer' && $type != '
 
 $order = pay_load_order($mysqli, $type, $order_id, $as, $owner_id);
 if (!$order) co_fail($as, 'Pedido não encontrado.');
-if ($order['status'] != 'pending') co_fail($as, 'Este pedido não está aguardando pagamento.');
-if ($order['amount'] <= 0) co_fail($as, 'Valor do pedido inválido.');
+// o cliente clicou: fica registrado antes de qualquer coisa (para saber se ele chegou a escolher a forma de pagamento)
+pay_log($mysqli, $type, $order_id, $method == 'pix' ? 'click_pix' : 'click_card', $method == 'pix' ? 'pix' : 'card', 'info', 'Clique no botão de pagamento.');
+if ($order['status'] != 'pending') { pay_log($mysqli, $type, $order_id, 'checkout_refused', $method == 'pix' ? 'pix' : 'card', 'error', 'O pedido não estava mais aguardando pagamento (situação: '.$order['status'].').'); co_fail($as, 'Este pedido não está aguardando pagamento.'); }
+if ($order['amount'] <= 0) { pay_log($mysqli, $type, $order_id, 'checkout_refused', $method == 'pix' ? 'pix' : 'card', 'error', 'Valor do pedido inválido.'); co_fail($as, 'Valor do pedido inválido.'); }
 
 if ($method == 'pix') {
     $r = pay_mp_create_pix($mysqli, $order, $as, $owner_id);

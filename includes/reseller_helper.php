@@ -402,6 +402,7 @@ function credit_orders_create($mysqli, $reseller_id, $credits){
     $ok = mysqli_stmt_execute($stmt);
     $id = mysqli_insert_id($mysqli);
     mysqli_stmt_close($stmt);
+    if ($ok) { require_once(__DIR__.'/payment_log.php'); pay_log($mysqli, 'credit', $id, 'order_created', '', 'ok', $credits.' créditos, total '.number_format($total, 2, ',', '.').' '.$currency.', pedido criado pela revenda.'); }
     return $ok ? $id : false;
 }
 
@@ -417,6 +418,7 @@ function credit_orders_mark_paid($mysqli, $order_id, $admin_id = 0, $reference =
     $changed = mysqli_stmt_affected_rows($stmt) > 0;
     mysqli_stmt_close($stmt);
     if (!$changed) return false;
+    if ($admin_id > 0) { require_once(__DIR__.'/payment_log.php'); pay_log($mysqli, 'credit', $order_id, 'manual_paid', 'manual', 'ok', 'Confirmado à mão por um administrador (admin #'.$admin_id.')'.($reference != '' ? ' · referência: '.$reference : '').'.'); }
 
     $order = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM tbl_credit_orders WHERE id = $order_id"));
     return resellers_add_credits($mysqli, $order['reseller_id'], (int)$order['credits'], 'Pedido #'.$order_id, 'purchase', $admin_id) !== false;
@@ -426,7 +428,9 @@ function credit_orders_cancel($mysqli, $order_id, $reseller_id = 0){
     $order_id = (int)$order_id;
     $extra = $reseller_id > 0 ? " AND reseller_id = ".(int)$reseller_id : '';
     mysqli_query($mysqli, "UPDATE tbl_credit_orders SET status = 'cancelled' WHERE id = $order_id AND status = 'pending'".$extra);
-    return mysqli_affected_rows($mysqli) > 0;
+    $done = mysqli_affected_rows($mysqli) > 0;
+    if ($done) { require_once(__DIR__.'/payment_log.php'); pay_log($mysqli, 'credit', $order_id, 'cancelled', '', 'info', $reseller_id > 0 ? 'A revenda cancelou o pedido.' : 'Pedido cancelado pelo administrador.'); }
+    return $done;
 }
 
 function credit_order_status_badge($status){

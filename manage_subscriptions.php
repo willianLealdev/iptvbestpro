@@ -9,6 +9,7 @@
         exit;
     }
     customers_migrate($mysqli);
+    require_once("includes/payment_log.php");
     $admin_id = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
 
     function sb_flash($ok, $msg){
@@ -67,6 +68,18 @@
                                      LEFT JOIN tbl_customers c ON c.id = s.customer_id
                                      LEFT JOIN tbl_devices d ON d.id = s.device_pk
                                      $where_sql ORDER BY (s.status = 'pending') DESC, s.id DESC LIMIT 300");
+    // O que cada cliente fez em cada pedido (clicou em Pix/cartão, Pix gerado, erro, etc.)
+    $rows = array(); $row_ids = array();
+    while($result && $one = mysqli_fetch_assoc($result)){ $rows[] = $one; $row_ids[] = (int)$one['id']; }
+    $ev_map = pay_log_load($mysqli, 'sub', $row_ids);
+    $pm_map = pay_log_payments($mysqli, 'sub', $row_ids);
+    $hist_js = array();
+    foreach($rows as $k => $one){
+        $oid = (int)$one['id'];
+        $steps = pay_log_steps(isset($ev_map[$oid]) ? $ev_map[$oid] : array(), isset($pm_map[$oid]) ? $pm_map[$oid] : array(), (int)$one['created_at'], $one['status']);
+        $rows[$k]['_sum'] = pay_log_summary($steps, $one['status']);
+        $hist_js[$oid] = pay_log_for_js($steps);
+    }
 
     $tot = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT
         SUM(status = 'pending') AS pending,
@@ -95,6 +108,18 @@
             .pk-none { color: #8c8c8c; background: #fafafa; border-color: #f0f0f0; }
             .pk-expired { color: #cf1322; background: #fff1f0; border-color: #ffccc7; }
             .sb-code { font-family: 'Courier New', monospace; font-weight: 700; letter-spacing: 2px; color: #3b6cf6; }
+            .pl-sum { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 600; line-height: 1.3; white-space: normal; }
+            .pl-sum-ok { color: #15803d; background: #f0fdf4; }
+            .pl-sum-wait { color: #b45309; background: #fff7e6; }
+            .pl-sum-bad { color: #cf1322; background: #fff1f0; }
+            .pl-sum-none { color: #6b7280; background: #f3f4f6; }
+            .ph-list { list-style: none; margin: 0; padding: 0; }
+            .ph-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eef0f4; }
+            .ph-item:last-child { border-bottom: 0; }
+            .ph-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; margin-top: 5px; background: #9ca3af; }
+            .ph-dot.ok { background: #16a34a; } .ph-dot.error { background: #dc2626; } .ph-dot.info { background: #3b82f6; }
+            .ph-time { color: #6b7280; font-size: 12px; }
+            .ph-meth { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 4px; background: #eef2ff; color: #4338ca; margin-left: 6px; }
         </style>
 
         <div class="row g-3 mb-4">
@@ -135,19 +160,21 @@
 
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
-                        <thead><tr><th>#</th><th>Cliente</th><th>Plano</th><th class="text-end">Valor</th><th>Status</th><th>Código</th><th>Aparelho</th><th>Vencimento</th><th class="text-end">Ações</th></tr></thead>
+                        <thead><tr><th>#</th><th>Cliente</th><th>Plano</th><th class="text-end">Valor</th><th>Status</th><th>Último passo</th><th>Código</th><th>Aparelho</th><th>Vencimento</th><th class="text-end">Ações</th></tr></thead>
                         <tbody>
-                        <?php if(mysqli_num_rows($result) > 0){ while($s = mysqli_fetch_assoc($result)){ $st = subscription_state($s); ?>
+                        <?php if(count($rows) > 0){ foreach($rows as $s){ $st = subscription_state($s); ?>
                             <tr>
                                 <td><?php echo (int)$s['id']; ?><br><small class="text-muted"><?php echo date('d/m/Y', $s['created_at']); ?></small></td>
                                 <td><b><?php echo htmlspecialchars((string)$s['customer_name']); ?></b><br><small class="text-muted"><?php echo htmlspecialchars((string)$s['customer_email']); ?><?php echo $s['customer_phone'] != '' ? ' · '.htmlspecialchars($s['customer_phone']) : ''; ?></small></td>
                                 <td><?php echo htmlspecialchars($s['plan_name']); ?><br><small class="text-muted"><?php echo (int)$s['months']; ?> meses</small></td>
                                 <td class="text-end text-nowrap"><?php echo money_format_currency($s['amount'], $s['currency']); ?></td>
                                 <td><?php echo subscription_state_badge($st); ?></td>
+                                <td style="min-width:190px;max-width:280px"><span class="pl-sum pl-sum-<?php echo $s['_sum'][1]; ?>"><?php echo htmlspecialchars($s['_sum'][0]); ?></span></td>
                                 <td><?php echo $s['code'] ? '<span class="sb-code">'.htmlspecialchars($s['code']).'</span>' : '<span class="text-muted">—</span>'; ?></td>
                                 <td><?php echo $s['device_pk'] ? htmlspecialchars($s['device_model'] != '' ? $s['device_model'] : $s['device_mac']).'<br><small class="text-muted">'.htmlspecialchars((string)$s['device_mac']).'</small>' : '<span class="text-muted">—</span>'; ?></td>
                                 <td class="text-nowrap"><?php echo (int)$s['expires_at'] > 0 ? date('d/m/Y', $s['expires_at']) : '<span class="text-muted">—</span>'; ?></td>
                                 <td class="text-end text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn_hist" data-id="<?php echo (int)$s['id']; ?>" data-info="<?php echo htmlspecialchars('#'.$s['id'].' · '.$s['plan_name'].' · '.money_format_currency($s['amount'], $s['currency']).' · '.$s['customer_name']); ?>" title="Ver o que aconteceu neste pedido"><i class="ri-history-line"></i> Histórico</button>
                                     <?php if($s['status'] == 'pending'){ ?>
                                         <button type="button" class="btn btn-sm btn-success btn_pay" data-id="<?php echo (int)$s['id']; ?>" data-info="<?php echo htmlspecialchars('#'.$s['id'].' · '.$s['plan_name'].' · '.money_format_currency($s['amount'], $s['currency']).' · '.$s['customer_name']); ?>"><i class="ri-check-line"></i> Confirmar pagamento</button>
                                         <form method="post" class="d-inline" onsubmit="return confirm('Cancelar este pedido?');">
@@ -160,7 +187,7 @@
                                 </td>
                             </tr>
                         <?php } } else { ?>
-                            <tr><td colspan="9" class="text-center text-muted py-5">Nenhuma assinatura.</td></tr>
+                            <tr><td colspan="10" class="text-center text-muted py-5">Nenhuma assinatura.</td></tr>
                         <?php } ?>
                         </tbody>
                     </table>
@@ -191,6 +218,45 @@
         </form>
     </div>
 </div>
+
+<div class="modal fade" id="histModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">O que aconteceu neste pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p id="hist_info" class="fw-semibold mb-2"></p>
+                <ul class="ph-list" id="hist_list"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+var PAY_HIST = <?php echo json_encode($hist_js, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+document.addEventListener('click', function (e) {
+    var b = e.target.closest('.btn_hist');
+    if (!b) return;
+    var list = document.getElementById('hist_list');
+    list.innerHTML = '';
+    document.getElementById('hist_info').textContent = b.getAttribute('data-info');
+    var steps = PAY_HIST[b.getAttribute('data-id')] || [];
+    if (!steps.length) { var li0 = document.createElement('li'); li0.className = 'text-muted'; li0.textContent = 'Nenhum registro deste pedido.'; list.appendChild(li0); }
+    steps.forEach(function (s) {
+        var li = document.createElement('li'); li.className = 'ph-item';
+        var dot = document.createElement('span'); dot.className = 'ph-dot ' + s.level;
+        var body = document.createElement('div'); body.style.flex = '1';
+        var t = document.createElement('div'); t.className = 'ph-time'; t.textContent = s.t + (s.ip ? ' · IP ' + s.ip : '');
+        var l = document.createElement('div'); l.style.fontWeight = '600'; l.textContent = s.label;
+        if (s.method) { var m = document.createElement('span'); m.className = 'ph-meth'; m.textContent = s.method == 'pix' ? 'PIX' : (s.method == 'card' ? 'CARTÃO' : 'MANUAL'); l.appendChild(m); }
+        body.appendChild(t); body.appendChild(l);
+        if (s.detail) { var d = document.createElement('div'); d.className = 'text-muted small'; d.style.wordBreak = 'break-word'; d.textContent = s.detail; body.appendChild(d); }
+        li.appendChild(dot); li.appendChild(body); list.appendChild(li);
+    });
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('histModal')).show();
+});
+</script>
 <script>
 document.addEventListener('click', function (e) {
     var b = e.target.closest('.btn_pay');

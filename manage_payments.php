@@ -21,7 +21,11 @@
     /* ---------- Filtros ---------- */
     $kind = (isset($_GET['kind']) && in_array($_GET['kind'], array('credit', 'sub'))) ? $_GET['kind'] : '';
     $method = (isset($_GET['method']) && in_array($_GET['method'], array('mercadopago', 'stripe', 'apple', 'amazon', 'manual', 'free'))) ? $_GET['method'] : '';
+    // Duas abas: pagamentos de verdade e testes grátis (teste de 7 dias e teste das lojas), para não misturar
+    $tab = (isset($_GET['tab']) && $_GET['tab'] == 'tests') ? 'tests' : 'real';
     $period = (isset($_GET['period']) && in_array($_GET['period'], array('today', '7d', 'month', 'last_month', '30d', 'year', 'all', 'custom'))) ? $_GET['period'] : 'month';
+    if ($method == 'free') { $tab = 'tests'; $method = ''; } // link antigo do filtro "Grátis"
+    if ($tab == 'tests') { $kind = ''; $method = ''; }
     $q = isset($_GET['q']) ? mb_substr(trim(strip_tags($_GET['q'])), 0, 100) : '';
     $date_from = isset($_GET['from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['from']) ? $_GET['from'] : '';
     $date_to = isset($_GET['to']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['to']) ? $_GET['to'] : '';
@@ -44,6 +48,8 @@
     $w = array();
     if ($t_from > 0) $w[] = "x.paid_at >= ".(int)$t_from;
     if ($t_to > 0) $w[] = "x.paid_at < ".(int)$t_to;
+    $w_period = $w ? 'WHERE '.implode(' AND ', $w) : ''; // só o período: para contar as duas abas
+    $w[] = $tab == 'tests' ? "x.method IN ('trial', 'demo')" : "x.method NOT IN ('trial', 'demo')";
     if ($kind != '') $w[] = "x.kind = '$kind'";
     if ($method == 'manual') $w[] = "x.method NOT IN ('mercadopago', 'stripe', 'apple', 'amazon', 'trial', 'demo')";
     elseif ($method == 'free') $w[] = "x.method IN ('trial', 'demo')";
@@ -80,7 +86,7 @@
     if ($is_csv) {
         while (ob_get_level() > 0) ob_end_clean(); // sem o HTML do topo e sem o filtro de tradução
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="pagamentos_'.date('Y-m-d').'.csv"');
+        header('Content-Disposition: attachment; filename="'.($tab == 'tests' ? 'testes' : 'pagamentos').'_'.date('Y-m-d').'.csv"');
         $out = fopen('php://output', 'w');
         fwrite($out, "\xEF\xBB\xBF");
         fputcsv($out, array('Data', 'Tipo', 'Pedido', 'Nome', 'E-mail', 'Telefone', 'Créditos/Plano', 'Valor', 'Moeda', 'Forma', 'Referência'), ';');
@@ -105,8 +111,17 @@
         COALESCE(SUM(IF(x.kind = 'credit', x.qty, 0)), 0) AS credits,
         COALESCE(SUM(IF(x.kind = 'sub', 1, 0)), 0) AS subs,
         COALESCE(SUM(IF(x.method = 'mercadopago', 1, 0)), 0) AS n_pix,
-        COALESCE(SUM(IF(x.method = 'stripe', 1, 0)), 0) AS n_card
+        COALESCE(SUM(IF(x.method = 'stripe', 1, 0)), 0) AS n_card,
+        COALESCE(SUM(IF(x.method = 'apple', 1, 0)), 0) AS n_apple,
+        COALESCE(SUM(IF(x.method = 'amazon', 1, 0)), 0) AS n_amazon,
+        COALESCE(SUM(IF(x.method = 'trial', 1, 0)), 0) AS n_trial,
+        COALESCE(SUM(IF(x.method = 'demo', 1, 0)), 0) AS n_demo
         FROM $union $where_sql"));
+    // quantos há em cada aba no período (para o número ao lado do nome da aba)
+    $tab_n = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT
+        COALESCE(SUM(IF(x.method IN ('trial', 'demo'), 0, 1)), 0) AS real_n,
+        COALESCE(SUM(IF(x.method IN ('trial', 'demo'), 1, 0)), 0) AS test_n
+        FROM $union $w_period"));
 
     $total_rows = (int)$tot['n'];
     $limit = 30;
@@ -142,17 +157,32 @@
             .pm-free { color: #389e0d; background: #f6ffed; border-color: #d9f7be; }
         </style>
 
+        <?php $tab_url = function ($t) { $qq = $_GET; $qq['tab'] = $t; unset($qq['page'], $qq['kind'], $qq['method']); return 'manage_payments.php?'.http_build_query($qq); }; ?>
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item"><a class="nav-link <?php if ($tab == 'real') echo 'active'; ?>" href="<?php echo htmlspecialchars($tab_url('real')); ?>"><i class="ri-money-dollar-circle-line"></i> Pagamentos <span class="badge bg-success"><?php echo (int)$tab_n['real_n']; ?></span></a></li>
+            <li class="nav-item"><a class="nav-link <?php if ($tab == 'tests') echo 'active'; ?>" href="<?php echo htmlspecialchars($tab_url('tests')); ?>"><i class="ri-flask-line"></i> Testes (grátis) <span class="badge bg-secondary"><?php echo (int)$tab_n['test_n']; ?></span></a></li>
+        </ul>
+
+        <?php if ($tab == 'tests') { ?>
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Testes no período</div><div class="fs-3 fw-bold"><?php echo $total_rows; ?></div><small class="text-muted"><?php echo htmlspecialchars($period_labels[$period]); ?> · sem dinheiro</small></div></div>
+            <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Teste grátis de 7 dias</div><div class="fs-3 fw-bold" style="color:#389e0d;"><?php echo (int)$tot['n_trial']; ?></div><small class="text-muted">pedidos pelo cliente</small></div></div>
+            <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Teste das lojas</div><div class="fs-3 fw-bold" style="color:#389e0d;"><?php echo (int)$tot['n_demo']; ?></div><small class="text-muted">códigos de revisão</small></div></div>
+        </div>
+        <?php } else { ?>
         <div class="row g-3 mb-4">
             <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Recebido em R$</div><div class="fs-4 fw-bold" style="color:#15803d;"><?php echo money_currency($tot['brl'], 'BRL'); ?></div><small class="text-muted"><?php echo htmlspecialchars($period_labels[$period]); ?></small></div></div>
             <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Recebido em US$</div><div class="fs-4 fw-bold" style="color:#1d4ed8;"><?php echo money_currency($tot['usd'], 'USD'); ?></div><small class="text-muted"><?php echo htmlspecialchars($period_labels[$period]); ?></small></div></div>
             <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Créditos vendidos</div><div class="fs-3 fw-bold"><?php echo (int)$tot['credits']; ?></div><small class="text-muted">para revendas</small></div></div>
             <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Assinaturas pagas</div><div class="fs-3 fw-bold"><?php echo (int)$tot['subs']; ?></div><small class="text-muted">de clientes diretos</small></div></div>
-            <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Pagamentos</div><div class="fs-3 fw-bold"><?php echo $total_rows; ?></div><small class="text-muted"><?php echo (int)$tot['n_pix']; ?> Pix · <?php echo (int)$tot['n_card']; ?> cartão · <?php echo $total_rows - (int)$tot['n_pix'] - (int)$tot['n_card']; ?> manual</small></div></div>
+            <div class="col-6 col-lg"><div class="card co-card p-3 h-100"><div class="text-muted small">Pagamentos de verdade</div><div class="fs-3 fw-bold"><?php echo $total_rows; ?></div><small class="text-muted"><?php echo (int)$tot['n_pix']; ?> Pix · <?php echo (int)$tot['n_card']; ?> cartão · <?php echo (int)$tot['n_apple']; ?> Apple · <?php echo (int)$tot['n_amazon']; ?> Amazon · <?php echo $total_rows - (int)$tot['n_pix'] - (int)$tot['n_card'] - (int)$tot['n_apple'] - (int)$tot['n_amazon']; ?> manual</small></div></div>
         </div>
+        <?php } ?>
 
         <div class="card co-card">
             <div class="card-body p-4">
                 <form method="get" class="row g-2 align-items-end mb-3">
+                    <input type="hidden" name="tab" value="<?php echo $tab; ?>">
                     <div class="col-12 col-md-3">
                         <label class="form-label small text-muted mb-1">Buscar</label>
                         <input type="text" name="q" class="form-control" value="<?php echo htmlspecialchars($q); ?>" placeholder="Nome, e-mail, nº do pedido ou referência">
@@ -171,6 +201,7 @@
                         <label class="form-label small text-muted mb-1">Até</label>
                         <input type="date" name="to" class="form-control" value="<?php echo htmlspecialchars($date_to); ?>">
                     </div>
+                    <?php if ($tab != 'tests') { ?>
                     <div class="col-6 col-md-2">
                         <label class="form-label small text-muted mb-1">Tipo</label>
                         <select name="kind" class="form-select">
@@ -188,9 +219,9 @@
                             <option value="apple" <?php if ($method == 'apple') echo 'selected'; ?>>Apple (App Store)</option>
                             <option value="amazon" <?php if ($method == 'amazon') echo 'selected'; ?>>Amazon (Appstore)</option>
                             <option value="manual" <?php if ($method == 'manual') echo 'selected'; ?>>Manual (confirmado no painel)</option>
-                            <option value="free" <?php if ($method == 'free') echo 'selected'; ?>>Grátis (testes)</option>
                         </select>
                     </div>
+                    <?php } ?>
                     <div class="col-12 col-md-auto d-flex gap-2">
                         <button type="submit" class="btn btn-primary"><i class="ri-search-line"></i> Filtrar</button>
                         <a href="manage_payments.php?<?php echo htmlspecialchars(http_build_query(array_merge($_GET, array('csv' => 1, 'page' => null)))); ?>" class="btn btn-outline-secondary" title="Baixar planilha (CSV)"><i class="ri-file-excel-2-line"></i> Exportar</a>
@@ -227,7 +258,7 @@
                                 </td>
                             </tr>
                         <?php } } else { ?>
-                            <tr><td colspan="7" class="text-muted py-5">Nenhum pagamento neste período.</td></tr>
+                            <tr><td colspan="7" class="text-muted py-5"><?php echo $tab == 'tests' ? 'Nenhum teste neste período.' : 'Nenhum pagamento neste período.'; ?></td></tr>
                         <?php } ?>
                         </tbody>
                     </table>

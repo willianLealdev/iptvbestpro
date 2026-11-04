@@ -10,6 +10,7 @@
  */
 
 require_once(__DIR__."/customer_helper.php");
+require_once(__DIR__."/payment_log.php");
 
 define('MP_API', 'https://api.mercadopago.com');
 define('STRIPE_API', 'https://api.stripe.com');
@@ -126,13 +127,22 @@ function pay_load_order_any($mysqli, $order_type, $order_id){
 /* ---------- Mercado Pago (Pix) ---------- */
 
 function pay_mp_create_pix($mysqli, $order, $owner_type, $owner_id){
-    if (!pay_mp_enabled($mysqli)) return array('ok' => false, 'msg' => 'Pix indisponível no momento.');
-    if ($order['currency'] != 'BRL') return array('ok' => false, 'msg' => 'Pix aceita apenas pagamentos em reais.');
+    if (!pay_mp_enabled($mysqli)) {
+        pay_log($mysqli, $order['type'], $order['id'], 'pix_unavailable', 'pix', 'error', 'Pix está desligado ou sem a chave do Mercado Pago nas configurações de pagamento.');
+        return array('ok' => false, 'msg' => 'Pix indisponível no momento.');
+    }
+    if ($order['currency'] != 'BRL') {
+        pay_log($mysqli, $order['type'], $order['id'], 'pix_unavailable', 'pix', 'error', 'Pedido em '.$order['currency'].': o Pix só aceita reais.');
+        return array('ok' => false, 'msg' => 'Pix aceita apenas pagamentos em reais.');
+    }
 
     // Reaproveita um Pix pendente e ainda válido do mesmo pedido (evita gerar vários QR Codes)
     $existing = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT * FROM tbl_payments WHERE provider = 'mercadopago' AND order_type = '".$order['type']."' AND order_id = ".(int)$order['id']."
                                                           AND status = 'pending' AND expires_at > ".(time() + 120)." ORDER BY id DESC LIMIT 1"));
-    if ($existing) return array('ok' => true, 'payment_id' => (int)$existing['id']);
+    if ($existing) {
+        pay_log($mysqli, $order['type'], $order['id'], 'pix_reused', 'pix', 'ok', 'Reaproveitou o Pix pendente (pagamento '.$existing['provider_id'].').', (string)$existing['id'], true);
+        return array('ok' => true, 'payment_id' => (int)$existing['id']);
+    }
 
     $ref = $order['type'].':'.$order['id'];
     $expires = time() + 30 * 60;
@@ -154,6 +164,7 @@ function pay_mp_create_pix($mysqli, $order, $owner_type, $owner_id){
     if ($r['code'] < 200 || $r['code'] >= 300 || empty($r['json']['id'])) {
         error_log('[mercadopago] '.$r['code'].' '.$r['body']);
         $msg = !empty($r['json']['message']) ? $r['json']['message'] : 'Não foi possível gerar o Pix.';
+        pay_log($mysqli, $order['type'], $order['id'], 'pix_error', 'pix', 'error', 'Mercado Pago respondeu HTTP '.$r['code'].': '.$msg.($r['error'] != '' ? ' ('.$r['error'].')' : ''));
         return array('ok' => false, 'msg' => 'Mercado Pago: '.$msg);
     }
     $tx = isset($r['json']['point_of_interaction']['transaction_data']) ? $r['json']['point_of_interaction']['transaction_data'] : array();
@@ -168,11 +179,12 @@ function pay_mp_create_pix($mysqli, $order, $owner_type, $owner_id){
     mysqli_stmt_execute($stmt);
     $id = mysqli_insert_id($mysqli);
     mysqli_stmt_close($stmt);
+    pay_log($mysqli, $order['type'], $order['id'], 'pix_generated', 'pix', 'ok', 'Pagamento Mercado Pago '.$pid.' criado; vale até '.date('H:i', $expires).'.', $pid);
     return array('ok' => true, 'payment_id' => $id);
 }
 
 // Consulta o pagamento no Mercado Pago (fonte da verdade) e libera o pedido se aprovado e o valor bater
-function pay_mp_sync($mysqli, $mp_payment_id){
+function pay_mp_sync($mysqli, $mp_payment_id, $src = ''){
     payments_migrate($mysqli);
     $mp_payment_id = preg_replace('/\D/', '', (string)$mp_payment_id);
     if ($mp_payment_id == '' || pay_cfg($mysqli, 'mp_token') == '') return false;
@@ -185,6 +197,10 @@ function pay_mp_sync($mysqli, $mp_payment_id){
     $status = isset($p['status']) ? $p['status'] : '';
     $paid_amount = isset($p['transaction_amount']) ? (float)$p['transaction_amount'] : 0;
     $currency = isset($p['currency_id']) ? strtoupper($p['currency_id']) : 'BRL';
+    $mp_detail = isset($p['status_detail']) ? (string)$p['status_detail'] : '';
+    pay_log($mysqli, $m[1], (int)$m[2], 'gateway_status', 'pix',
+            $status == 'approved' ? 'ok' : (in_array($status, array('rejected', 'cancelled', 'refunded', 'charged_back')) ? 'error' : 'info'),
+            'Mercado Pago: '.$status.($mp_detail != '' ? ' ('.$mp_detail.')' : ''), (string)$p['id'], true);
 
     if ($status == 'approved') {
         return pay_release($mysqli, 'mercadopago', (string)$p['id'], $m[1], (int)$m[2], $paid_amount, $currency);
@@ -217,9 +233,15 @@ function pay_mp_signature_ok($mysqli, $data_id){
 /* ---------- Stripe (cartão) ---------- */
 
 function pay_stripe_create_checkout($mysqli, $order, $owner_type, $owner_id, $return_url){
-    if (!pay_stripe_enabled($mysqli)) return array('ok' => false, 'msg' => 'Pagamento com cartão indisponível no momento.');
+    if (!pay_stripe_enabled($mysqli)) {
+        pay_log($mysqli, $order['type'], $order['id'], 'card_unavailable', 'card', 'error', 'Cartão está desligado ou sem a chave do Stripe nas configurações de pagamento.');
+        return array('ok' => false, 'msg' => 'Pagamento com cartão indisponível no momento.');
+    }
     $cents = (int)round($order['amount'] * 100);
-    if ($cents <= 0) return array('ok' => false, 'msg' => 'Valor inválido.');
+    if ($cents <= 0) {
+        pay_log($mysqli, $order['type'], $order['id'], 'card_unavailable', 'card', 'error', 'Valor do pedido inválido para o cartão.');
+        return array('ok' => false, 'msg' => 'Valor inválido.');
+    }
 
     $now = time();
     $stmt = mysqli_prepare($mysqli, "INSERT INTO tbl_payments (provider, order_type, order_id, owner_type, owner_id, amount, currency, status, created_at) VALUES ('stripe', ?, ?, ?, ?, ?, ?, 'pending', ?)");
@@ -256,11 +278,13 @@ function pay_stripe_create_checkout($mysqli, $order, $owner_type, $owner_id, $re
         error_log('[stripe] '.$r['code'].' '.$r['body']);
         mysqli_query($mysqli, "UPDATE tbl_payments SET status = 'failed' WHERE id = ".(int)$local_id);
         $msg = !empty($r['json']['error']['message']) ? $r['json']['error']['message'] : 'Não foi possível iniciar o pagamento.';
+        pay_log($mysqli, $order['type'], $order['id'], 'card_error', 'card', 'error', 'Stripe respondeu HTTP '.$r['code'].': '.$msg.($r['error'] != '' ? ' ('.$r['error'].')' : ''));
         return array('ok' => false, 'msg' => 'Stripe: '.$msg);
     }
     $sid = mysqli_real_escape_string($mysqli, $r['json']['id']);
     $url = mysqli_real_escape_string($mysqli, $r['json']['url']);
     mysqli_query($mysqli, "UPDATE tbl_payments SET provider_id = '$sid', checkout_url = '$url', expires_at = ".($now + 3600)." WHERE id = ".(int)$local_id);
+    pay_log($mysqli, $order['type'], $order['id'], 'card_session_created', 'card', 'ok', 'Sessão Stripe '.$r['json']['id'].' criada; o cliente foi enviado para a tela do cartão.', (string)$r['json']['id']);
     return array('ok' => true, 'payment_id' => $local_id, 'url' => $r['json']['url']);
 }
 
@@ -283,7 +307,7 @@ function pay_stripe_signature_ok($mysqli, $payload){
 }
 
 // Consulta a sessão no Stripe (fonte da verdade) e libera se paga e o valor bater
-function pay_stripe_sync($mysqli, $session_id){
+function pay_stripe_sync($mysqli, $session_id, $src = ''){
     payments_migrate($mysqli);
     if (!preg_match('/^cs_[A-Za-z0-9_]+$/', (string)$session_id) || pay_cfg($mysqli, 'stripe_secret') == '') return false;
     $r = pay_http('GET', STRIPE_API.'/v1/checkout/sessions/'.$session_id, array('Authorization: Bearer '.pay_cfg($mysqli, 'stripe_secret')));
@@ -291,6 +315,10 @@ function pay_stripe_sync($mysqli, $session_id){
     $s = $r['json'];
     $ref = isset($s['client_reference_id']) ? $s['client_reference_id'] : '';
     if (!preg_match('/^(sub|credit):(\d+)$/', $ref, $m)) return false;
+    $sp = isset($s['payment_status']) ? (string)$s['payment_status'] : '';
+    $ss = isset($s['status']) ? (string)$s['status'] : '';
+    pay_log($mysqli, $m[1], (int)$m[2], 'gateway_status', 'card', $sp == 'paid' ? 'ok' : ($ss == 'expired' ? 'error' : 'info'),
+            'Stripe: pagamento '.$sp.', sessão '.$ss, (string)$s['id'], true);
     if (isset($s['payment_status']) && $s['payment_status'] == 'paid') {
         return pay_release($mysqli, 'stripe', $s['id'], $m[1], (int)$m[2], ((int)$s['amount_total']) / 100, strtoupper($s['currency']));
     }
@@ -311,6 +339,8 @@ function pay_release($mysqli, $provider, $provider_id, $order_type, $order_id, $
     if (!$order) return false;
     if (abs($order['amount'] - (float)$paid_amount) > 0.009 || strtoupper($order['currency']) != strtoupper($currency)) {
         error_log("[pagamento] valor/moeda divergente em $order_type:$order_id ($paid_amount $currency x {$order['amount']} {$order['currency']})");
+        pay_log($mysqli, $order_type, $order_id, 'amount_mismatch', $provider == 'stripe' ? 'card' : 'pix', 'error',
+                'Pago '.$paid_amount.' '.$currency.', mas o pedido é de '.$order['amount'].' '.$order['currency'].'. Não foi liberado.', (string)$provider_id, true);
         return false;
     }
     $now = time();
@@ -328,6 +358,7 @@ function pay_release($mysqli, $provider, $provider_id, $order_type, $order_id, $
             $released = credit_orders_mark_paid($mysqli, $order_id, 0, $ref_note);
         }
     }
+    if ($released) pay_log($mysqli, $order_type, $order_id, 'paid', $provider == 'stripe' ? 'card' : 'pix', 'ok', 'Pagamento de '.$paid_amount.' '.strtoupper($currency).' confirmado ('.($provider == 'stripe' ? 'Stripe' : 'Mercado Pago').' '.$provider_id.').', (string)$provider_id);
     // Marca o registro do pagamento como pago (mesmo se o pedido já tinha sido liberado antes)
     mysqli_query($mysqli, "UPDATE tbl_payments SET status = 'paid', paid_at = $now WHERE provider = '$prov' AND provider_id = '$pid'");
     if ($provider == 'stripe' && !$released) {
