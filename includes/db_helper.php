@@ -21,6 +21,8 @@ if ($mysqli->connect_errno) {
     die("Connection failed: " . $conn->connect_error);
 } else {
     mysqli_query($mysqli,"SET NAMES 'utf8'");
+    // "Confiar neste dispositivo": refaz a sessão de quem marcou a caixa no login (Deploy/reinício não derruba mais)
+    try { require_once(__DIR__."/trusted_device.php"); trust_restore($mysqli); } catch (\Throwable $e) { error_log('trust: '.$e->getMessage()); }
 
     $setting_qry="SELECT * FROM tbl_settings where id='1'";
     $setting_result=mysqli_query($mysqli,$setting_qry);

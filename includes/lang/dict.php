@@ -1329,6 +1329,7 @@ return array(
   'Voltou do cartão, aguardando confirmação' => array('pt' => 'Voltou do cartão, aguardando confirmação', 'en' => 'Came back from the card page, waiting for confirmation', 'es' => 'Volvió de la tarjeta, esperando confirmación'),
   'Cancelou na tela do cartão' => array('pt' => 'Cancelou na tela do cartão', 'en' => 'Cancelled on the card page', 'es' => 'Canceló en la pantalla de la tarjeta'),
   'Clicou em pagar, mas nada foi gerado' => array('pt' => 'Clicou em pagar, mas nada foi gerado', 'en' => 'Clicked pay, but nothing was generated', 'es' => 'Hizo clic en pagar, pero no se generó nada'),
+  'Confiar neste dispositivo' => array('pt' => 'Confiar neste dispositivo', 'en' => 'Trust this device', 'es' => 'Confiar en este dispositivo'),
   'Ordem definida' => array('pt' => 'Ordem definida', 'en' => 'Order set', 'es' => 'Orden definido'),
   'Salvar ordem' => array('pt' => 'Salvar ordem', 'en' => 'Save order', 'es' => 'Guardar orden'),
   'Voltar ao automático' => array('pt' => 'Voltar ao automático', 'en' => 'Back to automatic', 'es' => 'Volver al automático'),

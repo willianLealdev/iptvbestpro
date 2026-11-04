@@ -68,7 +68,7 @@ if ($errors) {
             <?php auth_input(array('name' => 'user_login', 'id' => 'user_login', 'label' => 'E-mail ou usuário', 'icon' => 'ri-user-3-line', 'attrs' => 'autofocus autocomplete="username"')); ?>
             <?php auth_input(array('name' => 'nsofts_password_input', 'id' => 'nsofts_password_input', 'type' => 'password', 'label' => 'Senha', 'icon' => 'ri-lock-2-line', 'placeholder' => '••••••••', 'attrs' => 'autocomplete="current-password"')); ?>
             <div class="au-line">
-                <label class="au-check"><input type="checkbox" id="remember"> Lembrar de mim</label>
+                <label class="au-check"><input type="checkbox" name="trust" value="1" id="remember"> Confiar neste dispositivo</label>
                 <a href="auth_pass_recovery.php">Esqueceu a senha?</a>
             </div>
             <button type="submit" class="au-btn"><i class="ri-login-box-line"></i> Entrar</button>

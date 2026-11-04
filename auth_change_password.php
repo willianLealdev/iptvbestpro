@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         mysqli_stmt_bind_param($stmt, 'si', $hash, $id);
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
+        trust_revoke_all($mysqli, 'adm', $id);
         unset($_SESSION['admin_must_change_pw']);
         session_regenerate_id(true);
         $_SESSION['class'] = 'success';

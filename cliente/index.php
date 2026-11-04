@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             unset($_SESSION['cl_pending_verify']);
             session_regenerate_id(true);
             $_SESSION['cl_id'] = (int)$c['id'];
+            if (!empty($_POST['trust'])) trust_issue($mysqli, 'cl', (int)$c['id']);
             mysqli_query($mysqli, "UPDATE tbl_customers SET last_login = ".time()." WHERE id = ".(int)$c['id']);
             cl_redirect('dashboard.php');
         }
@@ -69,7 +70,7 @@ auth_start(array('prefix' => '../', 'title' => 'Entrar', 'badge' => 'Área do Cl
             <?php echo cl_csrf_field(); ?>
             <?php auth_input(array('name' => 'email', 'type' => 'email', 'label' => 'E-mail', 'icon' => 'ri-mail-line', 'value' => $email, 'placeholder' => 'seu@email.com', 'attrs' => 'autofocus autocomplete="email"')); ?>
             <?php auth_input(array('name' => 'password', 'type' => 'password', 'label' => 'Senha', 'icon' => 'ri-lock-2-line', 'placeholder' => '••••••••', 'attrs' => 'autocomplete="current-password"')); ?>
-            <div class="au-line"><span></span><a href="forgot.php">Esqueceu a senha?</a></div>
+            <div class="au-line"><?php echo trust_checkbox(true); ?><a href="forgot.php">Esqueceu a senha?</a></div>
             <button type="submit" class="au-btn"><i class="ri-login-box-line"></i> Entrar</button>
         </form>
         <p class="au-alt">Ainda não tem conta? <a href="register.php">Cadastre-se</a></p>

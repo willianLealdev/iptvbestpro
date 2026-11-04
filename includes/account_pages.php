@@ -132,6 +132,7 @@ function accp_reset_page($mysqli, $cfg){
             mysqli_stmt_bind_param($stmt, 'si', $hash, $id);
             mysqli_stmt_execute($stmt);
             mysqli_stmt_close($stmt);
+            trust_revoke_all($mysqli, $cfg['type'] == 'admin' ? 'adm' : ($cfg['type'] == 'reseller' ? 'rv' : 'cl'), $id);
             // quem redefiniu pelo e-mail provou que o e-mail é válido
             if ($cfg['type'] != 'admin') mysqli_query($mysqli, "UPDATE `$table` SET email_verified = 1 WHERE id = ".(int)$id);
             // sub-revenda que criou a senha pelo link do e-mail não precisa trocar de novo no primeiro acesso

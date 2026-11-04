@@ -49,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             unset($_SESSION['rv_pending_verify']);
             session_regenerate_id(true);
             $_SESSION['rv_id'] = (int)$r['id'];
+            if (!empty($_POST['trust'])) trust_issue($mysqli, 'rv', (int)$r['id']);
             mysqli_query($mysqli, "UPDATE tbl_resellers SET last_login = ".time()." WHERE id = ".(int)$r['id']);
             rv_redirect('dashboard.php');
         }
@@ -75,7 +76,7 @@ auth_start(rv_is_server()
             <?php echo rv_csrf_field(); ?>
             <?php auth_input(array('name' => 'email', 'type' => 'email', 'label' => 'E-mail', 'icon' => 'ri-mail-line', 'value' => $email, 'placeholder' => 'seu@email.com', 'attrs' => 'autofocus autocomplete="email"')); ?>
             <?php auth_input(array('name' => 'password', 'type' => 'password', 'label' => 'Senha', 'icon' => 'ri-lock-2-line', 'placeholder' => '••••••••', 'attrs' => 'autocomplete="current-password"')); ?>
-            <div class="au-line"><span></span><a href="forgot.php">Esqueceu a senha?</a></div>
+            <div class="au-line"><?php echo trust_checkbox(true); ?><a href="forgot.php">Esqueceu a senha?</a></div>
             <button type="submit" class="au-btn"><i class="ri-login-box-line"></i> Entrar</button>
         </form>
         <?php if (rv_signup_enabled($mysqli)) { ?>

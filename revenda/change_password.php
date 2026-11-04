@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         mysqli_stmt_bind_param($stmt, 'sii', $hash, $now, $rid);
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
+        trust_revoke_all($mysqli, 'rv', $rid);
         rv_flash('success', 'Senha alterada. Bem-vindo ao seu painel!');
         rv_redirect('dashboard.php');
     }

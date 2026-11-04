@@ -88,5 +88,7 @@ $_SESSION['admin_name'] = $row['username'];
 $_SESSION['admin_type'] = $row['admin_type'];
 $_SESSION['class'] = "success";
 $_SESSION['msg'] = "17";
+// caixa "Confiar neste dispositivo" (senha fraca nunca fica conectada: precisa trocar antes)
+if (!empty($_POST['trust']) && !$weak) trust_issue($mysqli, 'adm', (int)$row['id']);
 header("Location:dashboard.php");
 exit;
