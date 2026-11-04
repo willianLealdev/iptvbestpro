@@ -52,6 +52,7 @@
     $res = mysqli_query($mysqli, "SELECT * FROM tbl_devices WHERE platform IN ('iphone','ipad','apple_tv') AND (package <> '' OR owner <> '') ORDER BY last_seen DESC LIMIT 40");
     while($res && $row = mysqli_fetch_assoc($res)){ $list[] = $row; }
 ?>
+<main id="nsofts_main">
 <div class="nsofts-container">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb align-items-center">
@@ -123,5 +124,6 @@
     </div>
     <?php } ?>
 </div>
+</main>
 
 <?php include("includes/footer.php");?>
