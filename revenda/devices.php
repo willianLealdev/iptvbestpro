@@ -55,7 +55,7 @@ $status = (isset($_GET['status']) && in_array($_GET['status'], array('pending','
 $where = array("d.owner = 'reseller'", "d.reseller_id = $rid");
 if ($keyword != '') {
     $kw = mysqli_real_escape_string($mysqli, $keyword);
-    $where[] = "(d.customer_name LIKE '%$kw%' OR d.device_id LIKE '%$kw%' OR d.device_model LIKE '%$kw%')";
+    $where[] = "(d.customer_name LIKE '%$kw%' OR d.device_id LIKE '%$kw%' OR d.short_id LIKE '%$kw%' OR d.device_model LIKE '%$kw%')";
 }
 if ($status == 'pending') $where[] = "d.package = ''";
 if ($status == 'active')  $where[] = "d.package <> '' AND (d.expires_at = 0 OR d.expires_at >= $now)";
@@ -122,8 +122,9 @@ rv_header($mysqli, $reseller, 'Dispositivos', 'devices'); ?>
                         <a href="javascript:void(0)" class="rv-pencil btn_rename ms-1" data-pk="<?php echo (int)$d['id']; ?>" data-name="<?php echo rv_e($d['customer_name']); ?>" data-mac="<?php echo rv_e($d['device_id']); ?>" title="Editar nome do cliente"><i class="ri-pencil-line"></i></a>
                     </td>
                     <td>
-                        <?php echo rv_e($d['device_id']); ?>
-                        <span class="rv-copy ms-1" data-copy="<?php echo rv_e($d['device_id']); ?>"><i class="ri-file-copy-line"></i></span>
+                        <?php $d_show = !empty($d['short_id']) ? $d['short_id'] : $d['device_id']; // Apple: o ID de 8 números ?>
+                        <?php echo rv_e($d_show); ?>
+                        <span class="rv-copy ms-1" data-copy="<?php echo rv_e($d_show); ?>"><i class="ri-file-copy-line"></i></span>
                         <?php if ($d['device_model'] != '' || $d['country_code'] != '') { ?><br><small class="rv-muted"><?php echo rv_e($d['device_model']); ?></small><?php echo devices_flag($d['country_code'], $d['country_name']); ?><?php } ?>
                     </td>
                     <td><?php echo rv_e($d['app_label']); ?></td>

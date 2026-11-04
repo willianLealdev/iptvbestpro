@@ -217,7 +217,7 @@
     $my_ip = devices_client_ip();
     if($keyword != ''){
         $kw = mysqli_real_escape_string($mysqli, $keyword);
-        $where[] = "(d.customer_name LIKE '%$kw%' OR d.device_id LIKE '%$kw%' OR d.activated_by LIKE '%$kw%' OR d.device_model LIKE '%$kw%' OR d.ip_address LIKE '%$kw%')";
+        $where[] = "(d.customer_name LIKE '%$kw%' OR d.device_id LIKE '%$kw%' OR d.short_id LIKE '%$kw%' OR d.activated_by LIKE '%$kw%' OR d.device_model LIKE '%$kw%' OR d.ip_address LIKE '%$kw%')";
     }
     if($app_filter != ''){
         $af = mysqli_real_escape_string($mysqli, $app_filter);

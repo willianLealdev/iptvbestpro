@@ -38,10 +38,51 @@ function devices_migrate($mysqli){
     mysqli_query($mysqli, $sql);
 
     // Provedor de internet (empresa dona do IP), origem provável e em quantos dias diferentes o app foi aberto
-    foreach (array('asn_org' => "VARCHAR(120) NOT NULL DEFAULT ''", 'origin' => "VARCHAR(20) NOT NULL DEFAULT ''", 'days_seen' => "INT(11) NOT NULL DEFAULT 1") as $name => $definition) {
+    // short_id: "ID do dispositivo" de 8 números dos aparelhos Apple (o ID interno, longo, nunca aparece para o cliente)
+    foreach (array('asn_org' => "VARCHAR(120) NOT NULL DEFAULT ''", 'origin' => "VARCHAR(20) NOT NULL DEFAULT ''", 'days_seen' => "INT(11) NOT NULL DEFAULT 1", 'short_id' => "VARCHAR(8) NOT NULL DEFAULT ''") as $name => $definition) {
         $col = mysqli_query($mysqli, "SHOW COLUMNS FROM `tbl_devices` LIKE '$name'");
         if ($col && mysqli_num_rows($col) == 0) mysqli_query($mysqli, "ALTER TABLE `tbl_devices` ADD `$name` $definition");
     }
+}
+
+function devices_is_apple($platform){
+    return in_array((string)$platform, array('iphone', 'ipad', 'apple_tv'), true);
+}
+
+/**
+ * iPhone, iPad e Apple TV não têm campo de código (regra da Apple): o app mostra um "ID do dispositivo" de 8 números
+ * e a revenda ativa por ele no painel (Ativação Apple). O número é só um apelido: o aparelho continua sendo
+ * identificado pelo ID interno secreto, então ninguém consegue "puxar" listas de outro aparelho adivinhando números.
+ * Cria o número na primeira vez e devolve sempre o mesmo. Vazio para aparelho que não é da Apple.
+ */
+function device_short_id($mysqli, $device){
+    if (!$device || !devices_is_apple(isset($device['platform']) ? $device['platform'] : '')) return '';
+    devices_migrate($mysqli);
+    if (!empty($device['short_id'])) return (string)$device['short_id'];
+    $pk = (int)$device['id'];
+    for ($i = 0; $i < 30; $i++) {
+        $sid = (string)random_int(10000000, 99999999);
+        $ex = mysqli_query($mysqli, "SELECT id FROM tbl_devices WHERE short_id = '$sid' LIMIT 1");
+        if ($ex && mysqli_num_rows($ex) > 0) continue;
+        mysqli_query($mysqli, "UPDATE tbl_devices SET short_id = '$sid' WHERE id = $pk AND short_id = ''");
+        $cur = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT short_id FROM tbl_devices WHERE id = $pk"));
+        return $cur ? (string)$cur['short_id'] : '';
+    }
+    return '';
+}
+
+// Aparelho Apple pelo "ID do dispositivo" de 8 números (null se não existir)
+function device_find_by_short_id($mysqli, $sid){
+    $sid = preg_replace('/\D/', '', (string)$sid);
+    if (strlen($sid) != 8) return null;
+    devices_migrate($mysqli);
+    $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_devices WHERE short_id = ? AND platform IN ('iphone','ipad','apple_tv') ORDER BY last_seen DESC LIMIT 1");
+    if (!$stmt) return null;
+    mysqli_stmt_bind_param($stmt, 's', $sid);
+    mysqli_stmt_execute($stmt);
+    $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    return $row ?: null;
 }
 
 // Empresa dona do IP (ex.: "Claro S.A.", "Google LLC", "Amazon.com, Inc."). Vazio quando a base não existe.

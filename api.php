@@ -145,6 +145,8 @@ if($get_helper['helper_name']=="device_link" || $get_helper['helper_name']=="dev
     $sp_base = rtrim(brand_mail_base_url(), '/');
     $last = count($set[$API_NAME]) - 1;
     $set[$API_NAME][$last]['owner'] = $device ? (string)$device['owner'] : '';
+    // iPhone / iPad / Apple TV: "ID do dispositivo" de 8 números mostrado na tela (a revenda ativa por ele no painel)
+    $set[$API_NAME][$last]['short_id'] = $device ? device_short_id($mysqli, $device) : '';
     $set[$API_NAME][$last]['support_name'] = $sp['name'];
     $set[$API_NAME][$last]['support_whatsapp'] = $sp['whatsapp'];
     $set[$API_NAME][$last]['support_note'] = $sp['note'];

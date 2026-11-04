@@ -296,6 +296,12 @@ $mysqli->set_charset("utf8mb4");
                                 <span class="nsofts-sidebar-nav__text">Devices</span>
                             </a>
                         </li>
+                        <li class="nsofts-sidebar-nav__item">
+                            <a href="apple_activate.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "apple_activate.php") { ?>active<?php } ?>">
+                                <i class="ri-apple-line nsofts-sidebar-nav__icon"></i>
+                                <span class="nsofts-sidebar-nav__text">Ativação Apple</span>
+                            </a>
+                        </li>
                         
                         <?php require_once(__DIR__."/support_helper.php"); support_migrate($mysqli); $sp_unread_admin = support_unread_admin($mysqli); ?>
                         <li class="nsofts-sidebar-nav__item">

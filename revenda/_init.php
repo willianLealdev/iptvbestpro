@@ -153,6 +153,7 @@ function rv_header($mysqli, $reseller, $title, $active){
         array('dashboard', 'dashboard.php', 'ri-home-4-line', 'Painel'),
         array('training', 'training.php', 'ri-play-circle-line', 'Treinamento'),
         array('devices', 'devices.php', 'ri-device-line', 'Dispositivos'),
+        array('apple', 'apple.php', 'ri-apple-line', 'Ativação Apple'),
         array('credits', 'credits.php', 'ri-coin-line', 'Créditos'),
         array('subs', 'subs.php', 'ri-team-line', 'Sub-revendas'),
         array('dns', 'dns.php', 'ri-server-line', 'DNS'),
@@ -161,7 +162,7 @@ function rv_header($mysqli, $reseller, $title, $active){
         array('support', 'support.php', 'ri-customer-service-2-line', 'Suporte'),
     );
     // servidor parceiro: sem treinamento da revenda
-    if (rv_is_server()) $rv_menu = array_values(array_filter($rv_menu, function ($m) { return $m[0] != 'training' && $m[0] != 'subs'; }));
+    if (rv_is_server()) $rv_menu = array_values(array_filter($rv_menu, function ($m) { return $m[0] != 'training' && $m[0] != 'subs' && $m[0] != 'apple'; }));
     ?>
     <!-- menu lateral (no celular abre pelo botão ☰ e fecha ao escolher um item ou tocar fora) -->
     <aside class="rv-side" id="rvSide">
