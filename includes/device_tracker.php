@@ -76,7 +76,7 @@ function device_find_by_short_id($mysqli, $sid){
     $sid = preg_replace('/\D/', '', (string)$sid);
     if (strlen($sid) != 8) return null;
     devices_migrate($mysqli);
-    $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_devices WHERE short_id = ? AND platform IN ('iphone','ipad','apple_tv') ORDER BY last_seen DESC LIMIT 1");
+    $stmt = mysqli_prepare($mysqli, "SELECT * FROM tbl_devices WHERE short_id = ? ORDER BY last_seen DESC LIMIT 1");
     if (!$stmt) return null;
     mysqli_stmt_bind_param($stmt, 's', $sid);
     mysqli_stmt_execute($stmt);

@@ -49,7 +49,7 @@
     }
 
     $list = array();
-    $res = mysqli_query($mysqli, "SELECT * FROM tbl_devices WHERE platform IN ('iphone','ipad','apple_tv') AND (package <> '' OR owner <> '') ORDER BY last_seen DESC LIMIT 40");
+    $res = mysqli_query($mysqli, "SELECT * FROM tbl_devices WHERE platform IN ('iphone','ipad','apple_tv') ORDER BY last_seen DESC LIMIT 40");
     while($res && $row = mysqli_fetch_assoc($res)){ $list[] = $row; }
 ?>
 <main id="nsofts_main">
@@ -102,10 +102,10 @@
     <?php if($list){ ?>
     <div class="nsofts-card mt-4">
         <div class="nsofts-card__body p-0">
-            <div class="p-3 fw-semibold">Aparelhos Apple</div>
+            <div class="p-3"><span class="fw-semibold">Aparelhos Apple</span><div class="text-muted small">Todos os aparelhos Apple que abriram o app, do mais recente para o mais antigo. Confira aqui o ID que aparece no celular do cliente.</div></div>
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
-                    <thead><tr><th class="ps-4">ID do dispositivo</th><th>Cliente</th><th>Aparelho</th><th>Dono</th><th>Vencimento</th><th>Situação</th></tr></thead>
+                    <thead><tr><th class="ps-4">ID do dispositivo</th><th>Cliente</th><th>Aparelho</th><th>Dono</th><th>Vencimento</th><th>Visto por último</th><th>Situação</th></tr></thead>
                     <tbody>
                     <?php foreach($list as $d){ $st = devices_activation_status($d); ?>
                         <tr>
@@ -114,6 +114,7 @@
                             <td><?php echo htmlspecialchars($d['device_model'], ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo htmlspecialchars(devices_owner_label($mysqli, $d), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo (int)$d['expires_at'] > 0 ? date('d/m/Y', (int)$d['expires_at']) : '—'; ?></td>
+                            <td class="text-nowrap"><?php echo (int)$d['last_seen'] > 0 ? date('d/m H:i', (int)$d['last_seen']) : '—'; ?></td>
                             <td><?php echo $st == 'active' ? '<span class="badge bg-success">Ativo</span>' : ($st == 'expired' ? '<span class="badge bg-danger">Vencido</span>' : '<span class="badge bg-secondary">Aguardando</span>'); ?></td>
                         </tr>
                     <?php } ?>
