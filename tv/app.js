@@ -198,7 +198,7 @@
   // Android TV / Google TV (ex.: TCL abrindo pelo Media Station X): algumas TVs informam uma janela maior do que a parte que aparece
   // e a tela saía cortada. Só no Android compara todas as medidas (janela, documento, visualViewport e tela) e usa o menor par.
   // LG, Samsung, Titan, Whale e Windows continuam usando só a janela, como antes.
-  var IS_ANDROID = /Android/i.test(UA), VIEW_INFO = '';
+  var IS_ANDROID = /Android/i.test(UA);
   function viewSize() {
     var w = window.innerWidth || 1920, h = window.innerHeight || 1080;
     if (!IS_ANDROID) return { w: w, h: h };
@@ -211,19 +211,9 @@
         if (c[i][0] >= 300 && c[i][1] >= 200 && (!best || c[i][0] * c[i][1] < best[0] * best[1])) best = c[i];
       }
       if (best) { w = best[0]; h = best[1]; }
-      VIEW_INFO = 'in ' + window.innerWidth + 'x' + window.innerHeight + ' · cl ' + (de && de.clientWidth) + 'x' + (de && de.clientHeight) +
-        ' · vv ' + (vv ? Math.round(vv.width) + 'x' + Math.round(vv.height) + '@' + vv.scale : '-') + ' · sc ' + sc.width + 'x' + sc.height + ' · dpr ' + window.devicePixelRatio;
     } catch (e) {}
     return { w: w, h: h };
   }
-  function viewDebug(s) {
-    // linha pequena só no Android (teste da TCL); sai quando a tela estiver confirmada
-    if (!IS_ANDROID) return;
-    var d = $('viewdbg');
-    if (!d) { d = document.createElement('div'); d.id = 'viewdbg'; d.style.cssText = 'position:fixed;left:6px;bottom:4px;z-index:99999;font:11px monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.45);padding:2px 6px;pointer-events:none'; document.body.appendChild(d); }
-    d.textContent = VIEW_INFO + ' · s ' + s.toFixed(3);
-  }
-
   function fit() {
     var v = viewSize(), w = v.w, h = v.h;
     var s = Math.min(w / 1920, h / 1080);
@@ -232,7 +222,6 @@
     stage.style.height = Math.ceil(h / s) + 'px';
     stage.style.webkitTransform = 'scale(' + s + ')';
     stage.style.transform = 'scale(' + s + ')';
-    viewDebug(s);
   }
   window.addEventListener('resize', fit);
   fit();
