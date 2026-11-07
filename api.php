@@ -555,6 +555,8 @@ else if($get_helper['helper_name']=="get_device_user"){
         // Failover: devolve o servidor DNS que aceita este usuário agora (queda ou migração de servidor)
         $row['dns_base'] = playlist_current_dns($mysqli, $data, $fresh, $dns_status);
         // online | offline (nenhum servidor aceita este usuário: o app passa para outra lista do aparelho) | '' (lista por URL)
+        // tela "Listas" do app (check=1): testa o login de cada lista no servidor agora, para mostrar Online/Offline de verdade
+        if (!empty($get_helper['check']) && $dns_status != '') $dns_status = playlist_check_now($mysqli, $data, $row['dns_base'], $dns_status);
         $row['dns_status'] = $dns_status;
         $row['device_id'] = $data['device_id'];
         $row['playlist_name'] = isset($data['playlist_name']) ? $data['playlist_name'] : '';

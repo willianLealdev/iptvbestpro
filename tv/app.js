@@ -70,7 +70,7 @@
       d_res: 'Resolução', d_time: 'Tempo', d_buf: 'Buffer à frente', d_state: 'Estado', d_drop: 'Quadros perdidos', d_player: 'Player', d_host: 'Servidor', d_dev: 'Aparelho', d_err: 'Erro',
       l_list: 'Ao vivo', l_fav: 'Favoritar', l_favd: 'Favorito', l_epg: 'Programação', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recarregar', l_live: 'AO VIVO', l_h_open: 'abre', l_h_zap: 'mostra / esconde', l_h_close: 'fecha', l_none: 'Ainda não há canal anterior.',
       ch_off: 'Este canal está fora do ar no momento.', play_err: 'Não foi possível reproduzir agora.',
-      connected: 'Conectado', offline_lbl: 'Offline', pl_off_msg: 'Esta lista está offline agora. Escolha outra lista.', language: 'Idioma', device: 'ID do aparelho', support: 'Suporte', refresh: 'Atualizar lista', about: 'Sobre',
+      connected: 'Conectado', offline_lbl: 'Offline', online_lbl: 'Online', pl_off_msg: 'Esta lista está offline agora. Escolha outra lista.', language: 'Idioma', device: 'ID do aparelho', support: 'Suporte', refresh: 'Atualizar lista', about: 'Sobre',
       refresh_ok: 'Lista atualizada.', sup_talk: 'Fale com a sua revenda para ter suporte.', sup_none: 'Contato de suporte não cadastrado.',
       sup_scan: 'Aponte a câmera do celular para abrir o WhatsApp', close: 'Fechar',
       exp_title: 'Seu plano está vencendo', exp_days: 'Seu plano vence em {0} dia(s).', exp_today: 'Seu plano vence hoje.',
@@ -107,7 +107,7 @@
       d_res: 'Resolution', d_time: 'Time', d_buf: 'Buffer ahead', d_state: 'State', d_drop: 'Dropped frames', d_player: 'Player', d_host: 'Server', d_dev: 'Device', d_err: 'Error',
       l_list: 'Live', l_fav: 'Favorite', l_favd: 'Favorited', l_epg: 'Guide', l_prev: 'Previous channel', l_zoom: 'Zoom', l_reload: 'Reload', l_live: 'LIVE', l_h_open: 'open', l_h_zap: 'show / hide', l_h_close: 'close', l_none: 'No previous channel yet.',
       ch_off: 'This channel is offline right now.', play_err: 'Could not play right now.',
-      connected: 'Connected', offline_lbl: 'Offline', pl_off_msg: 'This list is offline right now. Choose another list.', language: 'Language', device: 'Device ID', support: 'Support', refresh: 'Refresh list', about: 'About',
+      connected: 'Connected', offline_lbl: 'Offline', online_lbl: 'Online', pl_off_msg: 'This list is offline right now. Choose another list.', language: 'Language', device: 'Device ID', support: 'Support', refresh: 'Refresh list', about: 'About',
       refresh_ok: 'List refreshed.', sup_talk: 'Contact your reseller for support.', sup_none: 'No support contact registered.',
       sup_scan: 'Point your phone camera at the code to open WhatsApp', close: 'Close',
       exp_title: 'Your plan is about to expire', exp_days: 'Your plan expires in {0} day(s).', exp_today: 'Your plan expires today.',
@@ -144,7 +144,7 @@
       d_res: 'Resolución', d_time: 'Tiempo', d_buf: 'Buffer adelante', d_state: 'Estado', d_drop: 'Cuadros perdidos', d_player: 'Reproductor', d_host: 'Servidor', d_dev: 'Dispositivo', d_err: 'Error',
       l_list: 'En vivo', l_fav: 'Favorito', l_favd: 'Favorito ★', l_epg: 'Programación', l_prev: 'Canal anterior', l_zoom: 'Zoom', l_reload: 'Recargar', l_live: 'EN VIVO', l_h_open: 'abre', l_h_zap: 'muestra / oculta', l_h_close: 'cierra', l_none: 'Aún no hay canal anterior.',
       ch_off: 'Este canal está fuera del aire ahora.', play_err: 'No fue posible reproducir ahora.',
-      connected: 'Conectado', offline_lbl: 'Sin conexión', pl_off_msg: 'Esta lista está sin conexión ahora. Elige otra lista.', language: 'Idioma', device: 'ID del dispositivo', support: 'Soporte', refresh: 'Actualizar lista', about: 'Acerca de',
+      connected: 'Conectado', offline_lbl: 'Sin conexión', online_lbl: 'En línea', pl_off_msg: 'Esta lista está sin conexión ahora. Elige otra lista.', language: 'Idioma', device: 'ID del dispositivo', support: 'Soporte', refresh: 'Actualizar lista', about: 'Acerca de',
       refresh_ok: 'Lista actualizada.', sup_talk: 'Habla con tu revendedor para tener soporte.', sup_none: 'Contacto de soporte no registrado.',
       sup_scan: 'Apunta la cámara del celular al código para abrir WhatsApp', close: 'Cerrar',
       exp_title: 'Tu plan está por vencer', exp_days: 'Tu plan vence en {0} día(s).', exp_today: 'Tu plan vence hoy.',
@@ -715,7 +715,7 @@
     // depois de ativar (ou trocar de dono) busca de novo a marca do dono do aparelho
     if (!chooser && !S.brandFresh) { S.brandFresh = true; return fetchBrand(function () { loadPlaylists(false); }); }
     // botão Atualizar: o painel confere o servidor de cada lista do zero
-    var ex = {};
+    var ex = { check: '1' }; // check: o painel testa o login de cada lista no servidor agora (Online/Offline de verdade)
     try { if (sessionStorage.getItem('bp_fresh')) { ex.fresh = '1'; sessionStorage.removeItem('bp_fresh'); } } catch (e) {}
     api('get_device_user', ex, function (err, arr) {
       if (err) { toast(t(err.status === 0 ? 'no_net' : 'server_err')); return noList(); }
@@ -793,7 +793,7 @@
       // lista caída: continua com o próprio nome e aparece como Offline (igual ao painel)
       var off = (p.real_status || p.dns_status) === 'offline';
       var on = !off && useId !== '' && useId === String(p.id);
-      rows += '<div class="row f" data-a="pick" data-i="' + i + '"><span>' + esc(p.playlist_name || p.user_name) + '</span>' + (off ? '<span class="badge off">● ' + esc(t('offline_lbl')) + '</span>' : (on ? '<span class="badge">● ' + esc(t('connected')) + '</span>' : '')) + '</div>';
+      rows += '<div class="row f" data-a="pick" data-i="' + i + '"><span>' + esc(p.playlist_name || p.user_name) + '</span>' + (off ? '<span class="badge off">● ' + esc(t('offline_lbl')) + '</span>' : (on ? '<span class="badge">● ' + esc(t('connected')) + '</span>' : ((p.real_status || p.dns_status) === 'online' ? '<span class="badge">● ' + esc(t('online_lbl')) + '</span>' : ''))) + '</div>';
     }
     show(header(t('playlist')) + '<div class="left" style="width:1200px"><div class="scroll">' + rows + '</div></div>',
       { back: function () { if (S.login) home(); else confirmExit(); }, acts: { pick: function (el, i) { var p = S.pls[+i]; if ((p.real_status || p.dns_status) === 'offline') { toast(t('pl_off_msg'), 4000); return; } if (S.pl && String(S.pl.id) !== String(p.id)) clearCatalog(); splash(); login(p); } } });
