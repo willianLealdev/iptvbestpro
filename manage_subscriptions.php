@@ -80,6 +80,13 @@
         $rows[$k]['_sum'] = pay_log_summary($steps, $one['status']);
         $hist_js[$oid] = pay_log_for_js($steps);
     }
+    // Pedido pendente em que o cliente SÓ clicou em assinar (nunca escolheu Pix nem cartão) não aparece:
+    // só entra na lista quando ele clica em um meio de pagamento (ou depois de pago/cancelado).
+    $hidden_pending = 0;
+    foreach($rows as $k => $one){
+        if($one['status'] == 'pending' && $one['_sum'][1] == 'none'){ unset($rows[$k]); $hidden_pending++; }
+    }
+    $rows = array_values($rows);
 
     $tot = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT
         SUM(status = 'pending') AS pending,
@@ -123,7 +130,7 @@
         </style>
 
         <div class="row g-3 mb-4">
-            <div class="col-6 col-lg"><div class="card sb-card p-3"><div class="text-muted small">Aguardando pagamento</div><div class="fs-3 fw-bold" style="color:#d46b08;"><?php echo (int)$tot['pending']; ?></div></div></div>
+            <div class="col-6 col-lg"><div class="card sb-card p-3"><div class="text-muted small">Aguardando pagamento</div><div class="fs-3 fw-bold" style="color:#d46b08;"><?php echo ($state == '' && $keyword == '' && $customer_filter == 0) ? max(0, (int)$tot['pending'] - $hidden_pending) : (int)$tot['pending']; ?></div></div></div>
             <div class="col-6 col-lg"><div class="card sb-card p-3"><div class="text-muted small">Códigos não usados</div><div class="fs-3 fw-bold" style="color:#3b6cf6;"><?php echo (int)$tot['codes']; ?></div></div></div>
             <div class="col-6 col-lg"><div class="card sb-card p-3"><div class="text-muted small">Assinaturas ativas</div><div class="fs-3 fw-bold" style="color:#16a34a;"><?php echo (int)$tot['active']; ?></div></div></div>
             <div class="col-6 col-lg"><div class="card sb-card p-3"><div class="text-muted small">Recebido no mês</div><div class="fw-bold"><?php echo money_format_currency($tot['month_brl'], 'BRL'); ?><br><?php echo money_format_currency($tot['month_usd'], 'USD'); ?></div></div></div>
