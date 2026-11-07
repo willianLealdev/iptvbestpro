@@ -548,7 +548,11 @@ else if($get_helper['helper_name']=="get_device_user"){
     mysqli_stmt_bind_param($stmt, 's', $device_id);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
-    while($data = mysqli_fetch_assoc($result)){
+    // lê todas as listas e confere o servidor de todas ao mesmo tempo (o tempo é o da mais lenta, não a soma)
+    $all_rows = array();
+    while($d = mysqli_fetch_assoc($result)){ $all_rows[] = $d; }
+    if (!$fresh) playlist_prefetch_probes($mysqli, $all_rows);
+    foreach($all_rows as $data){
         $row['id'] = $data['id'];
         $row['user_type'] = $data['user_type'];
         $row['user_name'] = $data['user_name'];

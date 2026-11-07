@@ -351,6 +351,26 @@ function playlist_sibling_ok($mysqli, $row){
 }
 
 /**
+ * Confere o servidor em uso de TODAS as listas do aparelho ao mesmo tempo (antes era uma de cada vez: 3 listas = 3 esperas).
+ * Guarda os resultados em $GLOBALS['__probe_pre'] para o playlist_current_dns usar. Só testa as listas que já passaram
+ * do tempo de cache (45 s), do mesmo jeito que o playlist_current_dns decidiria.
+ */
+function playlist_prefetch_probes($mysqli, $rows){
+    $catch = dns_list_catch_all_norms($mysqli);
+    $now = time();
+    $tasks = array();
+    foreach ($rows as $r) {
+        if (isset($r['source']) && $r['source'] != 'account') continue;
+        if (!empty($r['dns_checked_at']) && ($now - (int)$r['dns_checked_at']) < 45) continue;
+        $pin = isset($r['dns_pin']) ? (string)$r['dns_pin'] : '';
+        $cur = $pin != '' ? (dns_normalize($r['dns_base']) == $pin ? rtrim(trim((string)$r['dns_base']), '/') : $pin) : rtrim(trim((string)$r['dns_base']), '/');
+        if ($cur == '' || !empty($catch[dns_normalize($cur)])) continue;
+        $tasks[(int)$r['id']] = array('base' => $cur, 'username' => $r['user_name'], 'password' => $r['user_password']);
+    }
+    $GLOBALS['__probe_pre'] = count($tasks) > 1 ? playlist_probe_tasks($tasks, 4) : array();
+}
+
+/**
  * Failover para o app: devolve o DNS que funciona AGORA para esta playlist.
  * Usa cache curto; se o último servidor parar de aceitar (queda ou migração), procura em todos e atualiza.
  */
@@ -371,7 +391,9 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
     // lista fixada: confere o DNS fixado
     $curBase = $pin != '' ? (dns_normalize($row['dns_base']) == $pin ? rtrim(trim((string)$row['dns_base']), '/') : $pin) : rtrim(trim((string)$row['dns_base']), '/');
     if (!$fresh && $curBase != '' && empty($catch[dns_normalize($curBase)])) {
-        $cur = playlist_probe_parallel(array(array('base' => $curBase)), $row['user_name'], $row['user_password'], 4);
+        // se o api.php já testou todas as listas do aparelho ao mesmo tempo (playlist_prefetch_probes), usa esse resultado
+        $pre = isset($GLOBALS['__probe_pre'][(int)$row['id']]) ? $GLOBALS['__probe_pre'][(int)$row['id']] : null;
+        $cur = $pre !== null ? array($pre) : playlist_probe_parallel(array(array('base' => $curBase)), $row['user_name'], $row['user_password'], 4);
         // ainda aceita: continua nele, mas com o app aberto confere a cada 10 min se a lista foi migrada
         // para outro servidor (o antigo pode continuar aceitando o login depois da migração)
         $mig = $now - (int)(isset($row['dns_full_at']) ? $row['dns_full_at'] : 0) >= 600;
