@@ -190,8 +190,24 @@ $mysqli->set_charset("utf8mb4");
                     $cu_pending = 0;
                     $cu_tbl = mysqli_query($mysqli, "SHOW TABLES LIKE 'tbl_subscriptions'");
                     if($cu_tbl && mysqli_num_rows($cu_tbl) > 0){
-                        $cu_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT COUNT(*) AS num FROM tbl_subscriptions WHERE status = 'pending'"));
-                        $cu_pending = (int)$cu_row['num'];
+                        // Conta só pedidos em que o cliente clicou em Pix/cartão (mesma regra da lista de Assinaturas)
+                        $cu_pending = 0;
+                        $cu_q = mysqli_query($mysqli, "SELECT id FROM tbl_subscriptions WHERE status = 'pending' AND is_trial = 0 AND is_demo = 0");
+                        $cu_ids = array();
+                        while($cu_q && $cu_r = mysqli_fetch_assoc($cu_q)) $cu_ids[] = (int)$cu_r['id'];
+                        if($cu_ids){
+                            require_once __DIR__.'/payment_log.php';
+                            $cu_ev = pay_log_load($mysqli, 'sub', $cu_ids);
+                            $cu_pm = pay_log_payments($mysqli, 'sub', $cu_ids);
+                            $cu_click = array('click_pix','click_card','pix_generated','pix_reused','card_session_created','pix_error','card_error');
+                            foreach($cu_ids as $cu_id){
+                                $cu_hit = !empty($cu_pm[$cu_id]);
+                                if(!$cu_hit && !empty($cu_ev[$cu_id])){
+                                    foreach($cu_ev[$cu_id] as $cu_e){ if(in_array($cu_e['event'], $cu_click)){ $cu_hit = true; break; } }
+                                }
+                                if($cu_hit) $cu_pending++;
+                            }
+                        }
                     } ?>
                 <li class="nsofts-sidebar-nav__item nsofts-has-menu">
                     <a href="javascript:void(0)" class="nsofts-sidebar-nav__link <?php if ($cu_menu_open) { ?>open active<?php } ?>">
