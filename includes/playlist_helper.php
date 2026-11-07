@@ -491,8 +491,11 @@ function playlist_apply_fallback($mysqli, $device_id, $rows){
         $id = (int)$r['id'];
         // estado verdadeiro desta lista (online/offline), para o app mostrar "Offline" mesmo quando ela entrega o usuário de outra lista
         $rows[$k]['real_status'] = isset($r['dns_status']) ? $r['dns_status'] : '';
+        // id da lista que de fato está servindo (a própria, ou a reserva quando ela caiu): o app marca "Conectado" nesta
+        $rows[$k]['using_id'] = (string)$id;
         if (!isset($new[$id])) continue;
         $t = $byId[$new[$id]];
+        $rows[$k]['using_id'] = (string)(int)$t['id'];
         // a lista caída continua com o PRÓPRIO nome (antes ficava com o nome da lista reserva e aparecia repetida no app)
         foreach (array('user_type', 'user_name', 'user_password', 'dns_base', 'dns_status') as $f) $rows[$k][$f] = $t[$f];
     }
