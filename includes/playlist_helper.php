@@ -362,6 +362,7 @@ function playlist_prefetch_probes($mysqli, $rows){
     foreach ($rows as $r) {
         if (isset($r['source']) && $r['source'] != 'account') continue;
         if (!empty($r['dns_checked_at']) && ($now - (int)$r['dns_checked_at']) < 45) continue;
+        if (empty($GLOBALS['__bp_check']) && isset($r['dns_status']) && $r['dns_status'] == 'offline' && !empty($r['dns_checked_at']) && ($now - (int)$r['dns_checked_at']) < 300) continue;
         $pin = isset($r['dns_pin']) ? (string)$r['dns_pin'] : '';
         $cur = $pin != '' ? (dns_normalize($r['dns_base']) == $pin ? rtrim(trim((string)$r['dns_base']), '/') : $pin) : rtrim(trim((string)$r['dns_base']), '/');
         if ($cur == '' || !empty($catch[dns_normalize($cur)])) continue;
@@ -384,6 +385,10 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
     $stale_after = 45;
     $now = time();
     if (!$fresh && !empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < $stale_after) return $row['dns_base'];
+    // Abertura do app: lista já marcada OFFLINE há menos de 5 min não faz o app esperar o servidor dela de novo (um servidor fora do ar
+    // custa 4 s de espera a cada abertura). O monitor (cron/dns_monitor.php) reavalia a cada 5 min; a tela "Listas" e o "Atualizar"
+    // (check/fresh) testam na hora.
+    if (!$fresh && empty($GLOBALS['__bp_check']) && $status == 'offline' && !empty($row['dns_checked_at']) && ($now - (int)$row['dns_checked_at']) < 300) return $row['dns_base'];
 
     $pin = isset($row['dns_pin']) ? (string)$row['dns_pin'] : '';
     // o DNS em uso ainda conecta: continua nele (rápido, sem testar todos)

@@ -549,6 +549,7 @@ else if($get_helper['helper_name']=="get_device_user"){
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     // lê todas as listas e confere o servidor de todas ao mesmo tempo (o tempo é o da mais lenta, não a soma)
+    $GLOBALS['__bp_check'] = !empty($get_helper['check']); // tela "Listas": testa as listas na hora, sem atalho
     $all_rows = array();
     while($d = mysqli_fetch_assoc($result)){ $all_rows[] = $d; }
     if (!$fresh) playlist_prefetch_probes($mysqli, $all_rows);
