@@ -422,23 +422,34 @@ function playlist_current_dns($mysqli, $row, $fresh = false, &$status = null){
 }
 
 /**
- * Teste na hora (tela "Listas" do app): vai no servidor da lista com o login dela e diz se está online ou offline.
- * Um login só por lista (os servidores IPTV bloqueiam IP que erra login demais); no máximo uma vez a cada 15 s por lista.
- * Devolve 'online' | 'offline' (ou o status que já estava, se não dá para testar).
+ * Teste na hora (tela "Listas" do app): vai no servidor de cada lista com o login dela e diz se está online ou offline.
+ * Todas as listas são testadas AO MESMO TEMPO (o tempo é o da mais lenta, não a soma). Um login só por lista
+ * (os servidores IPTV bloqueiam IP que erra login demais); no máximo uma vez a cada 15 s por lista.
+ * $items: chave => array('row' => linha da lista, 'base' => DNS em uso, 'status' => status atual).
+ * Devolve chave => 'online' | 'offline' (ou o status que já estava, quando não dá para testar).
  */
-function playlist_check_now($mysqli, $row, $base, $status){
-    if (isset($row['source']) && $row['source'] != 'account') return $status;
-    $base = rtrim(trim((string)$base), '/');
-    if ($base == '') return $status;
+function playlist_check_many($mysqli, $items){
+    $out = array();
+    $tasks = array();
     $catch = dns_list_catch_all_norms($mysqli);
-    if (!empty($catch[dns_normalize($base)])) return $status; // DNS que aceita qualquer usuário: o teste não prova nada
-    // já testado agora há pouco (inclusive pelo próprio failover desta consulta): não repete o login
-    $fr = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT dns_checked_at FROM tbl_users WHERE id = ".(int)$row['id']));
-    if ($fr && time() - (int)$fr['dns_checked_at'] < 15 && $status != '') return $status;
-    $p = playlist_probe_parallel(array(array('base' => $base)), $row['user_name'], $row['user_password'], 4);
-    $on = $p[0]['result'] == 'ok' && !empty($p[0]['active']);
-    playlist_set_dns_state($mysqli, $row['id'], $base, $on, $on && isset($p[0]['server']) ? $p[0]['server'] : null);
-    return $on ? 'online' : 'offline';
+    foreach ($items as $k => $it) {
+        $row = $it['row'];
+        $base = rtrim(trim((string)$it['base']), '/');
+        $out[$k] = $it['status'];
+        if ((isset($row['source']) && $row['source'] != 'account') || $base == '' || $it['status'] == '') continue;
+        if (!empty($catch[dns_normalize($base)])) continue; // DNS que aceita qualquer usuário: o teste não prova nada
+        // já testado agora há pouco (inclusive pelo próprio failover desta consulta): não repete o login
+        $fr = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT dns_checked_at FROM tbl_users WHERE id = ".(int)$row['id']));
+        if ($fr && time() - (int)$fr['dns_checked_at'] < 15) continue;
+        $tasks[$k] = array('base' => $base, 'username' => $row['user_name'], 'password' => $row['user_password']);
+    }
+    if (!$tasks) return $out;
+    foreach (playlist_probe_tasks($tasks, 4) as $k => $p) {
+        $on = $p['result'] == 'ok' && !empty($p['active']);
+        playlist_set_dns_state($mysqli, $items[$k]['row']['id'], $tasks[$k]['base'], $on, $on && isset($p['server']) ? $p['server'] : null);
+        $out[$k] = $on ? 'online' : 'offline';
+    }
+    return $out;
 }
 
 // DNS que aceitam qualquer usuário (não servem para dizer que a lista conecta)

@@ -715,8 +715,8 @@
     // depois de ativar (ou trocar de dono) busca de novo a marca do dono do aparelho
     if (!chooser && !S.brandFresh) { S.brandFresh = true; return fetchBrand(function () { loadPlaylists(false); }); }
     // botão Atualizar: o painel confere o servidor de cada lista do zero
-    var ex = { check: '1' }; // check: o painel testa o login de cada lista no servidor agora (Online/Offline de verdade)
-    try { if (sessionStorage.getItem('bp_fresh')) { ex.fresh = '1'; sessionStorage.removeItem('bp_fresh'); } } catch (e) {}
+    var ex = chooser ? { check: '1' } : {}; // check: o painel testa o login de cada lista no servidor agora (só na tela de listas; na abertura atrasaria)
+    try { if (sessionStorage.getItem('bp_fresh')) { ex.fresh = '1'; ex.check = '1'; sessionStorage.removeItem('bp_fresh'); } } catch (e) {}
     api('get_device_user', ex, function (err, arr) {
       if (err) { toast(t(err.status === 0 ? 'no_net' : 'server_err')); return noList(); }
       S.pls = (arr || []).filter(function (p) { return p && p.user_name; });
